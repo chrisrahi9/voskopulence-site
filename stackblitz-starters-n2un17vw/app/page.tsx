@@ -404,9 +404,10 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                       onPointerDown: handlePointerDown,
                       onPointerUp: handlePointerEnd,
                       onPointerCancel: handlePointerEnd,
-                      onPointerLeave: handlePointerEnd,
+                      // no pointerleave — allow finger drift inside/outside
                     }
                   : {})}
+                
                 aria-label="Scroll to next section"
                 data-show-arrow={showArrow ? "true" : undefined}
                 data-long={isLongPress ? "true" : undefined}
@@ -414,7 +415,10 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
+                  touchAction: "none",                 // ✅ don’t treat as scroll/zoom
                 }}
+                onContextMenu={(e) => e.preventDefault()}  // ✅ avoid long-press context menu
+                
                 className={`group relative mt-10 inline-flex items-center justify-center
                 h-14 w-14 rounded-full
                 ring-1 ring-white/30 hover:ring-white/60
@@ -424,7 +428,7 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                 will-change-transform
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
                 ${isLongPress
-                  ? "scale-[1.4] animate-none ring-2 ring-white/60"
+                  ? "scale-[1.35] animate-none ring-2 ring-white/60"
                   : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
                 }
               `}
