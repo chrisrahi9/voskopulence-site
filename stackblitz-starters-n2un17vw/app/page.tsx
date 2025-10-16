@@ -388,25 +388,26 @@ useEffect(() => {
 {/* ===== Mobile curtain menu ===== */}
 <div
   id="mobile-menu"
-  className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
+  className={`fixed left-0 top-0 w-screen h-[100lvh] z-[200] lg:hidden overscroll-contain
     ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
   `}
   role="dialog"
   aria-modal="true"
   aria-hidden={!menuOpen}
 >
+
   {/* Frosted backdrop (same color/blur; only this fades) */}
   <div
-    className={`absolute inset-0
-      bg-[#004642]/75
-      backdrop-blur-xl
-      supports-[backdrop-filter]:bg-[#004642]/60
-      transform-gpu contain-paint
-      transition-opacity duration-200
-      ${menuOpen ? "opacity-100" : "opacity-0"}
-    `}
-    onClick={() => setMenuOpen(false)}
-  />
+  className={`absolute left-0 top-0 w-screen h-[100lvh]
+    bg-[#004642]/75
+    backdrop-blur-xl
+    supports-[backdrop-filter]:bg-[#004642]/60
+    transform-gpu contain-paint
+    transition-opacity duration-200
+    ${menuOpen ? "opacity-100" : "opacity-0"}
+  `}
+  onClick={() => setMenuOpen(false)}
+/>
 
   {/* Safe-area fillers so blur/color extend under iOS bars */}
   <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]
