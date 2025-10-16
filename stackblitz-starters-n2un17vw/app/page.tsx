@@ -422,7 +422,7 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                 className={`group relative mt-10 inline-flex items-center justify-center
                 h-14 w-14 rounded-full
                 /* Add invisible padding to enlarge the touch target */
-                before:content-[''] before:absolute before:-inset-2 before:rounded-full
+                before:content-[''] before:absolute before:-inset-4 before:rounded-full
                 ring-1 ring-white/30 hover:ring-white/60
                 bg-white/10 hover:bg-white/10
                 backdrop-blur-[3px]
