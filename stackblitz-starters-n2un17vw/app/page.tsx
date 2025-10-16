@@ -142,8 +142,7 @@ export default function Home() {
         if (Hls?.isSupported?.()) {
          const hls = new Hls({
   capLevelToPlayerSize: true,
-  startLevel: -1,                    // auto
-  maxInitialBitrate: 2500000,        // <-- use this
+  startLevel: -1,
   maxBufferLength: 10,
   maxMaxBufferLength: 20,
   backBufferLength: 0,
@@ -151,6 +150,11 @@ export default function Home() {
   fragLoadingRetryDelay: 500,
   fragLoadingMaxRetry: 3,
 });
+
+// Set non-typed config after creation (works even if typings don’t include it)
+// @ts-expect-error – not in our local typings
+hls.config.maxInitialBitrate = 2_500_000;  // ~2.5 Mbps
+
 
           hlsRef.current = hls;
 
