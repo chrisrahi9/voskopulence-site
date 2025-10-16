@@ -420,24 +420,30 @@ if (menuOpenRef.current) { tryPlay(v); return; }
   ring-1 ring-white/30 hover:ring-white/60
   bg-white/10 hover:bg-white/10
   backdrop-blur-[3px]
-  transition-transform duration-300 will-change-transform
+  transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)]  /* smooth, premium ease */
+  will-change-transform
   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
   ${isLongPress
-    ? "scale-[1.25] animate-none ring-2 ring-white/60" // noticeable grow + stronger ring
+    ? "scale-[1.35] animate-none ring-2 ring-white/60"  /* 35% bigger */
     : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
   }
 `}
+
+
+
               >
 {/* Soft glowing dot */}
 <div
-  className={`relative h-2.5 w-2.5 rounded-full bg-white/95
+  className={`
+    relative h-2.5 w-2.5 rounded-full bg-white/95
     shadow-[0_0_8px_rgba(255,255,255,0.6)]
-    transition-all duration-500
-    ${(!isLongPress && showArrow) ? "opacity-0" : ""}  /* hide on touch tap */
-    group-hover:opacity-0                               /* hide on hover */
-    ${isLongPress ? "scale-110" : ""}                   /* tiny enlarge on long press */
+    transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)]
+    ${isLongPress ? "scale-150" : ""}               /* dot grows inside */
+    ${showArrow ? "opacity-0" : "opacity-100"}
+    group-hover:opacity-0
   `}
 />
+
 
 {/* Chevron */}
 <svg
