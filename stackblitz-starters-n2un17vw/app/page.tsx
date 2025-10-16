@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
-
+const isTouch = typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
@@ -362,11 +362,15 @@ const scrollDown = () => {
               </p>
               <button
   ref={ctaRef}
-  onClick={scrollDown}                      // desktop click
-  onPointerDown={handlePointerDown}         // touch start
-  onPointerUp={handlePointerEnd}
-  onPointerCancel={handlePointerEnd}
-  onPointerLeave={handlePointerEnd}
+  onClick={scrollDown}
+  {...(isTouch
+    ? {
+        onPointerDown: handlePointerDown,
+        onPointerUp: handlePointerEnd,
+        onPointerCancel: handlePointerEnd,
+        onPointerLeave: handlePointerEnd,
+      }
+    : {})}
   aria-label="Scroll to next section"
   // data-attrs drive mobile states; Tailwind variants read these
   data-show-arrow={showArrow ? "true" : undefined}
