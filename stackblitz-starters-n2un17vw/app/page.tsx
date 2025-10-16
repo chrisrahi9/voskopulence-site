@@ -140,17 +140,18 @@ export default function Home() {
       try {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
-          const hls = new Hls({
-            capLevelToPlayerSize: true,             // match video size
-            startLevel: -1,                         // auto start-quality (not forced 360p)
-            maxInitialPlaylistBitrate: 2500000,     // ~2.5 Mbps initial pick
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
-            backBufferLength: 0,
-            enableWorker: true,                     // decode in a worker
-            fragLoadingRetryDelay: 500,             // retry on network stalls
-            fragLoadingMaxRetry: 3,
-          });
+         const hls = new Hls({
+  capLevelToPlayerSize: true,
+  startLevel: -1,                    // auto
+  maxInitialBitrate: 2500000,        // <-- use this
+  maxBufferLength: 10,
+  maxMaxBufferLength: 20,
+  backBufferLength: 0,
+  enableWorker: true,
+  fragLoadingRetryDelay: 500,
+  fragLoadingMaxRetry: 3,
+});
+
           hlsRef.current = hls;
 
           hls.attachMedia(v);
