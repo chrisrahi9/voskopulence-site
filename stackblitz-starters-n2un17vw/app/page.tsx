@@ -22,6 +22,7 @@ const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (e.pointerType === "mouse") return;
 
   setShowArrow(true);
+  const LONG_MS = 260; // shorter press
   longTimer.current = window.setTimeout(() => {
     setIsLongPress(true);
     try {
