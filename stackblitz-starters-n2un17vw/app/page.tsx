@@ -17,7 +17,21 @@ const isTouch =
   window.matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  
+  // --- Fix iOS viewport height so curtain covers the whole screen ---
+useEffect(() => {
+  const setVh = () => {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+  };
+  setVh();
+  window.addEventListener("resize", setVh);
+  window.addEventListener("orientationchange", setVh);
+  return () => {
+    window.removeEventListener("resize", setVh);
+    window.removeEventListener("orientationchange", setVh);
+  };
+}, []);
+
   // ✅ portal guard must be INSIDE the component
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -401,49 +415,81 @@ useEffect(() => {
   createPortal(
     <div
       id="mobile-menu"
-      className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
+      className={`fixed left-0 top-0 w-screen z-[200] lg:hidden overscroll-contain
         ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
       `}
       role="dialog"
       aria-modal="true"
       aria-hidden={!menuOpen}
+      // Use the robust height, not vh
+      style={{ height: "calc(var(--app-vh, 1vh) * 100)" }}
     >
-      {/* Frosted backdrop (same color/blur; only this fades) */}
+      {/* Base color layer (masks edge gaps); same tone as your backdrop */}
       <div
-        className={`fixed inset-0
-          bg-[#004642]/75
-          backdrop-blur-xl
-          supports-[backdrop-filter]:bg-[#004642]/60
-          transform-gpu contain-paint
-          transition-opacity duration-200
+        className={`fixed left-0 top-0 w-screen transition-opacity duration-200
           ${menuOpen ? "opacity-100" : "opacity-0"}
         `}
+        style={{
+          height: "calc(var(--app-vh, 1vh) * 100)",
+          backgroundColor: "#004642",
+          opacity: 0.75
+        }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Safe-area fillers so blur/color extend under iOS bars */}
+      {/* Frosted backdrop (keeps your blur/look) */}
       <div
-        className={`fixed inset-x-0 top-0 h-[env(safe-area-inset-top)]
-          bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
-          pointer-events-none transition-opacity duration-200
+        className={`fixed left-0 top-0 w-screen
+          transform-gpu contain-paint transition-opacity duration-200
           ${menuOpen ? "opacity-100" : "opacity-0"}
         `}
-      />
-      <div
-        className={`fixed inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
-          bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
-          pointer-events-none transition-opacity duration-200
-          ${menuOpen ? "opacity-100" : "opacity-0"}
-        `}
+        style={{
+          height: "calc(var(--app-vh, 1vh) * 100)",
+          // keep your exact blur + fallback tint
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          backgroundColor: "color-mix(in srgb, #004642 60%, transparent)" // Safari fallback (≈ your supports[...] class)
+        }}
+        onClick={() => setMenuOpen(false)}
       />
 
-      {/* Menu content (fade + slight slide; safe-area padding) */}
+      {/* Safe-area fillers so color/blur extend under iOS bars */}
       <div
-        className={`fixed inset-0 z-10 flex flex-col
-          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+        className={`fixed inset-x-0 top-0 transition-opacity duration-200 pointer-events-none
+          ${menuOpen ? "opacity-100" : "opacity-0"}
+        `}
+        style={{
+          height: "env(safe-area-inset-top)",
+          backgroundColor: "#004642",
+          opacity: 0.75,
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)"
+        }}
+      />
+      <div
+        className={`fixed inset-x-0 bottom-0 transition-opacity duration-200 pointer-events-none
+          ${menuOpen ? "opacity-100" : "opacity-0"}
+        `}
+        style={{
+          height: "env(safe-area-inset-bottom)",
+          backgroundColor: "#004642",
+          opacity: 0.75,
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)"
+        }}
+      />
+
+      {/* Menu content (fade + subtle slide; safe-area padding) */}
+      <div
+        className={`fixed left-0 top-0 z-10 flex flex-col
           text-white transition-all duration-200
           ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
         `}
+        style={{
+          height: "calc(var(--app-vh, 1vh) * 100)",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)"
+        }}
       >
         <div className="flex items-center justify-between h-[64px] px-4">
           <span className="font-semibold">Menu</span>
@@ -469,6 +515,7 @@ useEffect(() => {
     document.body
   )
 }
+
 
 
       {/* ===================== HERO ===================== */}
