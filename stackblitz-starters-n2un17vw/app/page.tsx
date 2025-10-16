@@ -39,11 +39,13 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   }
   // let the long-press grow animation complete
   const delay = isLongPress ? 120 : 0;
-  window.setTimeout(() => {
-    scrollDown();          // your existing smooth scroll
-    setIsLongPress(false); // reset states
-    setShowArrow(false);
-  }, delay);
+ window.setTimeout(() => {
+  if (!isLongPress) {
+    scrollDown(); // only scroll on tap or long-press release
+  }
+  setIsLongPress(false);
+  setShowArrow(false);
+}, delay);
 };
 
 
