@@ -69,7 +69,10 @@ const scrollDown = () => {
     const top = el.getBoundingClientRect().top;
     // choose the first section that isn't already mostly visible
     if (top > 80) {
-      const yOffset = -window.innerHeight * 0.25; // adjust this fraction
+      const yOffset =
+  window.innerWidth < 640
+    ? -window.innerHeight * 0.12
+    : -window.innerHeight * 0.25;
       const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
       return;
