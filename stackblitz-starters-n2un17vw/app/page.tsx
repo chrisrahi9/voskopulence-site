@@ -18,14 +18,18 @@ export default function Home() {
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
+  const [pressing, setPressing] = useState(false);                 // ✅ new: drives build-up
   const longTimer = useRef<number | null>(null);
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
+  const startPos = useRef<{ x: number; y: number } | null>(null);  // ✅ track movement
 
   // start on touch/pointer (touch only; desktop uses click)
   const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (e.pointerType === "mouse") return;
+    startPos.current = { x: e.clientX, y: e.clientY };
+    setPressing(true);                         // ✅ begin build-up immediately
     setShowArrow(true);
-    const LONG_MS = 260; // shorter press
+    const LONG_MS = 700;                       // ✅ slower, more deliberate threshold
     longTimer.current = window.setTimeout(() => {
       setIsLongPress(true);
       try {
@@ -34,19 +38,33 @@ export default function Home() {
     }, LONG_MS);
   };
 
+  // drift cancel (keeps pressing but cancels "longPress" if moved too far)
+  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!startPos.current) return;
+    const dx = e.clientX - startPos.current.x;
+    const dy = e.clientY - startPos.current.y;
+    if (Math.hypot(dx, dy) > 24) {            // allow some drift; cancel long press if too much
+      if (longTimer.current) {
+        clearTimeout(longTimer.current);
+        longTimer.current = null;
+      }
+    }
+  };
+
   // end on release/cancel
   const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     if (longTimer.current) {
       clearTimeout(longTimer.current);
       longTimer.current = null;
     }
-    const delay = isLongPress ? 120 : 0; // let grow animation finish
+    const delay = isLongPress ? 120 : 0; // let build-up settle
     window.setTimeout(() => {
       if (!isLongPress) {
         scrollDown(); // tap = scroll; long-press = just animate
       }
       setIsLongPress(false);
       setShowArrow(false);
+      setPressing(false);                     // ✅ stop build-up, ease back
     }, delay);
   };
 
@@ -101,7 +119,6 @@ export default function Home() {
     return () => root.classList.remove("overflow-hidden");
   }, [menuOpen]);
 
-
   const tryPlay = (v: HTMLVideoElement | null) => {
     if (!v) return;
     v.muted = true;
@@ -112,41 +129,39 @@ export default function Home() {
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
 
- // --- Video setup (HLS with MP4 fallback)
-useEffect(() => {
-  const v = videoRef.current;
-  if (!v) return;
+  // --- Video setup (HLS with MP4 fallback)
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
 
-  const HLS_SRC = asset("/hero_hls/master.m3u8");
-  const MP4_SRC = asset("/hero_web.mp4");
-  const POSTER = asset("/hero_poster.jpg");
+    const HLS_SRC = asset("/hero_hls/master.m3u8");
+    const MP4_SRC = asset("/hero_web.mp4");
+    const POSTER = asset("/hero_poster.jpg");
 
-  v.poster = POSTER;
+    v.poster = POSTER;
 
-  let destroyed = false;
+    let destroyed = false;
 
-  const setup = async () => {
-    // Prefer MP4 on iOS for crisp quality (Safari native HLS ABR can stick low)
-    const isIOS =
-      /iP(hone|od|ad)/.test(navigator.platform) ||
-      (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
+    const setup = async () => {
+      // Prefer MP4 on iOS for crisp quality
+      const isIOS =
+        /iP(hone|od|ad)/.test(navigator.platform) ||
+        (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
 
-    if (isIOS) {
-      v.src = MP4_SRC;              // <-- point this MP4 to your 1080p encode
-      try { v.load(); } catch {}
-      tryPlay(v);
-      return;
-    }
+      if (isIOS) {
+        v.src = MP4_SRC;
+        try { v.load(); } catch {}
+        tryPlay(v);
+        return;
+      }
 
-    // Non-iOS Safari that supports native HLS
-    if (v.canPlayType("application/vnd.apple.mpegurl")) {
-      v.src = HLS_SRC;
-      try { v.load(); } catch {}
-      tryPlay(v);
-      return;
-    }
-
-
+      // Native HLS (non-iOS Safari)
+      if (v.canPlayType("application/vnd.apple.mpegurl")) {
+        v.src = HLS_SRC;
+        try { v.load(); } catch {}
+        tryPlay(v);
+        return;
+      }
 
       // Other browsers: hls.js
       try {
@@ -162,11 +177,10 @@ useEffect(() => {
             fragLoadingRetryDelay: 500,
             fragLoadingMaxRetry: 3,
           });
-          
-          // Set non-typed config after creation (works even if typings don’t include it)
-          // @ts-expect-error – not in our local typings
-          hls.config.maxInitialBitrate = 2_500_000;  // ~2.5 Mbps
-          
+
+          // @ts-expect-error – not in local typings
+          hls.config.maxInitialBitrate = 2_500_000;
+
           hlsRef.current = hls;
 
           hls.attachMedia(v);
@@ -174,24 +188,22 @@ useEffect(() => {
             if (!destroyed) hls.loadSource(HLS_SRC);
           });
 
-          // If connection seems fast, bias toward a mid/high level (once)
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
               if (hls.levels?.length) {
-                // Prefer the 1080p rendition (height >= 1080 OR name contains "1080")
+                // Prefer the 1080p rendition, then hand ABR back
                 const lvls = hls.levels;
-                let pick = lvls.findIndex(l => (l.height ?? 0) >= 1080);
-                if (pick < 0) pick = lvls.findIndex(l => /1080/i.test(l.name ?? ""));
-                if (pick < 0) pick = lvls.length - 1; // fallback to highest
+                let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
+                if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
+                if (pick < 0) pick = lvls.length - 1;
                 hls.currentLevel = pick;
-          
-                // After 3s, give ABR control back (optional)
-                setTimeout(() => { hls.loadLevel = -1; }, 3000);
+                setTimeout(() => {
+                  hls.loadLevel = -1;
+                }, 3000);
               }
             } catch {}
             if (!destroyed) tryPlay(v);
           });
-          
 
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
@@ -218,19 +230,15 @@ useEffect(() => {
 
     setup();
 
-    // 🚫 Removed handlers that could restart under overlays
-    // v.addEventListener('waiting', () => { v.play().catch(() => {}); });
-    // v.addEventListener('stalled', () => { v.load(); tryPlay(v); });
-
     const onLoaded = () => tryPlay(v);
     const onCanPlay = () => { if (v.paused) tryPlay(v); };
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
-      // ✅ Fade in when video starts playing
-  v.addEventListener("playing", () => {
-    v.style.opacity = "1";
-  });
 
+    // ✅ Fade in when video starts playing
+    v.addEventListener("playing", () => {
+      v.style.opacity = "1";
+    });
 
     const onVis = () =>
       document.visibilityState === "visible" ? tryPlay(v) : v.pause();
@@ -238,10 +246,8 @@ useEffect(() => {
 
     const io = new IntersectionObserver(
       ([e]) => {
-// keep playing under the curtain (no pauses, no restarts)
-if (menuOpenRef.current) { tryPlay(v); return; }
-
-        // otherwise: play only if at least a sliver is visible
+        // keep playing under the curtain (no pauses, no restarts)
+        if (menuOpenRef.current) { tryPlay(v); return; }
         if (e.intersectionRatio > 0.03) tryPlay(v);
         else v.pause();
       },
@@ -366,37 +372,29 @@ if (menuOpenRef.current) { tryPlay(v); return; }
           {/* This wrapper is 12px taller than the hero, so it extends below it */}
           <div className="absolute inset-x-0 top-0 -bottom-[16px]">
             {/* Static fallback poster background (instant paint before video loads) */}
-<div
-  className="absolute inset-0 bg-cover bg-center"
-  style={{
-    backgroundImage: `url(${asset("/hero_poster.jpg")})`,
-    filter: "brightness(0.9)",
-  }}
-/>
-{/* Static fallback poster background (shows instantly before video starts) */}
-<div
-  className="absolute inset-0 bg-cover bg-center"
-  style={{
-    backgroundImage: `url(${asset("/hero_poster.jpg")})`,
-    filter: "brightness(0.9)",
-  }}
-/>
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${asset("/hero_poster.jpg")})`,
+                filter: "brightness(0.9)",
+              }}
+            />
 
-<video
-  ref={videoRef}
-  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
-  poster={asset("/hero_poster.jpg")}
-  autoPlay
-  muted
-  playsInline
-  // @ts-ignore
-  webkit-playsinline="true"
-  loop
-  preload="metadata"
-  aria-hidden="true"
-  disablePictureInPicture
-  controlsList="nodownload noplaybackrate"
-/>
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
+              poster={asset("/hero_poster.jpg")}
+              autoPlay
+              muted
+              playsInline
+              // @ts-ignore
+              webkit-playsinline="true"
+              loop
+              preload="metadata"
+              aria-hidden="true"
+              disablePictureInPicture
+              controlsList="nodownload noplaybackrate"
+            />
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
@@ -425,11 +423,10 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                   ? {
                       onPointerDown: handlePointerDown,
                       onPointerUp: handlePointerEnd,
+                      onPointerMove: handlePointerMove,   // ✅ build-up logic
                       onPointerCancel: handlePointerEnd,
-                      // no pointerleave — allow finger drift inside/outside
                     }
                   : {})}
-                
                 aria-label="Scroll to next section"
                 data-show-arrow={showArrow ? "true" : undefined}
                 data-long={isLongPress ? "true" : undefined}
@@ -437,10 +434,13 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: "none",                 // ✅ don’t treat as scroll/zoom
+                  touchAction: "none",
+                  // ✅ silky build-up while finger is down
+                  ...(pressing
+                    ? { animation: "pressGrow 1100ms cubic-bezier(.19,1,.22,1) forwards" }
+                    : {}),
                 }}
-                onContextMenu={(e) => e.preventDefault()}  // ✅ avoid long-press context menu
-                
+                onContextMenu={(e) => e.preventDefault()}
                 className={`group relative mt-10 inline-flex items-center justify-center
   h-14 w-14 rounded-full
   ring-1 ring-white/30 hover:ring-white/60
@@ -449,48 +449,43 @@ if (menuOpenRef.current) { tryPlay(v); return; }
   transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
   will-change-transform
   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent
-  ${isLongPress
-    ? "scale-[1.4] animate-none ring-2 ring-white/60"
-    : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
-  }
+  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+  ${isLongPress ? "ring-2 ring-white/60" : ""}
+  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
 `}
-
-            
               >
-{/* Soft glowing dot */}
-<div
-  className={`
+                {/* Soft glowing dot */}
+                <div
+                  className={`
     relative h-2.5 w-2.5 rounded-full bg-white/95
     shadow-[0_0_8px_rgba(255,255,255,0.6)]
-    transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
-    ${isLongPress ? "scale-150" : ""}
-    ${showArrow ? "opacity-0" : "opacity-100"}
+    transition-opacity duration-300
+    ${(!isLongPress && showArrow) ? "opacity-0" : "opacity-100"}
     group-hover:opacity-0
   `}
-></div>
+                  style={pressing ? { animation: "dotGrow 1100ms cubic-bezier(.19,1,.22,1) forwards" } : {}}
+                ></div>
 
-{/* Chevron */}
-<svg
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  aria-hidden="true"
-  className={`absolute z-10 transition-all duration-500
+                {/* Chevron */}
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className={`absolute z-10 transition-all duration-500
     ${(!isLongPress && showArrow) ? "opacity-100 translate-y-[2px]" : "opacity-0"}  /* show on touch tap only */
     group-hover:opacity-100 group-hover:translate-y-[2px]                            /* show on hover */
   `}
->
-  <path
-    d="M6 9.5 L12 15.5 L18 9.5"
-    fill="none"
-    stroke="white"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  />
-</svg>
-
+                >
+                  <path
+                    d="M6 9.5 L12 15.5 L18 9.5"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -619,6 +614,21 @@ if (menuOpenRef.current) { tryPlay(v); return; }
           </p>
         </div>
       </section>
+
+      {/* 🎯 Keyframes for the build-up press (scoped to this page) */}
+      <style jsx>{`
+        @keyframes pressGrow {
+          0%   { transform: scale(1); }
+          30%  { transform: scale(1.12); }
+          60%  { transform: scale(1.26); }
+          100% { transform: scale(1.4); } /* final size */
+        }
+        @keyframes dotGrow {
+          0%   { transform: scale(1); }
+          60%  { transform: scale(1.25); }
+          100% { transform: scale(1.5); }
+        }
+      `}</style>
     </div>
   );
 }
