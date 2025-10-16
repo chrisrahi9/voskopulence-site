@@ -112,50 +112,61 @@ export default function Home() {
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
 
-  // --- Video setup (HLS with MP4 fallback)
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
+ // --- Video setup (HLS with MP4 fallback)
+useEffect(() => {
+  const v = videoRef.current;
+  if (!v) return;
 
-    const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const MP4_SRC = asset("/hero_web.mp4");
-    const POSTER = asset("/hero_poster.jpg");
+  const HLS_SRC = asset("/hero_hls/master.m3u8");
+  const MP4_SRC = asset("/hero_web.mp4");
+  const POSTER = asset("/hero_poster.jpg");
 
-    v.poster = POSTER;
+  v.poster = POSTER;
 
-    let destroyed = false;
+  let destroyed = false;
 
-    const setup = async () => {
-      // Native HLS (Safari/iOS)
-      if (v.canPlayType("application/vnd.apple.mpegurl")) {
-        v.src = HLS_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
+  const setup = async () => {
+    // Prefer MP4 on iOS for crisp quality (Safari native HLS ABR can stick low)
+    const isIOS =
+      /iP(hone|od|ad)/.test(navigator.platform) ||
+      (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
+
+    if (isIOS) {
+      v.src = MP4_SRC;              // <-- point this MP4 to your 1080p encode
+      try { v.load(); } catch {}
+      tryPlay(v);
+      return;
+    }
+
+    // Non-iOS Safari that supports native HLS
+    if (v.canPlayType("application/vnd.apple.mpegurl")) {
+      v.src = HLS_SRC;
+      try { v.load(); } catch {}
+      tryPlay(v);
+      return;
+    }
+
+
 
       // Other browsers: hls.js
       try {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
-         const hls = new Hls({
-  capLevelToPlayerSize: true,
-  startLevel: -1,
-  maxBufferLength: 10,
-  maxMaxBufferLength: 20,
-  backBufferLength: 0,
-  enableWorker: true,
-  fragLoadingRetryDelay: 500,
-  fragLoadingMaxRetry: 3,
-});
-
-// Set non-typed config after creation (works even if typings don’t include it)
-// @ts-expect-error – not in our local typings
-hls.config.maxInitialBitrate = 2_500_000;  // ~2.5 Mbps
-
-
+          const hls = new Hls({
+            capLevelToPlayerSize: true,
+            startLevel: -1,
+            maxBufferLength: 10,
+            maxMaxBufferLength: 20,
+            backBufferLength: 0,
+            enableWorker: true,
+            fragLoadingRetryDelay: 500,
+            fragLoadingMaxRetry: 3,
+          });
+          
+          // Set non-typed config after creation (works even if typings don’t include it)
+          // @ts-expect-error – not in our local typings
+          hls.config.maxInitialBitrate = 2_500_000;  // ~2.5 Mbps
+          
           hlsRef.current = hls;
 
           hls.attachMedia(v);
@@ -166,16 +177,21 @@ hls.config.maxInitialBitrate = 2_500_000;  // ~2.5 Mbps
           // If connection seems fast, bias toward a mid/high level (once)
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
-              const conn: any = (navigator as any).connection;
-              const fast =
-                !!conn && (conn.downlink >= 5 || !["slow-2g", "2g", "3g"].includes(conn.effectiveType));
-              if (fast && hls.levels?.length) {
-                const idx = hls.levels.findIndex((lvl) => lvl.width >= 1280);
-                hls.currentLevel = idx >= 0 ? idx : hls.levels.length - 1;
+              if (hls.levels?.length) {
+                // Prefer the 1080p rendition (height >= 1080 OR name contains "1080")
+                const lvls = hls.levels;
+                let pick = lvls.findIndex(l => (l.height ?? 0) >= 1080);
+                if (pick < 0) pick = lvls.findIndex(l => /1080/i.test(l.name ?? ""));
+                if (pick < 0) pick = lvls.length - 1; // fallback to highest
+                hls.currentLevel = pick;
+          
+                // After 3s, give ABR control back (optional)
+                setTimeout(() => { hls.loadLevel = -1; }, 3000);
               }
             } catch {}
             if (!destroyed) tryPlay(v);
           });
+          
 
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
@@ -400,15 +416,15 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                   userSelect: "none",
                 }}
                 className={`group relative mt-10 inline-flex items-center justify-center
-                  h-14 w-14 rounded-full
-                  ring-1 ring-white/30 hover:ring-white/60
-                  bg-white/10 hover:bg-white/10
-                  backdrop-blur-[3px]
-                  transition-all duration-300 will-change-transform
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-                  animate-[pulse-smooth_2.6s_ease-in-out_infinite]
-                  ${isLongPress ? "scale-[1.06]" : ""}  /* grow on long-press */
-                `}
+  h-14 w-14 rounded-full
+  ring-1 ring-white/30 hover:ring-white/60
+  bg-white/10 hover:bg-white/10
+  backdrop-blur-[3px]
+  transition-transform duration-300 will-change-transform
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+  ${isLongPress ? "scale-[1.08] animate-none" : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"}
+`}
+
               >
 {/* Soft glowing dot */}
 <div
