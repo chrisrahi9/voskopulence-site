@@ -216,7 +216,7 @@ const scrollDown = () => {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
      {/* =================== NAVBAR =================== */}
-<header className="fixed top-0 z-50 w-full text-white/95">
+<header className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]">
   {/* Smooth single-layer background (punchy + frosted) */}
   <div
     className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease] will-change-[opacity] backdrop-blur-md backdrop-saturate-150"
