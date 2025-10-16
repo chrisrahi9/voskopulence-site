@@ -226,6 +226,11 @@ useEffect(() => {
     const onCanPlay = () => { if (v.paused) tryPlay(v); };
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
+      // ✅ Fade in when video starts playing
+  v.addEventListener("playing", () => {
+    v.style.opacity = "1";
+  });
+
 
     const onVis = () =>
       document.visibilityState === "visible" ? tryPlay(v) : v.pause();
@@ -368,23 +373,31 @@ if (menuOpenRef.current) { tryPlay(v); return; }
     filter: "brightness(0.9)",
   }}
 />
+{/* Static fallback poster background (shows instantly before video starts) */}
+<div
+  className="absolute inset-0 bg-cover bg-center"
+  style={{
+    backgroundImage: `url(${asset("/hero_poster.jpg")})`,
+    filter: "brightness(0.9)",
+  }}
+/>
 
-            <video
-              ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover"
-              poster={asset("/hero_poster.jpg")}
-              autoPlay
-              muted
-              playsInline
-              // @ts-ignore
-              webkit-playsinline="true"
-              loop
-              preload="metadata"
-              aria-hidden="true"
-              // @ts-ignore
-              disablePictureInPicture
-              controlsList="nodownload noplaybackrate"
-            />
+<video
+  ref={videoRef}
+  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
+  poster={asset("/hero_poster.jpg")}
+  autoPlay
+  muted
+  playsInline
+  // @ts-ignore
+  webkit-playsinline="true"
+  loop
+  preload="metadata"
+  aria-hidden="true"
+  disablePictureInPicture
+  controlsList="nodownload noplaybackrate"
+/>
+
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
             {/* Bottom gradient (also rides the extra 12px) */}
