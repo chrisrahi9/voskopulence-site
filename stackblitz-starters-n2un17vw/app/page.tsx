@@ -101,6 +101,7 @@ export default function Home() {
     return () => root.classList.remove("overflow-hidden");
   }, [menuOpen]);
 
+
   const tryPlay = (v: HTMLVideoElement | null) => {
     if (!v) return;
     v.muted = true;
@@ -140,14 +141,14 @@ export default function Home() {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
           const hls = new Hls({
-            capLevelToPlayerSize: true, // match video size
-            startLevel: -1,             // auto start-quality (not forced 360p)
-            maxInitialPlaylistBitrate: 2500000, // ~2.5 Mbps initial pick
+            capLevelToPlayerSize: true,             // match video size
+            startLevel: -1,                         // auto start-quality (not forced 360p)
+            maxInitialPlaylistBitrate: 2500000,     // ~2.5 Mbps initial pick
             maxBufferLength: 10,
             maxMaxBufferLength: 20,
             backBufferLength: 0,
-            enableWorker: true,         // decode in a worker
-            fragLoadingRetryDelay: 500, // retry on network stalls
+            enableWorker: true,                     // decode in a worker
+            fragLoadingRetryDelay: 500,             // retry on network stalls
             fragLoadingMaxRetry: 3,
           });
           hlsRef.current = hls;
@@ -173,14 +174,10 @@ export default function Home() {
 
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
-              try {
-                hls.destroy();
-              } catch {}
+              try { hls.destroy(); } catch {}
               hlsRef.current = null;
               v.src = MP4_SRC;
-              try {
-                v.load();
-              } catch {}
+              try { v.load(); } catch {}
               tryPlay(v);
             }
           });
@@ -200,14 +197,12 @@ export default function Home() {
 
     setup();
 
-    // 🚫 Remove event handlers that can forcibly restart the video under overlays
+    // 🚫 Removed handlers that could restart under overlays
     // v.addEventListener('waiting', () => { v.play().catch(() => {}); });
     // v.addEventListener('stalled', () => { v.load(); tryPlay(v); });
 
     const onLoaded = () => tryPlay(v);
-    const onCanPlay = () => {
-      if (v.paused) tryPlay(v);
-    };
+    const onCanPlay = () => { if (v.paused) tryPlay(v); };
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
 
@@ -217,18 +212,15 @@ export default function Home() {
 
     const io = new IntersectionObserver(
       ([e]) => {
-        // keep playing when the curtain menu is open (avoid pause/restart glitch)
-        if (menuOpenRef.current) {
-          tryPlay(v);
-          return;
-        }
+// keep playing under the curtain (no pauses, no restarts)
+if (menuOpenRef.current) { tryPlay(v); return; }
+
         // otherwise: play only if at least a sliver is visible
         if (e.intersectionRatio > 0.03) tryPlay(v);
         else v.pause();
       },
       { threshold: [0, 0.01, 0.02, 0.03, 0.1, 0.25, 0.5, 1] }
     );
-
     io.observe(v);
 
     return () => {
@@ -238,9 +230,7 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
+        try { hlsRef.current.destroy(); } catch {}
         hlsRef.current = null;
       }
     };
@@ -307,18 +297,29 @@ export default function Home() {
       {/* ===== Mobile curtain menu ===== */}
       <div
         id="mobile-menu"
-        className={`fixed inset-0 z-[200] lg:hidden transition-opacity duration-200 ${
-          menuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-[200] lg:hidden transition-opacity duration-200
+          [will-change:opacity]
+          ${menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
+        `}
         role="dialog"
         aria-modal="true"
         aria-hidden={!menuOpen}
       >
         {/* Frosted backdrop */}
         <div
-          className="absolute inset-0 bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-          onClick={() => setMenuOpen(false)}
-        />
+  className="absolute inset-0
+    bg-[#004642]/85                           /* darker */
+    supports-[backdrop-filter]:bg-[#004642]/70
+    backdrop-blur-2xl backdrop-saturate-150   /* stronger diffuse */
+    transform-gpu [will-change:opacity]
+    [transition:opacity_200ms_ease]"
+  onClick={() => setMenuOpen(false)}
+/>
+{/* optional subtle vignette for extra depth */}
+<div className="absolute inset-0 pointer-events-none
+  bg-[radial-gradient(ellipse_at_center,transparent_42%,rgba(0,0,0,0.28)_100%)]"
+/>
+
         {/* Menu content */}
         <div className="relative z-10 flex flex-col h-full text-white">
           <div className="flex items-center justify-between h-[64px] px-4">
@@ -414,35 +415,38 @@ export default function Home() {
                   ${isLongPress ? "scale-[1.06]" : ""}  /* grow on long-press */
                 `}
               >
-                {/* Soft glowing dot */}
-                <div
-                  className={`relative h-2.5 w-2.5 rounded-full bg-white/95
-                    shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                    transition-all duration-500
-                    ${showArrow ? "opacity-0" : "opacity-100"}
-                    ${isLongPress ? "scale-110" : ""}
-                  `}
-                />
+{/* Soft glowing dot */}
+<div
+  className={`relative h-2.5 w-2.5 rounded-full bg-white/95
+    shadow-[0_0_8px_rgba(255,255,255,0.6)]
+    transition-all duration-500
+    ${(!isLongPress && showArrow) ? "opacity-0" : ""}  /* hide on touch tap */
+    group-hover:opacity-0                               /* hide on hover */
+    ${isLongPress ? "scale-110" : ""}                   /* tiny enlarge on long press */
+  `}
+/>
 
-                {/* Chevron */}
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  className={`absolute transition-all duration-500
-                    ${showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                  `}
-                >
-                  <path
-                    d="M6 9.5 L12 15.5 L18 9.5"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+{/* Chevron */}
+<svg
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  aria-hidden="true"
+  className={`absolute z-10 transition-all duration-500
+    ${(!isLongPress && showArrow) ? "opacity-100 translate-y-[2px]" : "opacity-0"}  /* show on touch tap only */
+    group-hover:opacity-100 group-hover:translate-y-[2px]                            /* show on hover */
+  `}
+>
+  <path
+    d="M6 9.5 L12 15.5 L18 9.5"
+    fill="none"
+    stroke="white"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
+</svg>
+
               </button>
             </div>
           </div>
