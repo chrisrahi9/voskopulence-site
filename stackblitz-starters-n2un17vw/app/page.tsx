@@ -422,9 +422,11 @@ if (menuOpenRef.current) { tryPlay(v); return; }
   backdrop-blur-[3px]
   transition-transform duration-300 will-change-transform
   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-  ${isLongPress ? "scale-[1.08] animate-none" : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"}
+  ${isLongPress
+    ? "scale-[1.25] animate-none ring-2 ring-white/60" // noticeable grow + stronger ring
+    : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
+  }
 `}
-
               >
 {/* Soft glowing dot */}
 <div
