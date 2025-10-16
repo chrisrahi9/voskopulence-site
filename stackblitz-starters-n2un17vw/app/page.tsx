@@ -437,7 +437,7 @@ export default function Home() {
                   touchAction: "none",
                   // ✅ silky build-up while finger is down
                   ...(pressing
-                    ? { animation: "pressGrow 1100ms cubic-bezier(.19,1,.22,1) forwards" }
+                    ? { animation: "pressGrow 1400ms cubic-bezier(.22,1,.36,1) forwards" }
                     : {}),
                 }}
                 onContextMenu={(e) => e.preventDefault()}
@@ -463,7 +463,8 @@ export default function Home() {
     ${(!isLongPress && showArrow) ? "opacity-0" : "opacity-100"}
     group-hover:opacity-0
   `}
-                  style={pressing ? { animation: "dotGrow 1100ms cubic-bezier(.19,1,.22,1) forwards" } : {}}
+  style={pressing ? { animation: "dotGrow 1400ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+
                 ></div>
 
                 {/* Chevron */}
@@ -617,18 +618,19 @@ export default function Home() {
 
       {/* 🎯 Keyframes for the build-up press (scoped to this page) */}
       <style jsx>{`
-        @keyframes pressGrow {
-          0%   { transform: scale(1); }
-          30%  { transform: scale(1.12); }
-          60%  { transform: scale(1.26); }
-          100% { transform: scale(1.4); } /* final size */
-        }
-        @keyframes dotGrow {
-          0%   { transform: scale(1); }
-          60%  { transform: scale(1.25); }
-          100% { transform: scale(1.6); }
-        }
-      `}</style>
+  /* Smooth continuous growth */
+  @keyframes pressGrow {
+    from { transform: scale(1); }
+    to   { transform: scale(1.4); } /* set your final size here */
+  }
+
+  /* Dot swells smoothly too */
+  @keyframes dotGrow {
+    from { transform: scale(1); }
+    to   { transform: scale(1.6); }
+  }
+`}</style>
+
     </div>
   );
 }
