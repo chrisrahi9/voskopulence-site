@@ -388,32 +388,46 @@ useEffect(() => {
 {/* ===== Mobile curtain menu ===== */}
 <div
   id="mobile-menu"
-  className={`fixed left-0 top-0 w-screen h-[100lvh] z-[200] lg:hidden overscroll-contain
+  className={`fixed left-0 top-0 w-screen
+    h-[calc(100dvh+env(safe-area-inset-bottom))]
+    -mb-[env(safe-area-inset-bottom)]
+    z-[200] lg:hidden overscroll-contain
     ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
   `}
   role="dialog"
   aria-modal="true"
   aria-hidden={!menuOpen}
 >
-
-  {/* Frosted backdrop (same color/blur; only this fades) */}
+  {/* Frosted backdrop (same color/blur; fades only this) */}
   <div
-  className={`absolute left-0 top-0 w-screen h-[100lvh]
-    bg-[#004642]/75
-    backdrop-blur-xl
-    supports-[backdrop-filter]:bg-[#004642]/60
-    transform-gpu contain-paint
-    transition-opacity duration-200
-    ${menuOpen ? "opacity-100" : "opacity-0"}
-  `}
-  onClick={() => setMenuOpen(false)}
-/>
+    className={`fixed left-0 top-0 w-screen
+      h-[calc(100dvh+env(safe-area-inset-bottom))]
+      -mb-[env(safe-area-inset-bottom)]
+      bg-[#004642]/75
+      backdrop-blur-xl
+      supports-[backdrop-filter]:bg-[#004642]/60
+      transform-gpu contain-paint
+      transition-opacity duration-200
+      ${menuOpen ? "opacity-100" : "opacity-0"}
+    `}
+    onClick={() => setMenuOpen(false)}
+  />
 
-  {/* Safe-area fillers so blur/color extend under iOS bars */}
-  <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
-  <div className="absolute inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
+  {/* Safe-area fillers so the blur/color extend under iOS bars */}
+  <div
+    className={`fixed inset-x-0 top-0 h-[env(safe-area-inset-top)]
+      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
+      pointer-events-none transition-opacity duration-200
+      ${menuOpen ? "opacity-100" : "opacity-0"}
+    `}
+  />
+  <div
+    className={`fixed inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
+      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
+      pointer-events-none transition-opacity duration-200
+      ${menuOpen ? "opacity-100" : "opacity-0"}
+    `}
+  />
 
   {/* Menu content (fade + subtle slide, with safe-area padding) */}
   <div
@@ -444,8 +458,6 @@ useEffect(() => {
     </nav>
   </div>
 </div>
-
-
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
