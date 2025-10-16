@@ -626,7 +626,7 @@ export default function Home() {
         @keyframes dotGrow {
           0%   { transform: scale(1); }
           60%  { transform: scale(1.25); }
-          100% { transform: scale(1.5); }
+          100% { transform: scale(1.6); }
         }
       `}</style>
     </div>
