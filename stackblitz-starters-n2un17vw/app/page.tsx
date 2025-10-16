@@ -154,7 +154,74 @@ export default function Home() {
         tryPlay(v);
         return;
       }
-
+      useEffect(() => {
+        // Only on touch devices
+        if (!isTouch) return;
+      
+        let startX = 0, startY = 0, tracking = false, openedFromEdge = false;
+      
+        const onStart = (e: TouchEvent) => {
+          const t = e.touches[0];
+          startX = t.clientX;
+          startY = t.clientY;
+      
+          // Begin tracking only if we're at left edge (to open) OR menu is already open (to close)
+          openedFromEdge = !menuOpen && startX <= 24;    // 24px left edge
+          tracking = openedFromEdge || menuOpen;
+        };
+      
+        const onMove = (e: TouchEvent) => {
+          if (!tracking) return;
+          const t = e.touches[0];
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+      
+          // If vertical movement dominates, bail (let page scroll)
+          if (Math.abs(dy) > Math.abs(dx) + 10) {
+            tracking = false;
+            return;
+          }
+      
+          // When starting from edge, prevent accidental pull-to-refresh / horizontal scroll
+          if (openedFromEdge) {
+            // Keep it smooth; don’t spam preventDefault unless actually needed
+            if (Math.abs(dx) > 10 && Math.abs(dy) < 40) {
+              e.preventDefault();
+            }
+          }
+        };
+      
+        const onEnd = (e: TouchEvent) => {
+          if (!tracking) return;
+          // Use changedTouches if available (iOS)
+          const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+          if (!t) { tracking = false; return; }
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+      
+          const horizontal = Math.abs(dx) >= 70 && Math.abs(dy) <= 40;  // threshold tuning
+      
+          if (!menuOpen && openedFromEdge && horizontal && dx > 0) {
+            setMenuOpen(true);     // swipe right from edge → open
+          } else if (menuOpen && horizontal && dx < 0) {
+            setMenuOpen(false);    // swipe left while open → close
+          }
+      
+          tracking = false;
+        };
+      
+        // Passive false on move so we *can* preventDefault when needed
+        window.addEventListener("touchstart", onStart, { passive: true });
+        window.addEventListener("touchmove", onMove, { passive: false });
+        window.addEventListener("touchend", onEnd, { passive: true });
+      
+        return () => {
+          window.removeEventListener("touchstart", onStart as any);
+          window.removeEventListener("touchmove", onMove as any);
+          window.removeEventListener("touchend", onEnd as any);
+        };
+      }, [menuOpen]);
+      
       // Native HLS (non-iOS Safari)
       if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = HLS_SRC;
