@@ -1,44 +1,19 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-// Gate touch-only handlers (desktop uses simple click) — SSR-safe
+// Gate touch-only handlers (desktop uses simple click)
 const isTouch =
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(hover: none)").matches;
+  typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  // --- Fix iOS viewport height so curtain covers the whole screen ---
-useEffect(() => {
-  const setVh = () => {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty("--app-vh", `${vh}px`);
-  };
-  setVh();
-  window.addEventListener("resize", setVh);
-  window.addEventListener("orientationchange", setVh);
-  return () => {
-    window.removeEventListener("resize", setVh);
-    window.removeEventListener("orientationchange", setVh);
-  };
-}, []);
-
-  // ✅ portal guard must be INSIDE the component
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
-  
+
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
@@ -410,7 +385,7 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu (portal) ===== */}
+{/* ===== Mobile curtain menu ===== */}
 <div
   id="mobile-menu"
   className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
