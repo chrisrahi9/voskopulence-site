@@ -437,7 +437,7 @@ export default function Home() {
                   touchAction: "none",
                   // ✅ silky build-up while finger is down
                   ...(pressing
-                    ? { animation: "pressGrow 1400ms cubic-bezier(.22,1,.36,1) forwards" }
+                    ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
                     : {}),
                 }}
                 onContextMenu={(e) => e.preventDefault()}
@@ -463,7 +463,7 @@ export default function Home() {
     ${(!isLongPress && showArrow) ? "opacity-0" : "opacity-100"}
     group-hover:opacity-0
   `}
-  style={pressing ? { animation: "dotGrow 1400ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
 
                 ></div>
 
