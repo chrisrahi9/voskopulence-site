@@ -129,7 +129,7 @@ useEffect(() => {
     startX = t.clientX;
     startY = t.clientY;
     // arm only if starting at left edge to open, or if menu is open (to close)
-    openedFromEdge = !menuOpen && startX <= 24;   // 24px edge
+    openedFromEdge = !menuOpen && startX <= 50;   // 24px edge
     tracking = openedFromEdge || menuOpen;
   };
 
@@ -157,7 +157,7 @@ useEffect(() => {
 
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
-    const horizontalEnough = Math.abs(dx) >= 70 && Math.abs(dy) <= 40;
+    const horizontalEnough = Math.abs(dx) >= 45 && Math.abs(dy) <= 50;
 
     if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0) {
       setMenuOpen(true);     // swipe right from edge → open
