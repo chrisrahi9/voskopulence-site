@@ -411,78 +411,65 @@ useEffect(() => {
         </div>
       </header>
 {/* ===== Mobile curtain menu (portal) ===== */}
-{mounted &&
-  createPortal(
-    <aside
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className="lg:hidden z-[200]"
-    >
-      {/* Curtain (same look as before; ONE layer) */}
-      <div
-        className={`fixed left-0 top-0 w-screen
-          bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
-          transition-opacity duration-200
-          ${menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
-        `}
-        // full height using iOS-safe variable
-        style={{ height: "calc(var(--app-vh, 1vh) * 100)" }}
+<div
+  id="mobile-menu"
+  className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
+    ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
+  `}
+  role="dialog"
+  aria-modal="true"
+  aria-hidden={!menuOpen}
+>
+  {/* Frosted backdrop (same color/blur; only this fades) */}
+  <div
+    className={`absolute inset-0
+      bg-[#004642]/75
+      backdrop-blur-xl
+      supports-[backdrop-filter]:bg-[#004642]/60
+      transform-gpu contain-paint
+      transition-opacity duration-200
+      ${menuOpen ? "opacity-100" : "opacity-0"}
+    `}
+    onClick={() => setMenuOpen(false)}
+  />
+
+  {/* Safe-area fillers so blur/color extend under iOS bars */}
+  <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]
+    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
+  <div className="absolute inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
+    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
+
+  {/* Menu content (fade + subtle slide, with safe-area padding) */}
+  <div
+    className={`relative z-10 flex flex-col h-full
+      pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+      text-white transition-all duration-200
+      ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
+    `}
+  >
+    <div className="flex items-center justify-between h-[64px] px-4">
+      <span className="font-semibold">Menu</span>
+      <button
+        className="p-2 rounded-md hover:bg-white/10"
+        aria-label="Close menu"
         onClick={() => setMenuOpen(false)}
-      />
-
-      {/* Safe-area fillers so tint/blur go under iOS bars */}
-      <div
-        className={`fixed inset-x-0 top-0
-          bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
-          transition-opacity duration-200 pointer-events-none
-          ${menuOpen ? "opacity-100" : "opacity-0"}
-        `}
-        style={{ height: "env(safe-area-inset-top)" }}
-      />
-      <div
-        className={`fixed inset-x-0 bottom-0
-          bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60
-          transition-opacity duration-200 pointer-events-none
-          ${menuOpen ? "opacity-100" : "opacity-0"}
-        `}
-        style={{ height: "env(safe-area-inset-bottom)" }}
-      />
-
-      {/* Menu content */}
-      <div
-        className={`fixed left-0 top-0 w-screen z-10 flex flex-col text-white
-          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-          transition-all duration-200
-          ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}
-        `}
-        style={{ height: "calc(var(--app-vh, 1vh) * 100)" }}
       >
-        <div className="flex items-center justify-between h-[64px] px-4">
-          <span className="font-semibold">Menu</span>
-          <button
-            className="p-2 rounded-md hover:bg-white/10"
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
 
-        <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-          <a href="/shop"           onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-          <a href="#about"          onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-          <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-          <a href="/contact"        onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
-        </nav>
-      </div>
-    </aside>,
-    document.body
-  )
-}
+    <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
+      <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
+      <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
+      <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
+      <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
+    </nav>
+  </div>
+</div>
+
+
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
