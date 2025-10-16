@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -13,7 +16,10 @@ useEffect(() => setMounted(true), []);
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
-  typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(hover: none)").matches;
+
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
