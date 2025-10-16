@@ -360,6 +360,15 @@ if (menuOpenRef.current) { tryPlay(v); return; }
         <div className="relative h-[96svh] md:h-[96svh] lg:h-[96dvh]">
           {/* This wrapper is 12px taller than the hero, so it extends below it */}
           <div className="absolute inset-x-0 top-0 -bottom-[16px]">
+            {/* Static fallback poster background (instant paint before video loads) */}
+<div
+  className="absolute inset-0 bg-cover bg-center"
+  style={{
+    backgroundImage: `url(${asset("/hero_poster.jpg")})`,
+    filter: "brightness(0.9)",
+  }}
+/>
+
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover"
@@ -419,7 +428,7 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                 }}
                 onContextMenu={(e) => e.preventDefault()}  // ✅ avoid long-press context menu
                 
-className={`group relative mt-10 inline-flex items-center justify-center
+                className={`group relative mt-10 inline-flex items-center justify-center
   h-14 w-14 rounded-full
   ring-1 ring-white/30 hover:ring-white/60
   bg-white/10 hover:bg-white/10
@@ -429,7 +438,7 @@ className={`group relative mt-10 inline-flex items-center justify-center
   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
   before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent
   ${isLongPress
-    ? "scale-[1.35] animate-none ring-2 ring-white/60"
+    ? "scale-[1.4] animate-none ring-2 ring-white/60"
     : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
   }
 `}
