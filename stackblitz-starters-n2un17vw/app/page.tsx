@@ -416,34 +416,31 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                   userSelect: "none",
                 }}
                 className={`group relative mt-10 inline-flex items-center justify-center
-  h-14 w-14 rounded-full
-  ring-1 ring-white/30 hover:ring-white/60
-  bg-white/10 hover:bg-white/10
-  backdrop-blur-[3px]
-  transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)]  /* smooth, premium ease */
-  will-change-transform
-  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-  ${isLongPress
-    ? "scale-[1.35] animate-none ring-2 ring-white/60"  /* 35% bigger */
-    : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
-  }
-`}
-
-
-
+                h-14 w-14 rounded-full
+                ring-1 ring-white/30 hover:ring-white/60
+                bg-white/10 hover:bg-white/10
+                backdrop-blur-[3px]
+                transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]  /* slower, luxury ease */
+                will-change-transform
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+                ${isLongPress
+                  ? "scale-[1.35] animate-none ring-2 ring-white/60"
+                  : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
+                }
+              `}
+            
               >
 {/* Soft glowing dot */}
 <div
   className={`
     relative h-2.5 w-2.5 rounded-full bg-white/95
     shadow-[0_0_8px_rgba(255,255,255,0.6)]
-    transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)]
-    ${isLongPress ? "scale-150" : ""}               /* dot grows inside */
+    transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
+    ${isLongPress ? "scale-150" : ""}
     ${showArrow ? "opacity-0" : "opacity-100"}
     group-hover:opacity-0
   `}
-/>
-
+></div>
 
 {/* Chevron */}
 <svg
