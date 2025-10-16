@@ -1,7 +1,7 @@
 "use client";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = false; // or 0 if you prefer
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -10,21 +10,20 @@ import { createPortal } from "react-dom";
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-//Related to curtain covering whole iphone screen
-const [mounted, setMounted] = useState(false);
-useEffect(() => setMounted(true), []);
-
-// Gate touch-only handlers (desktop uses simple click)
+// Gate touch-only handlers (desktop uses simple click) — SSR-safe
 const isTouch =
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
   window.matchMedia("(hover: none)").matches;
 
-
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
-
+  
+// ✅ portal guard must be INSIDE the component
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
