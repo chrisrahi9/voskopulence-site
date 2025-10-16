@@ -318,7 +318,7 @@ const scrollDown = () => {
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
-      <div className="relative h-[96vh] md:h-[96svh] lg:h-[96dvh]">
+      <div className="relative h-[96svh] md:h-[96svh] lg:h-[96dvh]">
 {/* This wrapper is 12px taller than the hero, so it extends below it */}
 <div className="absolute inset-x-0 top-0 -bottom-[16px]">
   <video
