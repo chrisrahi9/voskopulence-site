@@ -17,12 +17,13 @@ const isTouch =
   window.matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<any>(null);
   
-// ✅ portal guard must be INSIDE the component
+  // ✅ portal guard must be INSIDE the component
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<any>(null);
   
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
