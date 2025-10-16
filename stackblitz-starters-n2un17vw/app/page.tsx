@@ -385,19 +385,19 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu ===== */}
+{/* ===== Mobile curtain menu (fixed + 100dvh, same color/blur) ===== */}
 <div
   id="mobile-menu"
-  className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
+  className={`fixed inset-0 z-[999] lg:hidden overscroll-contain
     ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
   `}
   role="dialog"
   aria-modal="true"
   aria-hidden={!menuOpen}
 >
-  {/* Frosted backdrop (same color/blur; only this fades) */}
+  {/* Frosted backdrop — EXACT same color/blur, but fixed + 100dvh */}
   <div
-    className={`absolute inset-0
+    className={`fixed left-0 top-0 w-screen h-[100dvh]
       bg-[#004642]/75
       backdrop-blur-xl
       supports-[backdrop-filter]:bg-[#004642]/60
@@ -408,15 +408,17 @@ useEffect(() => {
     onClick={() => setMenuOpen(false)}
   />
 
-  {/* Safe-area fillers so blur/color extend under iOS bars */}
-  <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
-  <div className="absolute inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
+  {/* Safe-area fillers so blur/color extend under iOS bars (fixed) */}
+  <div className="fixed left-0 right-0 top-0 h-[env(safe-area-inset-top)]
     bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
 
-  {/* Menu content (fade + subtle slide, with safe-area padding) */}
+  <div className="fixed left-0 right-0 bottom-0 h-[env(safe-area-inset-bottom)]
+    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
+
+  {/* Menu content — fixed + min-h[100dvh] so it spans full viewport */}
   <div
-    className={`relative z-10 flex flex-col h-full
+    className={`fixed inset-0 z-10 flex flex-col
+      min-h-[100dvh]
       pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
       text-white transition-all duration-200
       ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
@@ -443,8 +445,6 @@ useEffect(() => {
     </nav>
   </div>
 </div>
-
-
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
