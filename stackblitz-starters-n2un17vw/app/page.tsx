@@ -413,83 +413,74 @@ useEffect(() => {
 {/* ===== Mobile curtain menu (portal) ===== */}
 {mounted &&
   createPortal(
-    <div
+    <aside
       id="mobile-menu"
-      className={`fixed left-0 top-0 w-screen z-[200] lg:hidden overscroll-contain
-        ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
-      `}
       role="dialog"
       aria-modal="true"
       aria-hidden={!menuOpen}
-      // Use the robust height, not vh
-      style={{ height: "calc(var(--app-vh, 1vh) * 100)" }}
+      className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
+        ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
+      `}
     >
-      {/* Base color layer (masks edge gaps); same tone as your backdrop */}
+      {/* 1) Base color layer (click to close) */}
       <div
         className={`fixed left-0 top-0 w-screen transition-opacity duration-200
-          ${menuOpen ? "opacity-100" : "opacity-0"}
+          ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
         `}
         style={{
-          height: "calc(var(--app-vh, 1vh) * 100)",
-          backgroundColor: "#004642",
-          opacity: 0.75
+          height: "calc(var(--app-vh, 1vh) * 100)",             // full iOS height
+          backgroundColor: "rgba(0, 70, 66, 0.75)",             // your tone w/ alpha
         }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Frosted backdrop (keeps your blur/look) */}
+      {/* 2) Frosted blur layer (same fade, sits above color) */}
       <div
-        className={`fixed left-0 top-0 w-screen
-          transform-gpu contain-paint transition-opacity duration-200
-          ${menuOpen ? "opacity-100" : "opacity-0"}
+        className={`fixed left-0 top-0 w-screen transform-gpu contain-paint transition-opacity duration-200
+          ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
         `}
         style={{
           height: "calc(var(--app-vh, 1vh) * 100)",
-          // keep your exact blur + fallback tint
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          backgroundColor: "color-mix(in srgb, #004642 60%, transparent)" // Safari fallback (≈ your supports[...] class)
+          // subtle tint fallback for no-blur browsers
+          backgroundColor: "rgba(0, 70, 66, 0.6)",
         }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Safe-area fillers so color/blur extend under iOS bars */}
+      {/* 3) Safe-area fillers so tint/blur extend under iOS bars */}
       <div
-        className={`fixed inset-x-0 top-0 transition-opacity duration-200 pointer-events-none
-          ${menuOpen ? "opacity-100" : "opacity-0"}
+        className={`fixed inset-x-0 top-0 pointer-events-none transition-opacity duration-200
+          ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
         `}
         style={{
           height: "env(safe-area-inset-top)",
-          backgroundColor: "#004642",
-          opacity: 0.75,
+          backgroundColor: "rgba(0, 70, 66, 0.75)",
           backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)"
+          WebkitBackdropFilter: "blur(24px)",
         }}
       />
       <div
-        className={`fixed inset-x-0 bottom-0 transition-opacity duration-200 pointer-events-none
-          ${menuOpen ? "opacity-100" : "opacity-0"}
+        className={`fixed inset-x-0 bottom-0 pointer-events-none transition-opacity duration-200
+          ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
         `}
         style={{
           height: "env(safe-area-inset-bottom)",
-          backgroundColor: "#004642",
-          opacity: 0.75,
+          backgroundColor: "rgba(0, 70, 66, 0.75)",
           backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)"
+          WebkitBackdropFilter: "blur(24px)",
         }}
       />
 
-      {/* Menu content (fade + subtle slide; safe-area padding) */}
+      {/* 4) Menu content (safe-area padding, slight slide+fade) */}
       <div
-        className={`fixed left-0 top-0 z-10 flex flex-col
-          text-white transition-all duration-200
+        className={`fixed inset-0 z-10 flex flex-col text-white
+          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+          transition-all duration-200
           ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
         `}
-        style={{
-          height: "calc(var(--app-vh, 1vh) * 100)",
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)"
-        }}
+        style={{ height: "calc(var(--app-vh, 1vh) * 100)" }}
       >
         <div className="flex items-center justify-between h-[64px] px-4">
           <span className="font-semibold">Menu</span>
@@ -505,13 +496,13 @@ useEffect(() => {
         </div>
 
         <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-          <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-          <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-          <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-          <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
+          <a href="/shop"          onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
+          <a href="#about"         onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
+          <a href="/sustainability"onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
+          <a href="/contact"       onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
         </nav>
       </div>
-    </div>,
+    </aside>,
     document.body
   )
 }
