@@ -11,6 +11,27 @@ const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
+  // One viewport var that always equals the visible screen height on iOS
+useEffect(() => {
+  const root = document.documentElement;
+
+  // Prefer modern 100lvh when supported (no jumps with Safari UI)
+  if (typeof CSS !== "undefined" && CSS.supports?.("height: 100lvh")) {
+    root.style.setProperty("--full-vh", "100lvh");
+    return; // no listeners needed
+  }
+
+  // Fallback: compute from innerHeight
+  const set = () => root.style.setProperty("--full-vh", `${window.innerHeight}px`);
+  set();
+  window.addEventListener("resize", set);
+  window.addEventListener("orientationchange", set);
+  return () => {
+    window.removeEventListener("resize", set);
+    window.removeEventListener("orientationchange", set);
+  };
+}, []);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
@@ -385,7 +406,7 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu (fixed + 100dvh, same color/blur) ===== */}
+{/* ===== Mobile curtain menu (fixed + --full-vh) ===== */}
 <div
   id="mobile-menu"
   className={`fixed inset-0 z-[999] lg:hidden overscroll-contain
@@ -395,34 +416,40 @@ useEffect(() => {
   aria-modal="true"
   aria-hidden={!menuOpen}
 >
-  {/* Frosted backdrop — EXACT same color/blur, but fixed + 100dvh */}
+  {/* Frosted backdrop — SAME color/blur; height uses --full-vh */}
   <div
-    className={`fixed left-0 top-0 w-screen h-[100dvh]
+    className={`fixed left-0 top-0 w-screen
       bg-[#004642]/75
       backdrop-blur-xl
       supports-[backdrop-filter]:bg-[#004642]/60
       transform-gpu contain-paint
       transition-opacity duration-200
-      ${menuOpen ? "opacity-100" : "opacity-0"}
+      ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
     `}
+    style={{ height: "var(--full-vh, 100vh)" }}
     onClick={() => setMenuOpen(false)}
   />
 
-  {/* Safe-area fillers so blur/color extend under iOS bars (fixed) */}
-  <div className="fixed left-0 right-0 top-0 h-[env(safe-area-inset-top)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
-
-  <div className="fixed left-0 right-0 bottom-0 h-[env(safe-area-inset-bottom)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
-
-  {/* Menu content — fixed + min-h[100dvh] so it spans full viewport */}
+  {/* Safe-area fillers so blur/tint extend under iOS bars (fixed) */}
   <div
-    className={`fixed inset-0 z-10 flex flex-col
-      min-h-[100dvh]
+    className="fixed left-0 right-0 top-0 pointer-events-none
+      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+    style={{ height: "env(safe-area-inset-top)" }}
+  />
+  <div
+    className="fixed left-0 right-0 bottom-0 pointer-events-none
+      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+    style={{ height: "env(safe-area-inset-bottom)" }}
+  />
+
+  {/* Menu content — fixed + height var so it spans full visual viewport */}
+  <div
+    className={`fixed left-0 top-0 z-10 flex flex-col text-white
       pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-      text-white transition-all duration-200
-      ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
+      transition-all duration-200
+      ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}
     `}
+    style={{ height: "var(--full-vh, 100vh)", width: "100vw" }}
   >
     <div className="flex items-center justify-between h-[64px] px-4">
       <span className="font-semibold">Menu</span>
@@ -445,6 +472,7 @@ useEffect(() => {
     </nav>
   </div>
 </div>
+
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
