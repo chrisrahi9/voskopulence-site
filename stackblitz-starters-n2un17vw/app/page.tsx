@@ -424,7 +424,7 @@ if (menuOpenRef.current) { tryPlay(v); return; }
                 will-change-transform
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
                 ${isLongPress
-                  ? "scale-[1.35] animate-none ring-2 ring-white/60"
+                  ? "scale-[1.4] animate-none ring-2 ring-white/60"
                   : "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
                 }
               `}
