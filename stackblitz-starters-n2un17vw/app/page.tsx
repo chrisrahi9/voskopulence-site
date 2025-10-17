@@ -414,17 +414,7 @@ useEffect(() => {
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Safe-area fillers so tint/blur extend under iOS bars */}
-      <div
-        className="fixed inset-x-0 top-0 z-[1000] pointer-events-none
-                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-        style={{ height: "env(safe-area-inset-top)" }}
-      />
-      <div
-        className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none
-                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-        style={{ height: "env(safe-area-inset-bottom)" }}
-      />
+
 
       {/* Menu content */}
       <div
