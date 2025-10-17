@@ -9,22 +9,26 @@ const asset = (p: string) => `${ASSETS}${p}`;
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
-  typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  // state first
+  // 1) state first
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // keep a ref of menuOpen if you use it later
+  // 2) ref that mirrors menuOpen
   const menuOpenRef = useRef(menuOpen);
-  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
-}
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+  }, [menuOpen]);
 
-  // 3) Tint html/body while curtain is open (the effect that caused the error)
+  // 3) Tint html/body while curtain is open
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
+
     if (menuOpen) {
       html.classList.add("curtain-open");
       body.classList.add("curtain-open");
@@ -32,13 +36,12 @@ export default function Home() {
       html.classList.remove("curtain-open");
       body.classList.remove("curtain-open");
     }
+
     return () => {
       html.classList.remove("curtain-open");
       body.classList.remove("curtain-open");
     };
   }, [menuOpen]);
-
-
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
