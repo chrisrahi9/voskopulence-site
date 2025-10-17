@@ -101,9 +101,6 @@ const [scrolled, setScrolled] = useState(false);
     }, delay);
   };
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => {
