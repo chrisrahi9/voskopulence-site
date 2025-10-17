@@ -11,7 +11,6 @@ const asset = (p: string) => `${ASSETS}${p}`;
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
-export default function Home() {
   export default function Home() {
   // 1) STATE THAT OTHERS DEPEND ON — put this first
   const [menuOpen, setMenuOpen] = useState(false);
