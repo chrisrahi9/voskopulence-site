@@ -14,12 +14,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Sarina&family=League+Spartan:wght@300;400;600&display=swap"
           rel="stylesheet"
         />
-
-        {/* ✅ Important for iOS full-screen safe areas */}
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
-        />
       </head>
       <body>{children}</body>
     </html>
