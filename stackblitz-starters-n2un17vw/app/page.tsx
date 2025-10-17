@@ -11,14 +11,15 @@ const asset = (p: string) => `${ASSETS}${p}`;
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
-  export default function Home() {
-  // 1) STATE THAT OTHERS DEPEND ON — put this first
+export default function Home() {
+  // state first
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // 2) Keep the ref in sync (optional but you already use it later)
+  // keep a ref of menuOpen if you use it later
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
+}
 
   // 3) Tint html/body while curtain is open (the effect that caused the error)
   useEffect(() => {
