@@ -3,32 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-// All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-// Gate touch-only handlers (desktop uses simple click)
 const isTouch =
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
   window.matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  // 1) state first
+  // --- STATE (put this before any useEffect that reads it)
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // 2) ref that mirrors menuOpen
+  // mirrors menuOpen for listeners
   const menuOpenRef = useRef(menuOpen);
-  useEffect(() => {
-    menuOpenRef.current = menuOpen;
-  }, [menuOpen]);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
-  // 3) Tint html/body while curtain is open
+  // tint html/body when curtain is open
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-
     if (menuOpen) {
       html.classList.add("curtain-open");
       body.classList.add("curtain-open");
@@ -36,12 +31,13 @@ export default function Home() {
       html.classList.remove("curtain-open");
       body.classList.remove("curtain-open");
     }
-
     return () => {
       html.classList.remove("curtain-open");
       body.classList.remove("curtain-open");
     };
   }, [menuOpen]);
+
+  
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
