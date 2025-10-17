@@ -394,25 +394,33 @@ useEffect(() => {
 {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
 {mounted &&
   typeof document !== "undefined" &&
-  createPortal(
+createPortal(
+  <div
+    id="mobile-menu"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden={!menuOpen}
+    className={`fixed inset-0 z-[200] lg:hidden overscroll-contain ${
+      menuOpen ? "pointer-events-auto" : "pointer-events-none"
+    }`}                          // ← makes the wrapper fill the screen
+    style={{
+      inset: 0,
+      paddingTop: "env(safe-area-inset-top)",      // ← extend under iOS status bar
+      paddingBottom: "env(safe-area-inset-bottom)" // ← extend under Safari bottom bar
+    }}
+  >
+    {/* Backdrop – EXACT same color/blur, fills visual viewport */}
     <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
-      // No transforms on ancestors can affect this, since it's portaled to <body>
-    >
-      {/* Backdrop – EXACT same color/blur, fills visual viewport */}
-      <div
-        className="fixed inset-0 z-[999]
-                   bg-[#004642]/75
-                   backdrop-blur-xl
-                   supports-[backdrop-filter]:bg-[#004642]/60
-                   transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
-        onClick={() => setMenuOpen(false)}
-      />
+      className="fixed inset-0 z-[999]
+                 bg-[#004642]/75
+                 backdrop-blur-xl
+                 supports-[backdrop-filter]:bg-[#004642]/60
+                 transition-opacity duration-200"
+      style={{ opacity: menuOpen ? 1 : 0 }}
+      onClick={() => setMenuOpen(false)}
+    />
+    {/* ...rest of your menu content... */}
+
 
       {/* Safe-area fillers so tint/blur extend under iOS bars */}
       <div
