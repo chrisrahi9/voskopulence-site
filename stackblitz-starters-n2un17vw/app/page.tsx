@@ -11,6 +11,22 @@ const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
+  useEffect(() => {
+  const html = document.documentElement;
+  const body = document.body;
+  if (menuOpen) {
+    html.classList.add("curtain-open");
+    body.classList.add("curtain-open");
+  } else {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  }
+  return () => {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  };
+}, [menuOpen]);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
