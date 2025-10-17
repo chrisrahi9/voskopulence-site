@@ -385,42 +385,65 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu ===== */}
+{/* ===== Mobile curtain menu (full iOS coverage, same look) ===== */}
 <div
   id="mobile-menu"
-  className={`fixed inset-0 z-[200] lg:hidden overscroll-contain
-    ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
-  `}
   role="dialog"
   aria-modal="true"
   aria-hidden={!menuOpen}
+  className="lg:hidden"
 >
-  {/* Frosted backdrop (same color/blur; only this fades) */}
+  {/* OUTER WRAPPER pins to the largest viewport height */}
   <div
-    className={`absolute inset-0
-      bg-[#004642]/75
-      backdrop-blur-xl
-      supports-[backdrop-filter]:bg-[#004642]/60
-      transform-gpu contain-paint
-      transition-opacity duration-200
-      ${menuOpen ? "opacity-100" : "opacity-0"}
-    `}
-    onClick={() => setMenuOpen(false)}
-  />
+    className={`${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+    style={{
+      position: "fixed",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: "100lvh",              // 👈 key: fill the largest viewport
+      zIndex: 200,
+    }}
+  >
+    {/* Backdrop (same color + blur; fades only opacity) */}
+    <div
+      className={`absolute inset-0 transition-opacity duration-200
+                  bg-[#004642]/75 backdrop-blur-xl
+                  supports-[backdrop-filter]:bg-[#004642]/60`}
+      style={{ opacity: menuOpen ? 1 : 0 }}
+      onClick={() => setMenuOpen(false)}
+    />
 
-  {/* Safe-area fillers so blur/color extend under iOS bars */}
-  <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
-  <div className="absolute inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)]
-    bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none" />
+    {/* Safe-area fillers so tint/blur reach under bars */}
+    <div
+      className="absolute inset-x-0 top-0
+                 bg-[#004642]/75 backdrop-blur-xl
+                 supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
+      style={{ height: "env(safe-area-inset-top)", opacity: menuOpen ? 1 : 0 }}
+    />
+    <div
+      className="absolute inset-x-0 bottom-0
+                 bg-[#004642]/75 backdrop-blur-xl
+                 supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
+      style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
+    />
+  </div>
 
-  {/* Menu content (fade + subtle slide, with safe-area padding) */}
+  {/* MENU CONTENT layered above, also pinned to 100lvh */}
   <div
-    className={`relative z-10 flex flex-col h-full
-      pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-      text-white transition-all duration-200
-      ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}
-    `}
+    className={`transition-all duration-200 text-white
+                ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}`}
+    style={{
+      position: "fixed",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: "100lvh",               // 👈 matches the wrapper
+      paddingTop: "env(safe-area-inset-top)",
+      paddingBottom: "env(safe-area-inset-bottom)",
+      zIndex: 210,
+      pointerEvents: menuOpen ? "auto" : "none",
+    }}
   >
     <div className="flex items-center justify-between h-[64px] px-4">
       <span className="font-semibold">Menu</span>
@@ -443,8 +466,6 @@ useEffect(() => {
     </nav>
   </div>
 </div>
-
-
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
