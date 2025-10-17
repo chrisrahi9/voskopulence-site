@@ -459,6 +459,14 @@ useEffect(() => {
       style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
     />
   </div>
+{/* Bottom bleed so tint/blur extends under iOS toolbar */}
+<div
+  className="fixed inset-x-0 -bottom-12 h-24
+             bg-[#004642]/75 backdrop-blur-xl
+             supports-[backdrop-filter]:bg-[#004642]/60
+             pointer-events-none transition-opacity duration-200"
+  style={{ opacity: menuOpen ? 1 : 0 }}
+/>
 
   {/* MENU CONTENT layered above, also pinned to 100lvh */}
   <div
