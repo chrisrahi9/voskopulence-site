@@ -11,39 +11,10 @@ const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
-// Always-accurate visual viewport height for iOS (new & old)
-useEffect(() => {
-  const root = document.documentElement;
-
-  // Prefer dynamic viewport unit on modern iOS (works great on iOS 17/18+)
-  if (typeof CSS !== "undefined" && CSS.supports?.("height: 100dvh")) {
-    root.style.setProperty("--full-vh", "100dvh");
-    return; // no listeners needed
-  }
-
-  // Fallback: use visualViewport (reacts to Safari bars live)
-  const apply = () => {
-    const h = window.visualViewport
-      ? Math.round(window.visualViewport.height)
-      : window.innerHeight;
-    root.style.setProperty("--full-vh", `${h}px`);
-  };
-
-  apply();
-  window.visualViewport?.addEventListener("resize", apply);
-  window.visualViewport?.addEventListener("scroll", apply);
-  window.addEventListener("orientationchange", apply);
-  window.addEventListener("resize", apply);
-
-  return () => {
-    window.visualViewport?.removeEventListener("resize", apply);
-    window.visualViewport?.removeEventListener("scroll", apply);
-    window.removeEventListener("orientationchange", apply);
-    window.removeEventListener("resize", apply);
-  };
-}, []);
-
-
+// Mount flag so we can portal after client hydrates
+const [mounted, setMounted] = useState(false);
+useEffect(() => setMounted(true), []);
+  
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
@@ -418,79 +389,72 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu (uses --full-vh; same color/blur) ===== */}
-<div
-  id="mobile-menu"
-  className={`fixed inset-0 z-[999] lg:hidden overscroll-contain
-    ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}
-  `}
-  role="dialog"
-  aria-modal="true"
-  aria-hidden={!menuOpen}
->
-  {/* Backdrop — EXACT same look; height uses our var (+ bottom safe-area nudge) */}
-  <div
-    className={`fixed left-0 top-0 w-screen
-      bg-[#004642]/75
-      backdrop-blur-xl
-      supports-[backdrop-filter]:bg-[#004642]/60
-      transform-gpu contain-paint
-      transition-opacity duration-200
-      ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
-    `}
-    style={{
-      height: "calc(var(--full-vh, 100dvh) + env(safe-area-inset-bottom))",
-    }}
-    onClick={() => setMenuOpen(false)}
-  />
-
-  {/* Safe-area fillers so tint/blur continue under iOS bars */}
-  <div
-    className="fixed left-0 right-0 top-0 pointer-events-none
-      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-    style={{ height: "env(safe-area-inset-top)" }}
-  />
-  <div
-    className="fixed left-0 right-0 bottom-0 pointer-events-none
-      bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-    style={{ height: "env(safe-area-inset-bottom)" }}
-  />
-
-  {/* Menu content — sized by the same var; sits above backdrop */}
-  <div
-    className={`fixed left-0 top-0 z-10 flex flex-col
-      pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-      text-white transition-all duration-200
-      ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}
-    `}
-    style={{
-      height: "calc(var(--full-vh, 100dvh) + env(safe-area-inset-bottom))",
-      width: "100vw",
-    }}
-  >
-    <div className="flex items-center justify-between h-[64px] px-4">
-      <span className="font-semibold">Menu</span>
-      <button
-        className="p-2 rounded-md hover:bg-white/10"
-        aria-label="Close menu"
+{/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
+{mounted &&
+  typeof document !== "undefined" &&
+  createPortal(
+    <div
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden={!menuOpen}
+      className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
+      // No transforms on ancestors can affect this, since it's portaled to <body>
+    >
+      {/* Backdrop – EXACT same color/blur, fills visual viewport */}
+      <div
+        className="fixed inset-0 z-[999]
+                   bg-[#004642]/75
+                   backdrop-blur-xl
+                   supports-[backdrop-filter]:bg-[#004642]/60
+                   transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0 }}
         onClick={() => setMenuOpen(false)}
+      />
+
+      {/* Safe-area fillers so tint/blur extend under iOS bars */}
+      <div
+        className="fixed inset-x-0 top-0 z-[1000] pointer-events-none
+                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+        style={{ height: "env(safe-area-inset-top)" }}
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none
+                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+        style={{ height: "env(safe-area-inset-bottom)" }}
+      />
+
+      {/* Menu content */}
+      <div
+        className={`fixed inset-0 z-[1001] flex flex-col text-white
+                    pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+                    transition-all duration-200
+                    ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
+        <div className="flex items-center justify-between h-[64px] px-4">
+          <span className="font-semibold">Menu</span>
+          <button
+            className="p-2 rounded-md hover:bg-white/10"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-    <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-      <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-      <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-      <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-      <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
-    </nav>
-  </div>
-</div>
-
-
+        <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
+          <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
+          <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
+          <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
+          <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
+        </nav>
+      </div>
+    </div>,
+    document.body
+  )
+}
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
