@@ -432,13 +432,13 @@ useEffect(() => {
 
     {/* Safe-area fillers so tint/blur reach under bars */}
     <div
-      className="absolute inset-x-0 top-0
+      className="fixed inset-x-0 top-0
                  bg-[#004642]/75 backdrop-blur-xl
                  supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
       style={{ height: "env(safe-area-inset-top)", opacity: menuOpen ? 1 : 0 }}
     />
     <div
-      className="absolute inset-x-0 bottom-0
+      className="fixed inset-x-0 bottom-0
                  bg-[#004642]/75 backdrop-blur-xl
                  supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
       style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
