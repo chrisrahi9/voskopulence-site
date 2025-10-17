@@ -15,38 +15,39 @@ export default function Home() {
   const hlsRef = useRef<any>(null);
 const [menuOpen, setMenuOpen] = useState(false);
 const [scrolled, setScrolled] = useState(false);
-  // Frosted header on scroll
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+ // Frosted header on scroll
+useEffect(() => {
+  const onScroll = () => setScrolled(window.scrollY > 24);
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => window.removeEventListener("scroll", onScroll);
+}, []);
 
-  // Prevent background scrolling when menu is open
-  useEffect(() => {
-    const root = document.documentElement;
-    if (menuOpen) root.classList.add("overflow-hidden");
-    else root.classList.remove("overflow-hidden");
-    return () => root.classList.remove("overflow-hidden");
-  }, [menuOpen]);
+// Prevent background scrolling when menu is open
+useEffect(() => {
+  const root = document.documentElement;
+  if (menuOpen) root.classList.add("overflow-hidden");
+  else root.classList.remove("overflow-hidden");
+  return () => root.classList.remove("overflow-hidden");
+}, [menuOpen]);
 
-  // Tint html/body while curtain is open
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    if (menuOpen) {
-      html.classList.add("curtain-open");
-      body.classList.add("curtain-open");
-    } else {
-      html.classList.remove("curtain-open");
-      body.classList.remove("curtain-open");
-    }
-    return () => {
-      html.classList.remove("curtain-open");
-      body.classList.remove("curtain-open");
-    };
-  }, [menuOpen]);
+// Tint html/body while curtain is open (iOS bar matches the backdrop)
+useEffect(() => {
+  const html = document.documentElement;
+  const body = document.body;
+  if (menuOpen) {
+    html.classList.add("curtain-open");
+    body.classList.add("curtain-open");
+  } else {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  }
+  return () => {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  };
+}, [menuOpen]);
+
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
@@ -415,25 +416,27 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu (full coverage, centered) ===== */}
+{/* ===== Mobile curtain menu (full iOS coverage, centered links) ===== */}
 <div
   id="mobile-menu"
   role="dialog"
   aria-modal="true"
   aria-hidden={!menuOpen}
-  className={`lg:hidden ${menuOpen ? "" : "pointer-events-none"}`}
+  className="lg:hidden"
 >
-  {/* Full-viewport wrapper (100lvh covers the largest iOS viewport) */}
+  {/* OUTER WRAPPER pins to the largest viewport height */}
   <div
     className={`${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
     style={{
       position: "fixed",
-      inset: 0,
-      height: "100lvh",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: "100lvh",              // 👈 fill the largest viewport (prevents the bottom gap)
       zIndex: 200,
     }}
   >
-    {/* Backdrop — your exact tint + blur (fades only opacity) */}
+    {/* Backdrop (same color + blur; fades only opacity) */}
     <div
       className={`absolute inset-0 transition-opacity duration-200
                   bg-[#004642]/75 backdrop-blur-xl
@@ -455,44 +458,49 @@ useEffect(() => {
                  supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
       style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
     />
+  </div>
 
-    {/* Menu content — centered vertically */}
-    <div
-      className={`absolute inset-0 text-white transition-all duration-200 ${
-        menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"
-      }`}
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* top bar */}
-      <div className="flex items-center justify-between h-[64px] px-4">
-        <span className="font-semibold">Menu</span>
-        <button
-          className="p-2 rounded-md hover:bg-white/10"
-          aria-label="Close menu"
-          onClick={() => setMenuOpen(false)}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* CENTERED links */}
-      <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-        <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-        <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-        <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-        <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
-      </nav>
+  {/* MENU CONTENT layered above, also pinned to 100lvh */}
+  <div
+    className={`transition-all duration-200 text-white
+                ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}`}
+    style={{
+      position: "fixed",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: "100lvh",               // 👈 matches the wrapper
+      paddingTop: "env(safe-area-inset-top)",
+      paddingBottom: "env(safe-area-inset-bottom)",
+      zIndex: 210,
+      pointerEvents: menuOpen ? "auto" : "none",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    {/* top row */}
+    <div className="flex items-center justify-between h-[64px] px-4">
+      <span className="font-semibold">Menu</span>
+      <button
+        className="p-2 rounded-md hover:bg-white/10"
+        aria-label="Close menu"
+        onClick={() => setMenuOpen(false)}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
     </div>
+
+    {/* links centered vertically */}
+    <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
+      <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
+      <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
+      <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
+      <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
+    </nav>
   </div>
 </div>
-
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
