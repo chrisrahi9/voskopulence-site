@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
@@ -11,24 +12,32 @@ const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  useEffect(() => {
-  const html = document.documentElement;
-  const body = document.body;
-  if (menuOpen) {
-    html.classList.add("curtain-open");
-    body.classList.add("curtain-open");
-  } else {
-    html.classList.remove("curtain-open");
-    body.classList.remove("curtain-open");
-  }
-  return () => {
-    html.classList.remove("curtain-open");
-    body.classList.remove("curtain-open");
-  };
-}, [menuOpen]);
+  export default function Home() {
+  // 1) STATE THAT OTHERS DEPEND ON — put this first
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<any>(null);
+  // 2) Keep the ref in sync (optional but you already use it later)
+  const menuOpenRef = useRef(menuOpen);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
+
+  // 3) Tint html/body while curtain is open (the effect that caused the error)
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    if (menuOpen) {
+      html.classList.add("curtain-open");
+      body.classList.add("curtain-open");
+    } else {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    }
+    return () => {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    };
+  }, [menuOpen]);
+
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
