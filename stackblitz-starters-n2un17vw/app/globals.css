@@ -31,4 +31,13 @@ html, body {
 html, body {
   overflow-x: hidden;
 }
+/* When the curtain is open, darken the page background so Safari's bottom bar
+   shows the same tint instead of bright page content */
+html.curtain-open,
+body.curtain-open {
+  background-color: rgba(0, 70, 66, 0.75);
+  /* optional: soften like your backdrop */
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
 
