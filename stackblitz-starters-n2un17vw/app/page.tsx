@@ -2,40 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
+// All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
+// Gate touch-only handlers (desktop uses simple click)
 const isTouch =
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(hover: none)").matches;
+  typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  // --- STATE (put this before any useEffect that reads it)
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  // mirrors menuOpen for listeners
-  const menuOpenRef = useRef(menuOpen);
-  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
-
-  // tint html/body when curtain is open
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    if (menuOpen) {
-      html.classList.add("curtain-open");
-      body.classList.add("curtain-open");
-    } else {
-      html.classList.remove("curtain-open");
-      body.classList.remove("curtain-open");
-    }
-    return () => {
-      html.classList.remove("curtain-open");
-      body.classList.remove("curtain-open");
-    };
-  }, [menuOpen]);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<any>(null);
 
   
   // --- Pulsing CTA (touch behavior) ---
