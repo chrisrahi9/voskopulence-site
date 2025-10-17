@@ -11,26 +11,38 @@ const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
 export default function Home() {
-  // One viewport var that always equals the visible screen height on iOS
+// Always-accurate visual viewport height for iOS (new & old)
 useEffect(() => {
   const root = document.documentElement;
 
-  // Prefer modern 100lvh when supported (no jumps with Safari UI)
-  if (typeof CSS !== "undefined" && CSS.supports?.("height: 100lvh")) {
-    root.style.setProperty("--full-vh", "100lvh");
+  // Prefer dynamic viewport unit on modern iOS (works great on iOS 17/18+)
+  if (typeof CSS !== "undefined" && CSS.supports?.("height: 100dvh")) {
+    root.style.setProperty("--full-vh", "100dvh");
     return; // no listeners needed
   }
 
-  // Fallback: compute from innerHeight
-  const set = () => root.style.setProperty("--full-vh", `${window.innerHeight}px`);
-  set();
-  window.addEventListener("resize", set);
-  window.addEventListener("orientationchange", set);
+  // Fallback: use visualViewport (reacts to Safari bars live)
+  const apply = () => {
+    const h = window.visualViewport
+      ? Math.round(window.visualViewport.height)
+      : window.innerHeight;
+    root.style.setProperty("--full-vh", `${h}px`);
+  };
+
+  apply();
+  window.visualViewport?.addEventListener("resize", apply);
+  window.visualViewport?.addEventListener("scroll", apply);
+  window.addEventListener("orientationchange", apply);
+  window.addEventListener("resize", apply);
+
   return () => {
-    window.removeEventListener("resize", set);
-    window.removeEventListener("orientationchange", set);
+    window.visualViewport?.removeEventListener("resize", apply);
+    window.visualViewport?.removeEventListener("scroll", apply);
+    window.removeEventListener("orientationchange", apply);
+    window.removeEventListener("resize", apply);
   };
 }, []);
+
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
@@ -406,7 +418,7 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain menu (fixed + --full-vh) ===== */}
+{/* ===== Mobile curtain menu (uses --full-vh; same color/blur) ===== */}
 <div
   id="mobile-menu"
   className={`fixed inset-0 z-[999] lg:hidden overscroll-contain
@@ -416,7 +428,7 @@ useEffect(() => {
   aria-modal="true"
   aria-hidden={!menuOpen}
 >
-  {/* Frosted backdrop — SAME color/blur; height uses --full-vh */}
+  {/* Backdrop — EXACT same look; height uses our var (+ bottom safe-area nudge) */}
   <div
     className={`fixed left-0 top-0 w-screen
       bg-[#004642]/75
@@ -426,11 +438,13 @@ useEffect(() => {
       transition-opacity duration-200
       ${menuOpen ? "opacity-100 visible" : "opacity-0 invisible"}
     `}
-    style={{ height: "var(--full-vh, 100vh)" }}
+    style={{
+      height: "calc(var(--full-vh, 100dvh) + env(safe-area-inset-bottom))",
+    }}
     onClick={() => setMenuOpen(false)}
   />
 
-  {/* Safe-area fillers so blur/tint extend under iOS bars (fixed) */}
+  {/* Safe-area fillers so tint/blur continue under iOS bars */}
   <div
     className="fixed left-0 right-0 top-0 pointer-events-none
       bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
@@ -442,14 +456,17 @@ useEffect(() => {
     style={{ height: "env(safe-area-inset-bottom)" }}
   />
 
-  {/* Menu content — fixed + height var so it spans full visual viewport */}
+  {/* Menu content — sized by the same var; sits above backdrop */}
   <div
-    className={`fixed left-0 top-0 z-10 flex flex-col text-white
+    className={`fixed left-0 top-0 z-10 flex flex-col
       pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-      transition-all duration-200
+      text-white transition-all duration-200
       ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}
     `}
-    style={{ height: "var(--full-vh, 100vh)", width: "100vw" }}
+    style={{
+      height: "calc(var(--full-vh, 100dvh) + env(safe-area-inset-bottom))",
+      width: "100vw",
+    }}
   >
     <div className="flex items-center justify-between h-[64px] px-4">
       <span className="font-semibold">Menu</span>
@@ -472,6 +489,7 @@ useEffect(() => {
     </nav>
   </div>
 </div>
+
 
 
       {/* ===================== HERO ===================== */}
