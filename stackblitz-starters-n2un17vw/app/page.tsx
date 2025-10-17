@@ -391,37 +391,55 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-{mounted &&
-  typeof document !== "undefined" &&
+{/* ===== Mobile curtain menu (full iOS coverage) ===== */}
+{mounted && typeof document !== "undefined" &&
   createPortal(
-    <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
-      // No transforms on ancestors can affect this, since it's portaled to <body>
-    >
-      {/* Backdrop – EXACT same color/blur, fills visual viewport */}
+    <>
+      {/* Backdrop wrapper pinned to the LARGEST viewport height */}
       <div
-        className="fixed inset-0 z-[999]
-                   bg-[#004642]/75
-                   backdrop-blur-xl
-                   supports-[backdrop-filter]:bg-[#004642]/60
-                   transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
-        onClick={() => setMenuOpen(false)}
-      />
+        className={`fixed left-0 right-0 top-0 z-[999]
+                    ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        // 👇 This is the key — fill the largest viewport, not the visual one
+        style={{ height: "100lvh" }}
+      >
+        {/* Frosted layer (same color/blur as before) */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-200
+                      bg-[#004642]/75 backdrop-blur-xl
+                      supports-[backdrop-filter]:bg-[#004642]/60`}
+          style={{ opacity: menuOpen ? 1 : 0 }}
+          onClick={() => setMenuOpen(false)}
+        />
 
+        {/* Safe-area pads so tint/blur reach under notch & bottom home bar */}
+        <div
+          className="absolute inset-x-0 top-0
+                     bg-[#004642]/75 backdrop-blur-xl
+                     supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
+          style={{ height: "env(safe-area-inset-top)", opacity: menuOpen ? 1 : 0 }}
+        />
+        <div
+          className="absolute inset-x-0 bottom-0
+                     bg-[#004642]/75 backdrop-blur-xl
+                     supports-[backdrop-filter]:bg-[#004642]/60 pointer-events-none transition-opacity duration-200"
+          style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
+        />
+      </div>
 
-
-      {/* Menu content */}
+      {/* Menu content — also pinned to 100lvh and padded with safe areas */}
       <div
-        className={`fixed inset-0 z-[1001] flex flex-col text-white
-                    pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+        className={`fixed left-0 right-0 top-0 z-[1000] text-white
                     transition-all duration-200
-                    ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
+                    ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}`}
+        style={{
+          height: "100lvh",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          pointerEvents: menuOpen ? "auto" : "none",
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!menuOpen}
       >
         <div className="flex items-center justify-between h-[64px] px-4">
           <span className="font-semibold">Menu</span>
@@ -443,7 +461,7 @@ useEffect(() => {
           <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
         </nav>
       </div>
-    </div>,
+    </>,
     document.body
   )
 }
