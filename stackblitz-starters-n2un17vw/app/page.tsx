@@ -15,7 +15,38 @@ export default function Home() {
   const hlsRef = useRef<any>(null);
 const [menuOpen, setMenuOpen] = useState(false);
 const [scrolled, setScrolled] = useState(false);
+  // Frosted header on scroll
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
+  // Prevent background scrolling when menu is open
+  useEffect(() => {
+    const root = document.documentElement;
+    if (menuOpen) root.classList.add("overflow-hidden");
+    else root.classList.remove("overflow-hidden");
+    return () => root.classList.remove("overflow-hidden");
+  }, [menuOpen]);
+
+  // Tint html/body while curtain is open
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    if (menuOpen) {
+      html.classList.add("curtain-open");
+      body.classList.add("curtain-open");
+    } else {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    }
+    return () => {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    };
+  }, [menuOpen]);
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
