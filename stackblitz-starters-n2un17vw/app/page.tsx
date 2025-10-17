@@ -394,50 +394,37 @@ useEffect(() => {
 {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
 {mounted &&
   typeof document !== "undefined" &&
-createPortal(
-  <div
-    id="mobile-menu"
-    role="dialog"
-    aria-modal="true"
-    aria-hidden={!menuOpen}
-    className={`fixed inset-0 z-[200] lg:hidden overscroll-contain ${
-      menuOpen ? "pointer-events-auto" : "pointer-events-none"
-    }`}                          // ← makes the wrapper fill the screen
-    style={{
-      inset: 0,
-      paddingTop: "env(safe-area-inset-top)",      // ← extend under iOS status bar
-      paddingBottom: "env(safe-area-inset-bottom)" // ← extend under Safari bottom bar
-    }}
-  >
-
-   {/* Backdrop – same color/blur, but sized with visual viewport */}
-<div
-  className="fixed left-0 right-0 top-0 z-[999]
-             bg-[#004642]/75 backdrop-blur-xl
-             supports-[backdrop-filter]:bg-[#004642]/60
-             transition-opacity duration-200 will-change-opacity"
-  style={{
-    height: "var(--full-vh, 100dvh)",   // ← covers on first paint
-    opacity: menuOpen ? 1 : 0
-  }}
-  onClick={() => setMenuOpen(false)}
-/>
-    {/* Safe-area overlays so the blur/color extend under iOS bars */}
+  createPortal(
     <div
-      className="fixed inset-x-0 top-0
-                 bg-[#004642]/75 backdrop-blur-xl
-                 supports-[backdrop-filter]:bg-[#004642]/60
-                 pointer-events-none transition-opacity duration-200"
-      style={{ height: "env(safe-area-inset-top)", opacity: menuOpen ? 1 : 0 }}
-    />
-    <div
-      className="fixed inset-x-0 bottom-0
-                 bg-[#004642]/75 backdrop-blur-xl
-                 supports-[backdrop-filter]:bg-[#004642]/60
-                 pointer-events-none transition-opacity duration-200"
-      style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0 }}
-    />
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden={!menuOpen}
+      className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
+      // No transforms on ancestors can affect this, since it's portaled to <body>
+    >
+      {/* Backdrop – EXACT same color/blur, fills visual viewport */}
+      <div
+        className="fixed inset-0 z-[999]
+                   bg-[#004642]/75
+                   backdrop-blur-xl
+                   supports-[backdrop-filter]:bg-[#004642]/60
+                   transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0 }}
+        onClick={() => setMenuOpen(false)}
+      />
 
+      {/* Safe-area fillers so tint/blur extend under iOS bars */}
+      <div
+        className="fixed inset-x-0 top-0 z-[1000] pointer-events-none
+                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+        style={{ height: "env(safe-area-inset-top)" }}
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none
+                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
+        style={{ height: "env(safe-area-inset-bottom)" }}
+      />
 
       {/* Menu content */}
       <div
