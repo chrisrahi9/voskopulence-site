@@ -40,4 +40,24 @@ body.curtain-open {
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
 }
+/* --- iOS status-bar paint from first frame --- */
+html.ios-statusbar-fix body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: #004642;              /* your green */
+  pointer-events: none;
+  z-index: 2147483647;               /* above everything; visual-only */
+}
 
+/* Optional: also mask the bottom safe area if you ever see a white lip when the toolbar shows */
+html.ios-statusbar-fix body::after {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: env(safe-area-inset-bottom);
+  background: #004642;
+  pointer-events: none;
+  z-index: 2147483647;
+}
