@@ -340,12 +340,16 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-      <header className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]">
-        style={{ transform: 'translateZ(0)' }}
-        {/* solid paint under the iOS status bar from first frame */}
+<header
+  className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]"
+  style={{ transform: 'translateZ(0)' }}  // promote to its own layer (also helps jank)
+>
+  {/* solid paint under the iOS status bar from first frame */}
   <div
     aria-hidden="true"
     className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[-1]"
+  />
+
         {/* Smooth single-layer background (punchy + frosted) */}
         <div
           className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease] will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
