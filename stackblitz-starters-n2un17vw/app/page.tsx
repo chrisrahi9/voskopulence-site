@@ -5,6 +5,12 @@ import { createPortal } from "react-dom";
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
+export const metadata = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#004642' },
+    { media: '(prefers-color-scheme: dark)',  color: '#004642' },
+  ],
+};
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
@@ -335,9 +341,14 @@ useEffect(() => {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
       <header className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]">
+        style={{ transform: 'translateZ(0)' }}
+        {/* solid paint under the iOS status bar from first frame */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[-1]"
         {/* Smooth single-layer background (punchy + frosted) */}
         <div
-          className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease] will-change-[opacity] backdrop-blur-md backdrop-saturate-150"
+          className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease] will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
           style={{ backgroundColor: "#004642", opacity: scrolled ? 0.94 : 0 }}
           aria-hidden="true"
         />
