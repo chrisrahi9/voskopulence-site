@@ -61,14 +61,3 @@ html.ios-statusbar-fix body::after {
   pointer-events: none;
   z-index: 2147483647;
 }
-/* Sub-pixel seam guard under the fixed header on iOS */
-.header-no-seam::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 2px;
-  background: #004642;
-  opacity: 0.35;                    /* soft, invisible overlay */
-  pointer-events: none;
-  will-change: transform;
-}
