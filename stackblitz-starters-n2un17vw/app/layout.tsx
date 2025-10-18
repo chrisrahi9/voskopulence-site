@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="ios-statusbar-fix">
       <head>
         {/* Google Fonts: Sarina + League Spartan (300/400/600) */}
         <link
