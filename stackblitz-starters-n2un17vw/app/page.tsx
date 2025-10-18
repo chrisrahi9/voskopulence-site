@@ -2,15 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
-export const metadata = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#004642' },
-    { media: '(prefers-color-scheme: dark)',  color: '#004642' },
-  ],
-};
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
@@ -22,40 +17,37 @@ export default function Home() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  
-const [mounted, setMounted] = useState(false);
-useEffect(() => setMounted(true), []);
+
+  // For portals
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   const [showArrow, setShowArrow] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
-  const [pressing, setPressing] = useState(false);                 // ✅ new: drives build-up
+  const [pressing, setPressing] = useState(false);
   const longTimer = useRef<number | null>(null);
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
-  const startPos = useRef<{ x: number; y: number } | null>(null);  // ✅ track movement
+  const startPos = useRef<{ x: number; y: number } | null>(null);
 
-  // start on touch/pointer (touch only; desktop uses click)
   const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (e.pointerType === "mouse") return;
     startPos.current = { x: e.clientX, y: e.clientY };
-    setPressing(true);                         // ✅ begin build-up immediately
+    setPressing(true);
     setShowArrow(true);
-    const LONG_MS = 700;                       // ✅ slower, more deliberate threshold
+    const LONG_MS = 700;
     longTimer.current = window.setTimeout(() => {
       setIsLongPress(true);
-      try {
-        if (canVibrate) navigator.vibrate(18); // subtle haptic tick
-      } catch {}
+      try { if (canVibrate) navigator.vibrate(18); } catch {}
     }, LONG_MS);
   };
 
-  // drift cancel (keeps pressing but cancels "longPress" if moved too far)
   const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (!startPos.current) return;
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
-    if (Math.hypot(dx, dy) > 24) {            // allow some drift; cancel long press if too much
+    if (Math.hypot(dx, dy) > 24) {
       if (longTimer.current) {
         clearTimeout(longTimer.current);
         longTimer.current = null;
@@ -63,28 +55,23 @@ useEffect(() => setMounted(true), []);
     }
   };
 
-  // end on release/cancel
   const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     if (longTimer.current) {
       clearTimeout(longTimer.current);
       longTimer.current = null;
     }
-    const delay = isLongPress ? 120 : 0; // let build-up settle
+    const delay = isLongPress ? 120 : 0;
     window.setTimeout(() => {
-      if (!isLongPress) {
-        scrollDown(); // tap = scroll; long-press = just animate
-      }
+      if (!isLongPress) scrollDown();
       setIsLongPress(false);
       setShowArrow(false);
-      setPressing(false);                     // ✅ stop build-up, ease back
+      setPressing(false);
     }, delay);
   };
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
-  useEffect(() => {
-    menuOpenRef.current = menuOpen;
-  }, [menuOpen]);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
   // Frosted header on scroll
   useEffect(() => {
@@ -94,29 +81,23 @@ useEffect(() => setMounted(true), []);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Smooth scroll to #about (respects reduced-motion)
+  // Smooth scroll to first next section
   const scrollDown = () => {
     const targets = ["spotlight", "about"];
-    const reduce =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
       const el = document.getElementById(id);
       if (!el) continue;
       const top = el.getBoundingClientRect().top;
-      // choose the first section that isn't already mostly visible
       if (top > 80) {
         const yOffset =
-          window.innerWidth < 640
-            ? -window.innerHeight * 0.12
-            : -window.innerHeight * 0.25;
+          window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
         const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
         window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
         return;
       }
     }
-    // fallback: go to About if nothing else qualifies
-    document
-      .getElementById("about")
+    document.getElementById("about")
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
@@ -127,66 +108,50 @@ useEffect(() => setMounted(true), []);
     else root.classList.remove("overflow-hidden");
     return () => root.classList.remove("overflow-hidden");
   }, [menuOpen]);
-// Edge-swipe to open/close mobile menu
-useEffect(() => {
-  if (!isTouch) return;
 
-  let startX = 0, startY = 0, tracking = false, openedFromEdge = false;
+  // Edge-swipe to open/close mobile menu (touch only)
+  useEffect(() => {
+    if (!isTouch) return;
+    let startX = 0, startY = 0, tracking = false, openedFromEdge = false;
 
-  const onStart = (e: TouchEvent) => {
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    // arm only if starting at left edge to open, or if menu is open (to close)
-    openedFromEdge = !menuOpen && startX <= 50;   // 24px edge
-    tracking = openedFromEdge || menuOpen;
-  };
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      openedFromEdge = !menuOpen && startX <= 50;
+      tracking = openedFromEdge || menuOpen;
+    };
 
-  const onMove = (e: TouchEvent) => {
-    if (!tracking) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
+    const onMove = (e: TouchEvent) => {
+      if (!tracking) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dy) > Math.abs(dx) + 10) { tracking = false; return; }
+      if (openedFromEdge && Math.abs(dx) > 10 && Math.abs(dy) < 40) e.preventDefault();
+    };
 
-    // give up if vertical scroll dominates
-    if (Math.abs(dy) > Math.abs(dx) + 10) {
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+      if (!t) { tracking = false; return; }
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const horizontalEnough = Math.abs(dx) >= 45 && Math.abs(dy) <= 50;
+      if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0) setMenuOpen(true);
+      else if (menuOpen && horizontalEnough && dx < 0) setMenuOpen(false);
       tracking = false;
-      return;
-    }
-    // when opening from edge, prevent native gestures a bit
-    if (openedFromEdge && Math.abs(dx) > 10 && Math.abs(dy) < 40) {
-      e.preventDefault();
-    }
-  };
+    };
 
-  const onEnd = (e: TouchEvent) => {
-    if (!tracking) return;
-    const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
-    if (!t) { tracking = false; return; }
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove as unknown as EventListener, { passive: false });
+    window.addEventListener("touchend", onEnd, { passive: true });
 
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-    const horizontalEnough = Math.abs(dx) >= 45 && Math.abs(dy) <= 50;
-
-    if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0) {
-      setMenuOpen(true);     // swipe right from edge → open
-    } else if (menuOpen && horizontalEnough && dx < 0) {
-      setMenuOpen(false);    // swipe left while open → close
-    }
-    tracking = false;
-  };
-
-  // passive flags so we can preventDefault on move when needed
-  window.addEventListener("touchstart", onStart, { passive: true });
-  window.addEventListener("touchmove", onMove as unknown as EventListener, { passive: false });
-  window.addEventListener("touchend", onEnd, { passive: true });
-
-  return () => {
-    window.removeEventListener("touchstart", onStart);
-    window.removeEventListener("touchmove", onMove as unknown as EventListener);
-    window.removeEventListener("touchend", onEnd);
-  };
-}, [menuOpen, isTouch]);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove as unknown as EventListener);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [menuOpen, isTouch]);
 
   const tryPlay = (v: HTMLVideoElement | null) => {
     if (!v) return;
@@ -208,11 +173,9 @@ useEffect(() => {
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
-
     let destroyed = false;
 
     const setup = async () => {
-      // Prefer MP4 on iOS for crisp quality
       const isIOS =
         /iP(hone|od|ad)/.test(navigator.platform) ||
         (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
@@ -224,7 +187,6 @@ useEffect(() => {
         return;
       }
 
-      // Native HLS (non-iOS Safari)
       if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = HLS_SRC;
         try { v.load(); } catch {}
@@ -232,7 +194,6 @@ useEffect(() => {
         return;
       }
 
-      // Other browsers: hls.js
       try {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
@@ -246,34 +207,25 @@ useEffect(() => {
             fragLoadingRetryDelay: 500,
             fragLoadingMaxRetry: 3,
           });
-
           // @ts-expect-error – not in local typings
           hls.config.maxInitialBitrate = 2_500_000;
 
           hlsRef.current = hls;
-
           hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-            if (!destroyed) hls.loadSource(HLS_SRC);
-          });
-
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => { if (!destroyed) hls.loadSource(HLS_SRC); });
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
               if (hls.levels?.length) {
-                // Prefer the 1080p rendition, then hand ABR back
                 const lvls = hls.levels;
                 let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
                 if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
                 if (pick < 0) pick = lvls.length - 1;
                 hls.currentLevel = pick;
-                setTimeout(() => {
-                  hls.loadLevel = -1;
-                }, 3000);
+                setTimeout(() => { hls.loadLevel = -1; }, 3000);
               }
             } catch {}
             if (!destroyed) tryPlay(v);
           });
-
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
               try { hls.destroy(); } catch {}
@@ -285,15 +237,10 @@ useEffect(() => {
           });
           return;
         }
-      } catch {
-        // ignore and fall back
-      }
-
-      // Fallback: single MP4
-      v.src = MP4_SRC;
-      try {
-        v.load();
       } catch {}
+
+      v.src = MP4_SRC;
+      try { v.load(); } catch {}
       tryPlay(v);
     };
 
@@ -304,10 +251,8 @@ useEffect(() => {
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
 
-    // ✅ Fade in when video starts playing
-    v.addEventListener("playing", () => {
-      v.style.opacity = "1";
-    });
+    // Fade in when video starts
+    v.addEventListener("playing", () => { v.style.opacity = "1"; });
 
     const onVis = () =>
       document.visibilityState === "visible" ? tryPlay(v) : v.pause();
@@ -315,7 +260,6 @@ useEffect(() => {
 
     const io = new IntersectionObserver(
       ([e]) => {
-        // keep playing under the curtain (no pauses, no restarts)
         if (menuOpenRef.current) { tryPlay(v); return; }
         if (e.intersectionRatio > 0.03) tryPlay(v);
         else v.pause();
@@ -340,15 +284,15 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-<header
-  className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]"
-  style={{ transform: 'translateZ(0)' }}  // promote to its own layer (also helps jank)
->
-  {/* solid paint under the iOS status bar from first frame */}
-  <div
-    aria-hidden="true"
-    className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[-1]"
-  />
+      <header
+        className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]"
+        style={{ transform: "translateZ(0)" }} // GPU layer → smoother scroll
+      >
+        {/* Solid paint under the iOS status bar from first frame */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[-1]"
+        />
 
         {/* Smooth single-layer background (punchy + frosted) */}
         <div
@@ -403,85 +347,58 @@ useEffect(() => {
           </div>
         </div>
       </header>
-{/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-{mounted &&
-  typeof document !== "undefined" &&
-  createPortal(
-    <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
-      // No transforms on ancestors can affect this, since it's portaled to <body>
-    >
-      {/* Backdrop – EXACT same color/blur, fills visual viewport */}
-      <div
-        className="fixed inset-0 z-[999]
-                   bg-[#004642]/75
-                   backdrop-blur-xl
-                   supports-[backdrop-filter]:bg-[#004642]/60
-                   transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
-        onClick={() => setMenuOpen(false)}
-      />
 
-      {/* Safe-area fillers so tint/blur extend under iOS bars */}
-      <div
-        className="fixed inset-x-0 top-0 z-[1000] pointer-events-none
-                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-        style={{ height: "env(safe-area-inset-top)" }}
-      />
-      <div
-        className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none
-                   bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60"
-        style={{ height: "env(safe-area-inset-bottom)" }}
-      />
-
-      {/* Menu content */}
-      <div
-        className={`fixed inset-0 z-[1001] flex flex-col text-white
-                    pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-                    transition-all duration-200
-                    ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
-      >
-        <div className="flex items-center justify-between h-[64px] px-4">
-          <span className="font-semibold">Menu</span>
-          <button
-            className="p-2 rounded-md hover:bg-white/10"
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
+      {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
+      {mounted && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden={!menuOpen}
+            className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+            {/* Backdrop – EXACT same color/blur */}
+            <div
+              className="fixed inset-0 z-[999] bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 transition-opacity duration-200"
+              style={{ opacity: menuOpen ? 1 : 0 }}
+              onClick={() => setMenuOpen(false)}
+            />
+            {/* Safe-area fillers */}
+            <div className="fixed inset-x-0 top-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-top)" }} />
+            <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-bottom)" }} />
+            {/* Menu content */}
+            <div className={`fixed inset-0 z-[1001] flex flex-col text-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-all duration-200 ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}>
+              <div className="flex items-center justify-between h-[64px] px-4">
+                <span className="font-semibold">Menu</span>
+                <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-        <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-          <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-          <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-          <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-          <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
-        </nav>
-      </div>
-    </div>,
-    document.body
-  )
-}
+              <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
+                <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
+                <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
+                <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
+                <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
+              </nav>
+            </div>
+          </div>,
+          document.body
+        )
+      }
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
         <div className="relative h-[96svh] md:h-[96svh] lg:h-[96dvh]">
-          {/* This wrapper is 12px taller than the hero, so it extends below it */}
+          {/* 12px taller wrapper prevents seams */}
           <div className="absolute inset-x-0 top-0 -bottom-[16px]">
-            {/* Static fallback poster background (instant paint before video loads) */}
+            {/* instant static background before video loads */}
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${asset("/hero_poster.jpg")})`,
-                filter: "brightness(0.9)",
-              }}
+              style={{ backgroundImage: `url(${asset("/hero_poster.jpg")})`, filter: "brightness(0.9)" }}
             />
 
             <video
@@ -522,12 +439,12 @@ useEffect(() => {
 
               <button
                 ref={ctaRef}
-                onClick={scrollDown} // desktop click
+                onClick={scrollDown}
                 {...(isTouch
                   ? {
                       onPointerDown: handlePointerDown,
                       onPointerUp: handlePointerEnd,
-                      onPointerMove: handlePointerMove,   // ✅ build-up logic
+                      onPointerMove: handlePointerMove,
                       onPointerCancel: handlePointerEnd,
                     }
                   : {})}
@@ -539,57 +456,41 @@ useEffect(() => {
                   WebkitUserSelect: "none",
                   userSelect: "none",
                   touchAction: "none",
-                  // ✅ silky build-up while finger is down
-                  ...(pressing
-                    ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
-                    : {}),
+                  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
                 }}
                 onContextMenu={(e) => e.preventDefault()}
                 className={`group relative mt-10 inline-flex items-center justify-center
-  h-14 w-14 rounded-full
-  ring-1 ring-white/30 hover:ring-white/60
-  bg-white/10 hover:bg-white/10
-  backdrop-blur-[3px]
-  transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
-  will-change-transform
-  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-  ${isLongPress ? "ring-2 ring-white/60" : ""}
-  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-`}
+                  h-14 w-14 rounded-full
+                  ring-1 ring-white/30 hover:ring-white/60
+                  bg-white/10 hover:bg-white/10
+                  backdrop-blur-[3px]
+                  transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
+                  will-change-transform
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+                  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+                  ${isLongPress ? "ring-2 ring-white/60" : ""}
+                  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+                `}
               >
                 {/* Soft glowing dot */}
                 <div
                   className={`
-    relative h-2.5 w-2.5 rounded-full bg-white/95
-    shadow-[0_0_8px_rgba(255,255,255,0.6)]
-    transition-opacity duration-300
-    ${(!isLongPress && showArrow) ? "opacity-0" : "opacity-100"}
-    group-hover:opacity-0
-  `}
-  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
-
-                ></div>
-
+                    relative h-2.5 w-2.5 rounded-full bg-white/95
+                    shadow-[0_0_8px_rgba(255,255,255,0.6)]
+                    transition-opacity duration-300
+                    ${(!isLongPress && showArrow) ? "opacity-0" : "opacity-100"}
+                    group-hover:opacity-0
+                  `}
+                  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+                />
                 {/* Chevron */}
                 <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
+                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
                   className={`absolute z-10 transition-all duration-500
-    ${(!isLongPress && showArrow) ? "opacity-100 translate-y-[2px]" : "opacity-0"}  /* show on touch tap only */
-    group-hover:opacity-100 group-hover:translate-y-[2px]                            /* show on hover */
-  `}
+                    ${(!isLongPress && showArrow) ? "opacity-100 translate-y-[2px]" : "opacity-0"}
+                    group-hover:opacity-100 group-hover:translate-y-[2px]`}
                 >
-                  <path
-                    d="M6 9.5 L12 15.5 L18 9.5"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             </div>
@@ -612,16 +513,12 @@ useEffect(() => {
           border-t border-[#8C9A91]/30
         "
       >
-        {/* Sage edge halo */}
         <div className="pointer-events-none absolute inset-0 -z-10 shadow-[0_40px_120px_-40px_rgba(140,154,145,0.35)]" />
-        {/* Soft seam fade */}
         <div className="absolute -top-6 left-0 w-full h-6 pointer-events-none bg-gradient-to-b from-black/20 to-transparent opacity-40" />
-        {/* Background tint */}
         <div className="absolute inset-0 bg-[#004642]/5" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/40 to-transparent mix-blend-overlay pointer-events-none" />
 
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          {/* Product image */}
           <div className="flex justify-center md:justify-start">
             <img
               src="https://cdn.voskopulence.com/Spotlight_pic.png"
@@ -630,7 +527,6 @@ useEffect(() => {
             />
           </div>
 
-          {/* Text + CTA */}
           <div className="text-center md:text-left">
             <p className="uppercase tracking-[0.25em] text-sm text-neutral-600">Spotlight</p>
             <h3 className="mt-3 heading-script text-3xl sm:text-4xl text-[#004642]">
@@ -645,12 +541,10 @@ useEffect(() => {
                 href="/shop"
                 className="inline-flex items-center gap-3 rounded-full border-2 border-[#004642]
                            px-7 py-3 text-[#004642] text-[1.05rem] font-semibold tracking-[0.04em]
-                           whitespace-nowrap
-                           hover:bg-[#004642] hover:text-white transition-all duration-300
-                           shadow-[0_0_10px_rgba(140,154,145,0.35)]
-                           hover:shadow-[0_0_16px_rgba(140,154,145,0.5)]
-                           ring-1 ring-[#8C9A91]/30 hover:ring-[#8C9A91]/50
-                           hover:[transform:translateY(-1px)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/60"
+                           whitespace-nowrap hover:bg-[#004642] hover:text-white transition-all duration-300
+                           shadow-[0_0_10px_rgba(140,154,145,0.35)] hover:shadow-[0_0_16px_rgba(140,154,145,0.5)]
+                           ring-1 ring-[#8C9A91]/30 hover:ring-[#8C9A91]/50 hover:[transform:translateY(-1px)]
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/60"
               >
                 <span>Discover the bar</span>
                 <svg width="22" height="22" viewBox="0 0 24 24" className="transition-transform duration-300 group-hover:translate-x-[2.5px]" strokeWidth="2.2">
@@ -669,7 +563,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* tiny underlap so no background can peek above About */}
         <div className="pointer-events-none absolute -bottom-[2px] left-0 right-0 h-[4px] bg-white" />
       </section>
 
@@ -687,9 +580,7 @@ useEffect(() => {
           bg-transparent
         "
       >
-        {/* Sage soft edge halo */}
         <div className="pointer-events-none absolute inset-0 -z-10 shadow-[0_50px_140px_-50px_rgba(140,154,145,0.4)]" />
-        {/* Soft seam fade */}
         <div className="absolute -top-6 left-0 w-full h-6 pointer-events-none bg-gradient-to-b from-black/20 to-transparent opacity-40" />
 
         <div className="absolute inset-0 z-0">
@@ -720,21 +611,11 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* 🎯 Keyframes for the build-up press (scoped to this page) */}
+      {/* Keyframes for the build-up press (scoped to this page) */}
       <style jsx>{`
-  /* Smooth continuous growth */
-  @keyframes pressGrow {
-    from { transform: scale(1); }
-    to   { transform: scale(1.4); } /* set your final size here */
-  }
-
-  /* Dot swells smoothly too */
-  @keyframes dotGrow {
-    from { transform: scale(1); }
-    to   { transform: scale(1.6); }
-  }
-`}</style>
-
+        @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
+        @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
+      `}</style>
     </div>
   );
 }
