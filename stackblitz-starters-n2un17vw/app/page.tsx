@@ -13,6 +13,10 @@ const isTouch =
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  
 const [mounted, setMounted] = useState(false);
 useEffect(() => setMounted(true), []);
 
