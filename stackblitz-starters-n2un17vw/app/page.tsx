@@ -73,13 +73,26 @@ export default function Home() {
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
-  // Frosted header on scroll
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+// Frosted header on scroll (throttled with requestAnimationFrame)
+const [scrolled, setScrolled] = useState(false);
+const rafId = useRef<number | null>(null);
+
+useEffect(() => {
+  const onScroll = () => {
+    if (rafId.current != null) return;
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null;
+      setScrolled(window.scrollY > 24);
+    });
+  };
+  onScroll(); // set initial
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => {
+    if (rafId.current != null) cancelAnimationFrame(rafId.current);
+    window.removeEventListener("scroll", onScroll);
+  };
+}, []);
+
 
   // Smooth scroll to first next section
   const scrollDown = () => {
@@ -285,42 +298,41 @@ export default function Home() {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
 <header
-  className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]"
-  style={{ transform: "translateZ(0)", willChange: "transform", contain: "paint" }}
+  className="fixed top-0 z-50 w-full text-white/95"
+  style={{
+    // promote to own layer & isolate paints = smoother on iOS
+    transform: "translateZ(0)",
+    willChange: "opacity, transform",
+    contain: "paint",
+    WebkitTapHighlightColor: "transparent",
+  }}
 >
-  {/* ✅ Solid paint under iOS status bar (no white flash, ends at camera area) */}
+  {/* Single frosted background layer that fades in on scroll */}
   <div
-    aria-hidden="true"
-    className="fixed inset-x-0 top-0 pointer-events-none"
+    className="absolute inset-0 pointer-events-none backdrop-blur-md backdrop-saturate-150 transform-gpu"
     style={{
-      height: "clamp(4px, env(safe-area-inset-top), 34px)", // 👈 slightly shorter cap
-      background: "#004642",
-      zIndex: 0,
+      backgroundColor: "#004642",
+      transition: "opacity 300ms ease",
+      opacity: scrolled ? 0.94 : 0,
     }}
-  />
-
-  {/* Smooth frosted background */}
-  <div
-    className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease]
-               backdrop-blur-md backdrop-saturate-150 transform-gpu"
-    style={{ backgroundColor: "#004642", opacity: scrolled ? 0.94 : 0, zIndex: 1 }}
     aria-hidden="true"
   />
 
+  {/* Gentle top gradient only before scroll */}
   {!scrolled && (
     <div
       className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
-      style={{ zIndex: 1 }}
       aria-hidden="true"
     />
   )}
 
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6" style={{ zIndex: 2 }}>
-    <div className="relative flex items-center justify-between h-[56px] md:h-[64px] lg:h-[72px]">
+  {/* Content row */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
+    <div className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
       {/* LEFT: hamburger */}
       <div className="grow basis-0">
         <button
-          className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[3]"
+          className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
           aria-label="Open menu"
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
@@ -332,11 +344,8 @@ export default function Home() {
         </button>
       </div>
 
-      {/* CENTER: logo */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ zIndex: 2 }}
-      >
+      {/* CENTER: logo (unchanged, keeps the premium layout) */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <img
           src={asset("/logo_improved.svg")}
           alt="Voskopulence"
@@ -347,7 +356,7 @@ export default function Home() {
       </div>
 
       {/* RIGHT: desktop nav */}
-      <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[3]">
+      <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
         <a href="/shop" className="hover:text-gray-200">Shop</a>
         <a href="#about" className="hover:text-gray-200">About</a>
         <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
@@ -356,6 +365,7 @@ export default function Home() {
     </div>
   </div>
 </header>
+
 
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
