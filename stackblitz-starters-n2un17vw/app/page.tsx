@@ -74,7 +74,6 @@ export default function Home() {
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
 // Frosted header on scroll (throttled with requestAnimationFrame)
-const [scrolled, setScrolled] = useState(false);
 const rafId = useRef<number | null>(null);
 
 useEffect(() => {
