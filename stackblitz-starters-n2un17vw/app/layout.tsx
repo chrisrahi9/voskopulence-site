@@ -1,32 +1,39 @@
-import "./globals.css";
+import './globals.css'
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ScrollToTop from "./_components/ScrollToTop";
 
 export const metadata: Metadata = {
-  title: "Voskopulence",
-  description: "Mediterranean luxury haircare",
+  title: 'Voskopulence',
+  description: 'Mediterranean luxury haircare',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Google Fonts */}
+        {/* Google Fonts: Sarina + League Spartan (300/400/600) */}
         <link
           href="https://fonts.googleapis.com/css2?family=Sarina&family=League+Spartan:wght@300;400;600&display=swap"
           rel="stylesheet"
         />
-        {/* iOS full-screen */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        {/* Paint Safari UI */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#004642" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#004642" />
+        {/* iOS full-screen safe areas */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
       </head>
-     <body>
-  <ScrollToTop />
-  {children}
-</body>
+      <body>
+        {/* Wrap any client component that might read routing state */}
+        <Suspense fallback={null}>
+          <ScrollToTop />
+        </Suspense>
 
+        {/* Also wrap children so any page using useSearchParams is safe */}
+        <Suspense fallback={null}>
+          {children}
+        </Suspense>
+      </body>
     </html>
   );
 }
