@@ -288,36 +288,25 @@ export default function Home() {
   className="fixed top-0 z-50 w-full text-white/95 [padding-top:env(safe-area-inset-top)]"
   style={{ transform: "translateZ(0)", willChange: "transform", contain: "paint" }}
 >
-  {/* ✅ Solid paint under iOS status bar – shows on first frame, no white flash */}
-  
-<div
-  aria-hidden="true"
-  className="fixed inset-x-0 top-0 pointer-events-none"
-  style={{
-    height: "max(env(safe-area-inset-top), 6px)", // paint just the status area
-    background: "#004642",
-    zIndex: 0,
-  }}
-/>
+  {/* ✅ Solid paint under iOS status bar (no white flash, ends at camera area) */}
+  <div
+    aria-hidden="true"
+    className="fixed inset-x-0 top-0 pointer-events-none"
+    style={{
+      height: "clamp(4px, env(safe-area-inset-top), 36px)", // 👈 slightly shorter cap
+      background: "#004642",
+      zIndex: 0,
+    }}
+  />
 
+  {/* Smooth frosted background */}
+  <div
+    className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease]
+               backdrop-blur-md backdrop-saturate-150 transform-gpu"
+    style={{ backgroundColor: "#004642", opacity: scrolled ? 0.94 : 0, zIndex: 1 }}
+    aria-hidden="true"
+  />
 
-
-{/* Smooth single-layer background (punchy + frosted) */}
-<div
-  className="absolute inset-x-0 top-0 pointer-events-none
-             transition-[opacity,height] duration-300 ease-linear
-             backdrop-blur-md backdrop-saturate-150 transform-gpu"
-  style={{
-    backgroundColor: "#004642",
-    opacity: scrolled ? 0.94 : 1,
-    // ✅ Only cover the status bar before scroll; expand after scroll
-    height: scrolled ? "100%" : "env(safe-area-inset-top)",
-  }}
-  aria-hidden="true"
-/>
-
-
-  {/* Pre-scroll gradient */}
   {!scrolled && (
     <div
       className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
@@ -326,9 +315,8 @@ export default function Home() {
     />
   )}
 
-  {/* --- CONTAINER --- */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6" style={{ zIndex: 2 }}>
-    <div className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+    <div className="relative flex items-center justify-between h-[56px] md:h-[64px] lg:h-[72px]">
       {/* LEFT: hamburger */}
       <div className="grow basis-0">
         <button
@@ -344,8 +332,11 @@ export default function Home() {
         </button>
       </div>
 
-      {/* CENTER: logo (kept visible above backgrounds) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ zIndex: 2 }}>
+      {/* CENTER: logo */}
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        style={{ zIndex: 2 }}
+      >
         <img
           src={asset("/logo_improved.svg")}
           alt="Voskopulence"
@@ -365,6 +356,7 @@ export default function Home() {
     </div>
   </div>
 </header>
+
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
       {mounted && typeof document !== "undefined" &&
