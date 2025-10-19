@@ -289,16 +289,18 @@ export default function Home() {
   style={{ transform: "translateZ(0)", willChange: "transform", contain: "paint" }}
 >
   {/* ✅ Solid paint under iOS status bar – shows on first frame, no white flash */}
-  <div
-    aria-hidden="true"
-    className="fixed inset-x-0 top-0 pointer-events-none"
-    style={{
-      // Use a safe minimum so it paints even if env() is 0 on first frame
-      height: "max(env(safe-area-inset-top), 24px)",
-      background: "#004642",
-      zIndex: 0,
-    }}
-  />
+ <div
+  aria-hidden="true"
+  className="fixed inset-x-0 top-0 pointer-events-none"
+  style={{
+    // paint a little (6px) on first frame, use real safe-area if present,
+    // but NEVER exceed 44px so it won’t overlap the logo
+    height: "clamp(6px, env(safe-area-inset-top), 44px)",
+    background: "#004642",
+    zIndex: 0,
+  }}
+/>
+
 
   {/* Smooth frosted background (only opacity changes → jank-free) */}
   <div
