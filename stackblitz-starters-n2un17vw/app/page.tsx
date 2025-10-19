@@ -307,16 +307,20 @@ useEffect(() => {
     WebkitTapHighlightColor: "transparent",
   }}
 >
-  {/* Single frosted background layer that fades in on scroll */}
-  <div
-    className="absolute inset-0 pointer-events-none backdrop-blur-md backdrop-saturate-150 transform-gpu"
-    style={{
-      backgroundColor: "#004642",
-      transition: "opacity 300ms ease",
-      opacity: scrolled ? 0.94 : 0,
-    }}
-    aria-hidden="true"
-  />
+{/* Background layer – starts **below** the safe-area to avoid the top sliver */}
+<div
+  className="absolute left-0 right-0 bottom-0 pointer-events-none
+             [transition:opacity_300ms_ease] will-change-[opacity]
+             backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+  style={{
+    // don’t paint under the status bar area
+    top: "env(safe-area-inset-top)",
+    backgroundColor: "#004642",
+    opacity: scrolled ? 0.94 : 0,
+  }}
+  aria-hidden="true"
+/>
+
 
   {/* Gentle top gradient only before scroll */}
   {!scrolled && (
