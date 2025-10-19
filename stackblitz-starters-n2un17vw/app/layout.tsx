@@ -21,7 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#004642" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#004642" />
       </head>
-      <body><ScrollToTop />{children}</body>
+     <body>
+  <ScrollToTop />
+  {children}
+</body>
+
     </html>
   );
 }
