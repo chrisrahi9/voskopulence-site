@@ -61,39 +61,4 @@ html.ios-statusbar-fix body::after {
   pointer-events: none;
   z-index: 2147483647;
 }
-/* ---------- iOS status-bar paint, zero-flash solution ---------- */
 
-/* 1) PREPAINT (SSR first frame): use a fixed fallback height so there's never a white flash.
-      This class is on <html> only until the script swaps it out. */
-html.ios-prepaint body::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 48px;                     /* safe fallback for first frame */
-  background: #004642;              /* your green */
-  pointer-events: none;
-  z-index: 2147483647;
-}
-
-/* 2) RUNTIME (after the class swap): use real safe-area height */
-html.ios-statusbar-fix body::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top);
-  background: #004642;
-  pointer-events: none;
-  z-index: 2147483647;
-}
-
-/* (Optional) mask the bottom safe area too if you ever notice a white lip
-html.ios-statusbar-fix body::after {
-  content: "";
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  height: env(safe-area-inset-bottom);
-  background: #004642;
-  pointer-events: none;
-  z-index: 2147483647;
-}
-*/
