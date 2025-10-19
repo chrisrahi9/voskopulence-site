@@ -293,7 +293,7 @@ export default function Home() {
     aria-hidden="true"
     className="fixed inset-x-0 top-0 pointer-events-none"
     style={{
-      height: "clamp(4px, env(safe-area-inset-top), 36px)", // 👈 slightly shorter cap
+      height: "clamp(4px, env(safe-area-inset-top), 34px)", // 👈 slightly shorter cap
       background: "#004642",
       zIndex: 0,
     }}
