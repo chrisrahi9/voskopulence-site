@@ -295,7 +295,7 @@ export default function Home() {
   style={{
     // paint a little (6px) on first frame, use real safe-area if present,
     // but NEVER exceed 44px so it won’t overlap the logo
-    height: "clamp(6px, env(safe-area-inset-top), 40px)",
+    height: "clamp(6px, env(safe-area-inset-top), 30px)",
     background: "#004642",
     zIndex: 0,
   }}
