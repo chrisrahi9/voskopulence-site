@@ -289,25 +289,33 @@ export default function Home() {
   style={{ transform: "translateZ(0)", willChange: "transform", contain: "paint" }}
 >
   {/* ✅ Solid paint under iOS status bar – shows on first frame, no white flash */}
- <div
+  
+<div
   aria-hidden="true"
   className="fixed inset-x-0 top-0 pointer-events-none"
   style={{
-    // paint a little (6px) on first frame, use real safe-area if present,
-    // but NEVER exceed 44px so it won’t overlap the logo
-    height: "clamp(6px, env(safe-area-inset-top), 30px)",
+    height: "max(env(safe-area-inset-top), 6px)", // paint just the status area
     background: "#004642",
     zIndex: 0,
   }}
 />
 
 
-  {/* Smooth frosted background (only opacity changes → jank-free) */}
-  <div
-    className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease] backdrop-blur-md backdrop-saturate-150 transform-gpu"
-    style={{ backgroundColor: "#004642", opacity: scrolled ? 0.94 : 0, zIndex: 1 }}
-    aria-hidden="true"
-  />
+
+{/* Smooth single-layer background (punchy + frosted) */}
+<div
+  className="absolute inset-x-0 top-0 pointer-events-none
+             transition-[opacity,height] duration-300 ease-linear
+             backdrop-blur-md backdrop-saturate-150 transform-gpu"
+  style={{
+    backgroundColor: "#004642",
+    opacity: scrolled ? 0.94 : 1,
+    // ✅ Only cover the status bar before scroll; expand after scroll
+    height: scrolled ? "100%" : "env(safe-area-inset-top)",
+  }}
+  aria-hidden="true"
+/>
+
 
   {/* Pre-scroll gradient */}
   {!scrolled && (
