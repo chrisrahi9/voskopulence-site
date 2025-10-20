@@ -113,13 +113,61 @@ useEffect(() => {
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
-  // Lock page scroll when mobile menu is open
-  useEffect(() => {
-    const root = document.documentElement;
-    if (menuOpen) root.classList.add("overflow-hidden");
-    else root.classList.remove("overflow-hidden");
-    return () => root.classList.remove("overflow-hidden");
-  }, [menuOpen]);
+// Lock page scroll when mobile menu is open (robust iOS-safe)
+useEffect(() => {
+  let scrollYBefore = 0;
+
+  if (menuOpen) {
+    // remember current scroll
+    scrollYBefore = window.scrollY;
+
+    // lock body (works on iOS)
+    const body = document.body;
+    body.style.position = "fixed";
+    body.style.top = `-${scrollYBefore}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    // avoid rubber-band overscroll
+    const html = document.documentElement;
+    html.style.overscrollBehaviorY = "none";
+  } else {
+    // restore body
+    const body = document.body;
+    const top = body.style.top;
+    body.style.position = "";
+    body.style.top = "";
+    body.style.left = "";
+    body.style.right = "";
+    body.style.width = "";
+    body.style.overflow = "";
+
+    const html = document.documentElement;
+    html.style.overscrollBehaviorY = "";
+
+    // return to previous scroll position
+    if (top) {
+      const y = -parseInt(top, 10) || 0;
+      window.scrollTo(0, y);
+    }
+  }
+
+  return () => {
+    // safety: if component unmounts while open, restore styles
+    const body = document.body;
+    body.style.position = "";
+    body.style.top = "";
+    body.style.left = "";
+    body.style.right = "";
+    body.style.width = "";
+    body.style.overflow = "";
+    const html = document.documentElement;
+    html.style.overscrollBehaviorY = "";
+  };
+}, [menuOpen]);
+
 useEffect(() => {
   const html = document.documentElement;
   const body = document.body;
@@ -406,12 +454,15 @@ useEffect(() => {
             <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "max(env(safe-area-inset-bottom), 36px)" }} />
             {/* Menu content */}
 <div
-  className={`fixed inset-0 z-[1010] flex flex-col text-white pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),36px)] transition-all duration-300 ${
-    menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"
-  }`}
+  className={`fixed inset-0 z-[1010] overflow-hidden overscroll-contain
+              flex flex-col text-white
+              pt-[env(safe-area-inset-top)]
+              pb-[max(env(safe-area-inset-bottom),36px)]
+              transition-opacity duration-300
+              ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
 >
-  {/* Header row */}
-  <div className="flex items-center justify-between h-[64px] px-5">
+  {/* Top row (title + X) */}
+  <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
     <span className="font-semibold text-white/95">Menu</span>
     <button
       className="p-2 rounded-md hover:bg-white/10"
@@ -424,24 +475,19 @@ useEffect(() => {
     </button>
   </div>
 
-  {/* Menu items */}
-  <nav className="flex-1 flex flex-col items-center justify-center gap-8 text-[1.25rem] font-light tracking-wide">
-    <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
-      Shop
-    </a>
-    <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
-      About
-    </a>
-    <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
-      Sustainability
-    </a>
-    <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
-      Contact
-    </a>
-  </nav>
+  {/* Centered links */}
+  <div className="relative grow">
+    <nav className="absolute inset-0 grid place-items-center">
+      <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+        <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
+        <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
+        <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
+        <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
 </div>
 
-          </div>,
           document.body
         )
       }
