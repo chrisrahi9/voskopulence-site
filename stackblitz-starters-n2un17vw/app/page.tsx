@@ -299,28 +299,27 @@ useEffect(() => {
 <header
   className="fixed top-0 z-50 w-full text-white/95"
   style={{
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    willChange: 'opacity, transform',
-    contain: 'paint',
-    WebkitTapHighlightColor: 'transparent',
+    // promote to own layer & isolate paints = smoother on iOS
+    transform: "translateZ(0)",
+    willChange: "opacity, transform",
+    contain: "paint",
+    WebkitTapHighlightColor: "transparent",
   }}
 >
-  {/* Background layer: smooth opacity, starts at top:0 */}
-  <div
-    className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease]
-               will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-    style={{ backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
-    aria-hidden="true"
-  />
+{/* Background layer – starts **below** the safe-area to avoid the top sliver */}
+<div
+  className="absolute left-0 right-0 bottom-0 pointer-events-none
+             [transition:opacity_300ms_ease] will-change-[opacity]
+             backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+  style={{
+    // don’t paint under the status bar area
+    top: "env(safe-area-inset-top)",
+    backgroundColor: "#004642",
+    opacity: scrolled ? 0.94 : 0,
+  }}
+  aria-hidden="true"
+/>
 
-  {!scrolled && (
-    <div
-      className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
-      aria-hidden="true"
-    />
-  )}
 
   {/* Gentle top gradient only before scroll */}
   {!scrolled && (
