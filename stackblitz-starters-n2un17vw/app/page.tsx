@@ -345,11 +345,15 @@ export default function Home() {
 <header
   className="fixed top-0 z-50 w-full text-white/95"
   style={{
-    // promote to own layer & isolate paints = smoother on iOS
-    transform: "translateZ(0)",
-    willChange: "opacity, transform",
-    contain: "paint",
-    WebkitTapHighlightColor: "transparent",
+    // include the notch/status-bar space so there's never a seam
+    paddingTop: 'env(safe-area-inset-top)',
+
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    willChange: 'opacity',
+    contain: 'paint',
+    WebkitTapHighlightColor: 'transparent',
   }}
 >
 {/* Background layer – starts **below** the safe-area to avoid the top sliver */}
@@ -370,7 +374,11 @@ export default function Home() {
 
         {/* Content row */}
         <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-          <div className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+         <div
+  className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
+  style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
+>
+
             {/* LEFT: hamburger */}
             <div className="grow basis-0">
               <button
@@ -387,7 +395,10 @@ export default function Home() {
             </div>
 
             {/* CENTER: logo (unchanged, keeps the premium layout) */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+           <div
+  className="absolute left-1/2 top-1/2 pointer-events-none"
+  style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+>
               <img
                 src={asset("/logo_improved.svg")}
                 alt="Voskopulence"
