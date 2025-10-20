@@ -67,3 +67,12 @@ html { background-color: #004642; }
 
 /* Reduce scroll chaining / bounce revealing gaps on fast flicks */
 html, body { overscroll-behavior-y: contain; }
+
+/* When the curtain (mobile menu) is open, tint the page root so iOS bars match */
+html.curtain-open,
+body.curtain-open {
+  background-color: rgba(0, 70, 66, 0.75);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
