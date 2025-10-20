@@ -62,3 +62,8 @@ html.ios-statusbar-fix body::after {
   z-index: 2147483647;
 }
 
+/* Make iOS rubber-band background green instead of white */
+html { background-color: #004642; }
+
+/* Reduce scroll chaining / bounce revealing gaps on fast flicks */
+html, body { overscroll-behavior-y: contain; }
