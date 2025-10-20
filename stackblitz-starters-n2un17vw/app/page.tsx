@@ -405,23 +405,42 @@ useEffect(() => {
             <div className="fixed inset-x-0 top-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-top)" }} />
             <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "max(env(safe-area-inset-bottom), 36px)" }} />
             {/* Menu content */}
-            <div className={`fixed inset-0 z-[1001] flex flex-col text-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-all duration-200 ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}>
-              <div className="flex items-center justify-between h-[64px] px-4">
-                <span className="font-semibold">Menu</span>
-                <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+<div
+  className={`fixed inset-0 z-[1010] flex flex-col text-white pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),36px)] transition-all duration-300 ${
+    menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"
+  }`}
+>
+  {/* Header row */}
+  <div className="flex items-center justify-between h-[64px] px-5">
+    <span className="font-semibold text-white/95">Menu</span>
+    <button
+      className="p-2 rounded-md hover:bg-white/10"
+      aria-label="Close menu"
+      onClick={() => setMenuOpen(false)}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
 
-              <nav className="flex-1 flex flex-col items-center justify-center gap-6 text-xl">
-                <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a>
-                <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a>
-                <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a>
-                <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a>
-              </nav>
-            </div>
+  {/* Menu items */}
+  <nav className="flex-1 flex flex-col items-center justify-center gap-8 text-[1.25rem] font-light tracking-wide">
+    <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
+      Shop
+    </a>
+    <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
+      About
+    </a>
+    <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
+      Sustainability
+    </a>
+    <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">
+      Contact
+    </a>
+  </nav>
+</div>
+
           </div>,
           document.body
         )
