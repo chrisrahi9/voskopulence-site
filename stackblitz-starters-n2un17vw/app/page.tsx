@@ -120,7 +120,21 @@ useEffect(() => {
     else root.classList.remove("overflow-hidden");
     return () => root.classList.remove("overflow-hidden");
   }, [menuOpen]);
-
+useEffect(() => {
+  const html = document.documentElement;
+  const body = document.body;
+  if (menuOpen) {
+    html.classList.add("curtain-open");
+    body.classList.add("curtain-open");
+  } else {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  }
+  return () => {
+    html.classList.remove("curtain-open");
+    body.classList.remove("curtain-open");
+  };
+}, [menuOpen]);
   // Edge-swipe to open/close mobile menu (touch only)
   useEffect(() => {
     if (!isTouch) return;
@@ -389,7 +403,7 @@ useEffect(() => {
             />
             {/* Safe-area fillers */}
             <div className="fixed inset-x-0 top-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-top)" }} />
-            <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-bottom)" }} />
+            <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "max(env(safe-area-inset-bottom), 36px)" }} />
             {/* Menu content */}
             <div className={`fixed inset-0 z-[1001] flex flex-col text-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-all duration-200 ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}>
               <div className="flex items-center justify-between h-[64px] px-4">
