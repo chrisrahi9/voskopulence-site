@@ -73,25 +73,24 @@ export default function Home() {
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
-// Frosted header on scroll (throttled with requestAnimationFrame)
-const rafId = useRef<number | null>(null);
+  // Frosted header on scroll (throttled with requestAnimationFrame)
+  const rafId = useRef<number | null>(null);
 
-useEffect(() => {
-  const onScroll = () => {
-    if (rafId.current != null) return;
-    rafId.current = requestAnimationFrame(() => {
-      rafId.current = null;
-      setScrolled(window.scrollY > 24);
-    });
-  };
-  onScroll(); // set initial
-  window.addEventListener("scroll", onScroll, { passive: true });
-  return () => {
-    if (rafId.current != null) cancelAnimationFrame(rafId.current);
-    window.removeEventListener("scroll", onScroll);
-  };
-}, []);
-
+  useEffect(() => {
+    const onScroll = () => {
+      if (rafId.current != null) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        setScrolled(window.scrollY > 24);
+      });
+    };
+    onScroll(); // set initial
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      if (rafId.current != null) cancelAnimationFrame(rafId.current);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   // Smooth scroll to first next section
   const scrollDown = () => {
@@ -113,76 +112,77 @@ useEffect(() => {
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
-// Lock page scroll when mobile menu is open (robust iOS-safe)
-useEffect(() => {
-  let scrollYBefore = 0;
+  // Lock page scroll when mobile menu is open (robust iOS-safe)
+  useEffect(() => {
+    let scrollYBefore = 0;
 
-  if (menuOpen) {
-    // remember current scroll
-    scrollYBefore = window.scrollY;
+    if (menuOpen) {
+      // remember current scroll
+      scrollYBefore = window.scrollY;
 
-    // lock body (works on iOS)
-    const body = document.body;
-    body.style.position = "fixed";
-    body.style.top = `-${scrollYBefore}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
+      // lock body (works on iOS)
+      const body = document.body;
+      body.style.position = "fixed";
+      body.style.top = `-${scrollYBefore}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+      body.style.overflow = "hidden";
 
-    // avoid rubber-band overscroll
-    const html = document.documentElement;
-    html.style.overscrollBehaviorY = "none";
-  } else {
-    // restore body
-    const body = document.body;
-    const top = body.style.top;
-    body.style.position = "";
-    body.style.top = "";
-    body.style.left = "";
-    body.style.right = "";
-    body.style.width = "";
-    body.style.overflow = "";
+      // avoid rubber-band overscroll
+      const html = document.documentElement;
+      html.style.overscrollBehaviorY = "none";
+    } else {
+      // restore body
+      const body = document.body;
+      const top = body.style.top;
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.overflow = "";
 
-    const html = document.documentElement;
-    html.style.overscrollBehaviorY = "";
+      const html = document.documentElement;
+      html.style.overscrollBehaviorY = "";
 
-    // return to previous scroll position
-    if (top) {
-      const y = -parseInt(top, 10) || 0;
-      window.scrollTo(0, y);
+      // return to previous scroll position
+      if (top) {
+        const y = -parseInt(top, 10) || 0;
+        window.scrollTo(0, y);
+      }
     }
-  }
 
-  return () => {
-    // safety: if component unmounts while open, restore styles
-    const body = document.body;
-    body.style.position = "";
-    body.style.top = "";
-    body.style.left = "";
-    body.style.right = "";
-    body.style.width = "";
-    body.style.overflow = "";
+    return () => {
+      // safety: if component unmounts while open, restore styles
+      const body = document.body;
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.overflow = "";
+      const html = document.documentElement;
+      html.style.overscrollBehaviorY = "";
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
     const html = document.documentElement;
-    html.style.overscrollBehaviorY = "";
-  };
-}, [menuOpen]);
+    const body = document.body;
+    if (menuOpen) {
+      html.classList.add("curtain-open");
+      body.classList.add("curtain-open");
+    } else {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    }
+    return () => {
+      html.classList.remove("curtain-open");
+      body.classList.remove("curtain-open");
+    };
+  }, [menuOpen]);
 
-useEffect(() => {
-  const html = document.documentElement;
-  const body = document.body;
-  if (menuOpen) {
-    html.classList.add("curtain-open");
-    body.classList.add("curtain-open");
-  } else {
-    html.classList.remove("curtain-open");
-    body.classList.remove("curtain-open");
-  }
-  return () => {
-    html.classList.remove("curtain-open");
-    body.classList.remove("curtain-open");
-  };
-}, [menuOpen]);
   // Edge-swipe to open/close mobile menu (touch only)
   useEffect(() => {
     if (!isTouch) return;
@@ -358,80 +358,77 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-<header
-  className="fixed top-0 z-50 w-full text-white/95"
-  style={{
-    // promote to own layer & isolate paints = smoother on iOS
-    transform: "translateZ(0)",
-    willChange: "opacity, transform",
-    contain: "paint",
-    WebkitTapHighlightColor: "transparent",
-  }}
->
-{/* Background layer – starts **below** the safe-area to avoid the top sliver */}
-<div
-  className="absolute left-0 right-0 bottom-0 pointer-events-none
+      <header
+        className="fixed top-0 z-50 w-full text-white/95"
+        style={{
+          // promote to own layer & isolate paints = smoother on iOS
+          transform: "translateZ(0)",
+          willChange: "opacity, transform",
+          contain: "paint",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        {/* Background layer – starts **below** the safe-area to avoid the top sliver */}
+        <div
+          className="absolute left-0 right-0 bottom-0 pointer-events-none
              [transition:opacity_300ms_ease] will-change-[opacity]
              backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-  style={{
-    // don’t paint under the status bar area
-    top: "env(safe-area-inset-top)",
-    backgroundColor: "#004642",
-    opacity: scrolled ? 0.94 : 0,
-  }}
-  aria-hidden="true"
-/>
-
-
-  {/* Gentle top gradient only before scroll */}
-  {!scrolled && (
-    <div
-      className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
-      aria-hidden="true"
-    />
-  )}
-
-  {/* Content row */}
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-    <div className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
-      {/* LEFT: hamburger */}
-      <div className="grow basis-0">
-        <button
-          className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-          onClick={() => setMenuOpen(true)}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-          </svg>
-        </button>
-      </div>
-
-      {/* CENTER: logo (unchanged, keeps the premium layout) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <img
-          src={asset("/logo_improved.svg")}
-          alt="Voskopulence"
-          className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
-          loading="eager"
-          decoding="async"
+          style={{
+            // don’t paint under the status bar area
+            top: "env(safe-area-inset-top)",
+            backgroundColor: "#004642",
+            opacity: scrolled ? 0.94 : 0,
+          }}
+          aria-hidden="true"
         />
-      </div>
 
-      {/* RIGHT: desktop nav */}
-      <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-        <a href="/shop" className="hover:text-gray-200">Shop</a>
-        <a href="#about" className="hover:text-gray-200">About</a>
-        <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-        <a href="/contact" className="hover:text-gray-200">Contact</a>
-      </nav>
-    </div>
-  </div>
-</header>
+        {/* Gentle top gradient only before scroll */}
+        {!scrolled && (
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
+            aria-hidden="true"
+          />
+        )}
 
+        {/* Content row */}
+        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
+          <div className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+            {/* LEFT: hamburger */}
+            <div className="grow basis-0">
+              <button
+                className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+                aria-label="Open menu"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-menu"
+                onClick={() => setMenuOpen(true)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                </svg>
+              </button>
+            </div>
 
+            {/* CENTER: logo (unchanged, keeps the premium layout) */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <img
+                src={asset("/logo_improved.svg")}
+                alt="Voskopulence"
+                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+
+            {/* RIGHT: desktop nav */}
+            <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+              <a href="/shop" className="hover:text-gray-200">Shop</a>
+              <a href="#about" className="hover:text-gray-200">About</a>
+              <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+              <a href="/contact" className="hover:text-gray-200">Contact</a>
+            </nav>
+          </div>
+        </div>
+      </header>
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
       {mounted && typeof document !== "undefined" &&
@@ -453,41 +450,41 @@ useEffect(() => {
             <div className="fixed inset-x-0 top-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-top)" }} />
             <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "max(env(safe-area-inset-bottom), 36px)" }} />
             {/* Menu content */}
-<div
-  className={`fixed inset-0 z-[1010] overflow-hidden overscroll-contain
+            <div
+              className={`fixed inset-0 z-[1010] overflow-hidden overscroll-contain
               flex flex-col text-white
               pt-[env(safe-area-inset-top)]
               pb-[max(env(safe-area-inset-bottom),36px)]
               transition-opacity duration-300
               ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
->
-  {/* Top row (title + X) */}
-  <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-    <span className="font-semibold text-white/95">Menu</span>
-    <button
-      className="p-2 rounded-md hover:bg-white/10"
-      aria-label="Close menu"
-      onClick={() => setMenuOpen(false)}
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M18 6L6 18M6 6l12 12" />
-      </svg>
-    </button>
-  </div>
+            >
+              {/* Top row (title + X) */}
+              <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+                <span className="font-semibold text-white/95">Menu</span>
+                <button
+                  className="p-2 rounded-md hover:bg-white/10"
+                  aria-label="Close menu"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-  {/* Centered links */}
-  <div className="relative grow">
-    <nav className="absolute inset-0 grid place-items-center">
-      <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-        <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
-        <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
-        <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
-        <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
-      </ul>
-    </nav>
-  </div>
-</div>,
-
+              {/* Centered links */}
+              <div className="relative grow">
+                <nav className="absolute inset-0 grid place-items-center">
+                  <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+                    <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
+                    <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
+                    <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
+                    <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>,
           document.body
         )
       }
