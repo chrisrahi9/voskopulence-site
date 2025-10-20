@@ -359,7 +359,7 @@ export default function Home() {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
       <header
-        className="fixed top-0 z-50 w-full text-white/95"
+        className={`fixed top-0 z-[1100] w-full text-white/95 ${menuOpen ? "pointer-events-none" : ""}`}
         style={{
           // promote to own layer & isolate paints = smoother on iOS
           transform: "translateZ(0)",
@@ -374,11 +374,11 @@ export default function Home() {
              [transition:opacity_300ms_ease] will-change-[opacity]
              backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
           style={{
-            // don’t paint under the status bar area
-            top: "env(safe-area-inset-top)",
-            backgroundColor: "#004642",
-            opacity: scrolled ? 0.94 : 0,
-          }}
+    top: "env(safe-area-inset-top)",
+    backgroundColor: "#004642",
+    // keep solid strip when menu is open
+    opacity: menuOpen ? 0.94 : (scrolled ? 0.94 : 0),
+  }}
           aria-hidden="true"
         />
 
@@ -431,63 +431,60 @@ export default function Home() {
       </header>
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-      {mounted && typeof document !== "undefined" &&
-        createPortal(
-          <div
-            id="mobile-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-hidden={!menuOpen}
-            className={`lg:hidden ${menuOpen ? "" : "hidden"}`}
-          >
-            {/* Backdrop – EXACT same color/blur */}
-            <div
-              className="fixed inset-0 z-[999] bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 transition-opacity duration-200"
-              style={{ opacity: menuOpen ? 1 : 0 }}
-              onClick={() => setMenuOpen(false)}
-            />
-            {/* Safe-area fillers */}
-            <div className="fixed inset-x-0 top-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "env(safe-area-inset-top)" }} />
-            <div className="fixed inset-x-0 bottom-0 z-[1000] pointer-events-none bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60" style={{ height: "max(env(safe-area-inset-bottom), 36px)" }} />
-            {/* Menu content */}
-            <div
-              className={`fixed inset-0 z-[1010] overflow-hidden overscroll-contain
-              flex flex-col text-white
-              pt-[env(safe-area-inset-top)]
-              pb-[max(env(safe-area-inset-bottom),36px)]
-              transition-opacity duration-300
-              ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-1 pointer-events-none"}`}
-            >
-              {/* Top row (title + X) */}
-              <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-                <span className="font-semibold text-white/95">Menu</span>
-                <button
-                  className="p-2 rounded-md hover:bg-white/10"
-                  aria-label="Close menu"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+     {mounted && typeof document !== "undefined" &&
+  createPortal(
+    <div
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden={!menuOpen}
+      className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
+    >
+      {/* Backdrop — SAME color & blur */}
+      <div
+        className="absolute inset-0 bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0 }}
+        onClick={() => setMenuOpen(false)}
+      />
 
-              {/* Centered links */}
-              <div className="relative grow">
-                <nav className="absolute inset-0 grid place-items-center">
-                  <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-                    <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
-                    <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
-                    <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
-                    <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
-                  </ul>
-                </nav>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )
-      }
+      {/* Menu content */}
+      <div
+        className={`absolute inset-0 overflow-hidden overscroll-contain
+                    flex flex-col text-white
+                    pt-[env(safe-area-inset-top)]
+                    pb-[max(env(safe-area-inset-bottom),36px)]
+                    transition-opacity duration-300
+                    ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      >
+        {/* Top row (title + X) */}
+        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+          <span className="font-semibold text-white/95">Menu</span>
+          <button
+            className="p-2 rounded-md hover:bg-white/10"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Centered links */}
+        <nav className="grow grid place-items-center">
+          <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+            <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
+            <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
+            <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
+            <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
