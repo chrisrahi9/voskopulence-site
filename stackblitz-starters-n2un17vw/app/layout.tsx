@@ -28,7 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <ScrollToTop />
         </Suspense>
-
+ {/* Permanent status-bar fill (sits under iOS camera area) */}
+  <div
+    aria-hidden
+    className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[100]"
+  />
         {/* Also wrap children so any page using useSearchParams is safe */}
         <Suspense fallback={null}>
           {children}
