@@ -343,7 +343,7 @@ export default function Home() {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
 <header
-  className="fixed top-0 z-50 w-full text-white/95"
+  className={`fixed top-0 z-[1100] w-full text-white/95 ${menuOpen ? "pointer-events-none" : ""}`}
   style={{
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
@@ -353,11 +353,12 @@ export default function Home() {
     WebkitTapHighlightColor: 'transparent',
   }}
 >
+
   {/* Background layer: smooth opacity, starts at top:0 */}
   <div
     className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease]
                will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-    style={{ backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
+   style={{ backgroundColor: '#004642', opacity: menuOpen ? 0.94 : (scrolled ? 0.94 : 0) }}
     aria-hidden="true"
   />
 
