@@ -345,8 +345,6 @@ export default function Home() {
 <header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
-    // expose CAP as a CSS var so all children use the exact same value
-    // NOTE: CSS supports decimal px values; iOS is fine with 5.5px
     ['--cap' as any]: `${CAP_PX}px`,
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
@@ -355,41 +353,27 @@ export default function Home() {
     contain: "layout paint",
   }}
 >
-  {/* 1) Top cap — solid, always on */}
+  {/* Single, seam-free background (cap + fade) */}
   <div
-    className="absolute left-0 right-0 top-0"
-    style={{ height: "var(--cap)", backgroundColor: "#004642", opacity: 0.94 }}
-    aria-hidden="true"
-  />
-
-  {/* 2) Fading header background — starts immediately below the cap */}
-  <div
-    className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
+    className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
     style={{
-      top: "var(--cap)",
-      backgroundColor: "#004642",
-      opacity: scrolled ? 0.94 : 0,
-      transform: "translateZ(0)",
-      willChange: "opacity",
-    }}
-    aria-hidden="true"
-  />
-
-  {/* 3) Anti-alias seam killer — a 2px vertical blend right at the junction */}
-  <div
-    className="absolute left-0 right-0 pointer-events-none"
-    style={{
-      top: "var(--cap)",
-      height: "2px",
-      // same green -> transparent over 2px hides the hairline completely
-      background:
-        "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
+      // One gradient paints the solid cap, then the fading header below it.
+      background: `
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,0.94) 0,
+          rgba(0,70,66,0.94) var(--cap),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+        )
+      `,
+      transition: "background 300ms ease",
       transform: "translateZ(0)",
     }}
     aria-hidden="true"
   />
 
-  {/* 4) Content offset so the row sits below the cap */}
+  {/* Spacer so the content row starts below the cap */}
   <div style={{ height: "var(--cap)" }} aria-hidden="true" />
 
   {/* Row */}
