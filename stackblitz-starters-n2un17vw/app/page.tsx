@@ -373,10 +373,11 @@ export default function Home() {
 
         {/* Content row */}
         <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-         <div
+        <div
   className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
   style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
 >
+
 
             {/* LEFT: hamburger */}
             <div className="grow basis-0">
@@ -394,18 +395,20 @@ export default function Home() {
             </div>
 
             {/* CENTER: logo (unchanged, keeps the premium layout) */}
-           <div
+         <div
   className="absolute left-1/2 top-1/2 pointer-events-none"
-  style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+  style={{ transform: 'translate3d(-50%, -50%, 0)' }}  // note the 3d
 >
-              <img
-                src={asset("/logo_improved.svg")}
-                alt="Voskopulence"
-                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
-                loading="eager"
-                decoding="async"
-              />
-            </div>
+  <img
+    src={asset("/logo_improved.svg")}
+    alt="Voskopulence"
+    className="block w-auto"
+    style={{ height: '80px' }}         // 👈 lock to a concrete px height to avoid sub-pixel reflow
+    loading="eager"
+    decoding="async"
+  />
+</div>
+
 
             {/* RIGHT: desktop nav */}
             <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
@@ -425,7 +428,7 @@ export default function Home() {
 />
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-  {mounted && typeof document !== "undefined" &&
+{mounted && typeof document !== "undefined" &&
   createPortal(
     <div
       id="mobile-menu"
@@ -434,25 +437,27 @@ export default function Home() {
       aria-hidden={!menuOpen}
       className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
     >
-      {/* Backdrop — fully covers dynamic viewport + bottom safe area */}
+      {/* Backdrop — covers dynamic viewport; no solid band */}
       <div
-        className="fixed left-0 top-0 w-screen h-[100dvh] bg-[#004642]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0, transform: 'translateZ(0)' }}
+        className="fixed left-0 top-0 w-screen h-[100dvh] backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)', transform: 'translateZ(0)' }}
         onClick={() => setMenuOpen(false)}
       />
-      {/* Bottom blur extender for iOS safe-area (prevents solid band) */}
+
+      {/* Bottom blur extender over the safe-area (prevents the green slab) */}
       <div
         className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-        style={{ height: 'env(safe-area-inset-bottom)', opacity: menuOpen ? 1 : 0, backgroundColor: '#004642' }}
+        style={{ height: 'env(safe-area-inset-bottom)', opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)' }}
         aria-hidden="true"
       />
 
-      {/* If you want the status bar area to remain solid over the blur, keep this; remove if you prefer it blurred */}
-      <div
+      {/* (Optional) If you want the status bar to remain SOLID (not blurred) while open, keep this.
+          If you prefer it blurred too, delete this block. */}
+      {/* <div
         className="fixed inset-x-0 top-0 z-[1001]"
         style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
         aria-hidden="true"
-      />
+      /> */}
 
       {/* Menu content */}
       <div
@@ -462,6 +467,7 @@ export default function Home() {
                     transition-opacity duration-300
                     ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
+        {/* Top row */}
         <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
           <span className="font-semibold text-white/95">Menu</span>
           <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
