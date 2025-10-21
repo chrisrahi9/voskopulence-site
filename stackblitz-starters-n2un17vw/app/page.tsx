@@ -345,7 +345,7 @@ export default function Home() {
 <header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
-    ['--cap' as any]: `${CAP_PX}px`,
+    ['--cap' as any]: `${CAP_PX}px`, // e.g. 3–5.5
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
@@ -357,7 +357,6 @@ export default function Home() {
   <div
     className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
     style={{
-      // One gradient paints the solid cap, then the fading header below it.
       background: `
         linear-gradient(
           to bottom,
@@ -373,41 +372,53 @@ export default function Home() {
     aria-hidden="true"
   />
 
+  {/* BLEND: hides any hairline at the cap edge */}
+  <div
+    className="absolute left-0 right-0 pointer-events-none"
+    style={{
+      top: "var(--cap)",
+      height: "2px", // try 1.5–3px if you need more/less
+      background: "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
+      transform: "translateZ(0)",
+    }}
+    aria-hidden="true"
+  />
+
   {/* Spacer so the content row starts below the cap */}
   <div style={{ height: "var(--cap)" }} aria-hidden="true" />
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
-    {/* Left: burger */}
-    <div className="grow basis-0 pl-1.5" />
+    {/* Left: burger (add a little left padding for breathing room) */}
+    <div className="grow basis-0 pl-1.5">
       <button
-        className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         aria-label="Open menu"
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
         onClick={() => setMenuOpen(true)}
-        style={{ transform: 'translateY(-0.5px)' }}
-
+        style={{ transform: 'translateY(-0.5px)' }} /* micro-align */
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M3 6h18M3 12h18M3 18h18" />
+          <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
         </svg>
       </button>
     </div>
 
-    {/* Center: logo (jitter-free) */}
-   <div
-  className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
-  style={{
-    transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
-    willChange: 'transform',
-  }}
->
-
+    {/* Center: logo (jitter-resistant + subtle scale on scroll) */}
+    <div
+      className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
+      style={{
+        transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
+        willChange: "transform",
+        contain: "layout paint",
+        textShadow: '0 1px 6px rgba(0,0,0,0.35)', // helps on bright video frames
+      }}
+    >
       <img
         src={asset("/logo_improved.svg")}
         alt="Voskopulence"
-        className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
+        className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
         style={{
@@ -415,8 +426,6 @@ export default function Home() {
           backfaceVisibility: "hidden",
           WebkitBackfaceVisibility: "hidden",
         }}
-        style={{ textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}
-
       />
     </div>
 
@@ -429,6 +438,7 @@ export default function Home() {
     </nav>
   </div>
 </header>
+
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
         createPortal(
