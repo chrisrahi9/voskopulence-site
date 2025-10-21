@@ -340,88 +340,85 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
-      {/* =================== NAVBAR =================== */}
+  <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
+    {/* =================== NAVBAR =================== */}
 
-<header
-  className="fixed top-0 z-50 w-full text-white/95"
-  style={{
-    // keep content below the notch (optional but recommended)
-    paddingTop: 'env(safe-area-inset-top)',
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    willChange: 'opacity',
-    contain: 'paint',
-    WebkitTapHighlightColor: 'transparent',
-  }}
->
-  {/* 1) Always-on TOP CAP (status bar only) — no transition, never disappears */}
-  <div
-    className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
-    style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
-    aria-hidden="true"
-  />
+    <header
+      className="fixed top-0 z-50 w-full text-white/95"
+      style={{
+        // keep content below the notch (optional but recommended)
+        paddingTop: 'env(safe-area-inset-top)',
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        willChange: 'opacity',
+        contain: 'paint',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {/* 1) Always-on TOP CAP (status bar only) — no transition, never disappears */}
+      <div
+        className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
+        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
+        aria-hidden="true"
+      />
 
-  {/* 2) Fading header background BELOW the cap */}
-  <div
-    className="absolute left-0 right-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
-               will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-    style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
-    aria-hidden="true"
-  />
-  {/* ...rest of your header content row... */}
-</header>
+      {/* 2) Fading header background BELOW the cap */}
+      <div
+        className="absolute left-0 right-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
+                   will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+        style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
+        aria-hidden="true"
+      />
 
-
-        {/* Content row */}
-        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-       <div
-  className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-  style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
->
-
-
-
-            {/* LEFT: hamburger */}
-            <div className="grow basis-0">
-              <button
-                className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-                aria-label="Open menu"
-                aria-expanded={menuOpen}
-                aria-controls="mobile-menu"
-                onClick={() => setMenuOpen(true)}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M3 6h18M3 12h18M3 18h18" />
-                </svg>
-              </button>
-            </div>
-
-            {/* CENTER: logo (unchanged, keeps the premium layout) */}
-  <div
-    className="absolute left-1/2 top-1/2 pointer-events-none"
-    style={{ transform: 'translate3d(-50%, -50%, 0)' }}
-  >
-               <img
-                src={asset("/logo_improved.svg")}
-                alt="Voskopulence"
-                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
-                loading="eager"
-                decoding="async"
-              />
-  </div>
-
-            {/* RIGHT: desktop nav */}
-            <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-              <a href="/shop" className="hover:text-gray-200">Shop</a>
-              <a href="#about" className="hover:text-gray-200">About</a>
-              <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-              <a href="/contact" className="hover:text-gray-200">Contact</a>
-            </nav>
+      {/* Content row */}
+      <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
+        <div
+          className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
+          style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
+        >
+          {/* LEFT: hamburger */}
+          <div className="grow basis-0">
+            <button
+              className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMenuOpen(true)}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
           </div>
+
+          {/* CENTER: logo (unchanged, keeps the premium layout) */}
+          <div
+            className="absolute left-1/2 top-1/2 pointer-events-none"
+            style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+          >
+            <img
+              src={asset("/logo_improved.svg")}
+              alt="Voskopulence"
+              className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+
+          {/* RIGHT: desktop nav */}
+          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+            <a href="/shop" className="hover:text-gray-200">Shop</a>
+            <a href="#about" className="hover:text-gray-200">About</a>
+            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+            <a href="/contact" className="hover:text-gray-200">Contact</a>
+          </nav>
         </div>
-      </header>
+      </div>
+    </header>
+  </div>
+);
+
 {/* Fixed top cap to remove the first-scroll gap (status bar only) */}
 <div
   className="fixed inset-x-0 top-0 z-[60] pointer-events-none"
