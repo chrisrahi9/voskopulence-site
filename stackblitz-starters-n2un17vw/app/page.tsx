@@ -353,36 +353,41 @@ export default function Home() {
   }}
 >
   {(() => {
-    // Tune these two numbers only
-    const CAP = 3;      // visual thickness of the top strip (px). Try 2–4
-    const ROW_H = 80;   // tallest row height you use (lg:h-[80px])
+    const CAP = 3;      // your visible top strip (px). Try 2–4
+    const BUFFER = 6;   // tiny safety buffer (px) to survive iOS first-scroll nudge
+    const ROW_H = 80;   // max header row height (lg:h-[80px])
 
     return (
       <>
-        {/* SINGLE fixed background (cap + fading header). Fixed prevents first-scroll split */}
+        {/* LAYER 1: Solid, fixed cap + safety buffer (NO transition, NO blur) */}
         <div
-          className="fixed inset-x-0 pointer-events-none"
+          className="fixed inset-x-0 top-0 pointer-events-none"
           style={{
-            top: 0,
-            height: `calc(${CAP}px + ${ROW_H}px)`,
-            background: `
-              linear-gradient(
-                to bottom,
-                rgba(0,70,66,0.94) 0,
-                rgba(0,70,66,0.94) ${CAP}px,
-                rgba(0,70,66,${scrolled ? 0.94 : 0}) ${CAP}px,
-                rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-              )
-            `,
-            WebkitTransform: "translateZ(0)",
-            transform: "translateZ(0)",
-            transition: "background 300ms ease",
+            height: `${CAP + BUFFER}px`,
+            backgroundColor: "#004642",
+            opacity: 0.94,
             zIndex: 0,
+            transform: "translateZ(0)",
           }}
           aria-hidden="true"
         />
 
-        {/* Row — pad down by CAP so content starts below the strip */}
+        {/* LAYER 2: Fixed tint/blur for the rest of the header (fades in/out) */}
+        <div
+          className="fixed inset-x-0 pointer-events-none backdrop-blur-md backdrop-saturate-150"
+          style={{
+            top: `${CAP + BUFFER}px`,
+            height: `${ROW_H}px`,
+            backgroundColor: "#004642",
+            opacity: scrolled ? 0.94 : 0,
+            transition: "opacity 300ms ease",
+            zIndex: 0,
+            transform: "translateZ(0)",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* CONTENT: pad the row by CAP only (not the buffer) so layout stays snug */}
         <div
           className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
           style={{ paddingTop: `${CAP}px`, zIndex: 1 }}
@@ -426,7 +431,7 @@ export default function Home() {
           </div>
 
           {/* Right: nav */}
-          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[2]">
             <a href="/shop" className="hover:text-gray-200">Shop</a>
             <a href="#about" className="hover:text-gray-200">About</a>
             <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
@@ -437,7 +442,6 @@ export default function Home() {
     );
   })()}
 </header>
-
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
