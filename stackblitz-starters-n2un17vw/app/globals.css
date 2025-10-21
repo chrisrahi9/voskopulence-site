@@ -9,6 +9,7 @@
 
 /* Smooth fonts for luxe look */
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
 /* Voskopulence typography */
 :root {
   --font-sans: 'League Spartan', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
@@ -21,57 +22,56 @@ html, body {
 }
 
 /* helper classes */
-.heading-script {
-  font-family: var(--font-script);
-  font-weight: 400;
-}
-.text-sans {
-  font-family: var(--font-sans);
-  font-weight: 300;
-}
+.heading-script { font-family: var(--font-script); font-weight: 400; }
+.text-sans     { font-family: var(--font-sans);   font-weight: 300; }
+
 @keyframes pulse-smooth {
   0%,100% { transform: scale(1); }
   50%     { transform: scale(1.05); }
 }
-html, body {
-  overflow-x: hidden;
-}
+
+html, body { overflow-x: hidden; }
+
 /* When the curtain is open, darken the page background so Safari's bottom bar
    shows the same tint instead of bright page content */
 html.curtain-open,
 body.curtain-open {
   background-color: rgba(0, 70, 66, 0.75);
-  /* optional: soften like your backdrop */
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
 }
-/* --- iOS status-bar paint from first frame --- */
-html.ios-statusbar-fix body::before {
+
+/* === Permanent iOS status-bar cap (renders BEFORE React) ===
+   Prevents the one-time “green strip rolls up” gap on first scroll. */
+html::before {
   content: "";
   position: fixed;
   top: 0; left: 0; right: 0;
   height: env(safe-area-inset-top);
-  background: #004642;              /* your green */
+  background: #004642;       /* your green */
+  opacity: 0.94;             /* match header opacity */
   pointer-events: none;
-  z-index: 2147483647;               /* above everything; visual-only */
+  z-index: 2147483647;       /* visual-only, never blocks taps */
 }
 
-/* Optional: also mask the bottom safe area if you ever see a white lip when the toolbar shows */
-html.ios-statusbar-fix body::after {
+/* (Optional) If you ever see a white lip at the very bottom when iOS toolbar appears,
+   uncomment the block below. It paints the bottom safe-area solid green.
+   Keep it commented if you prefer relying on the portal’s blurred backdrop instead. */
+/*
+html::after {
   content: "";
   position: fixed;
   left: 0; right: 0; bottom: 0;
   height: env(safe-area-inset-bottom);
   background: #004642;
+  opacity: 0.94;
   pointer-events: none;
   z-index: 2147483647;
 }
+*/
 
-/* Make iOS rubber-band background green instead of white */
+/* Make iOS rubber-band background green instead of white (behind overscroll) */
 html { background-color: #004642; }
 
 /* Reduce scroll chaining / bounce revealing gaps on fast flicks */
 html, body { overscroll-behavior-y: contain; }
-
-
-
