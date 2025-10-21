@@ -379,13 +379,15 @@ export default function Home() {
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
     {/* Left: burger */}
-    <div className="grow basis-0">
+    <div className="grow basis-0 pl-1.5" />
       <button
         className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
         aria-label="Open menu"
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
         onClick={() => setMenuOpen(true)}
+        style={{ transform: 'translateY(-0.5px)' }}
+
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M3 6h18M3 12h18M3 18h18" />
@@ -394,18 +396,18 @@ export default function Home() {
     </div>
 
     {/* Center: logo (jitter-free) */}
-    <div
-      className="absolute left-1/2 top-1/2 pointer-events-none"
-      style={{
-        transform: "translate3d(-50%, -50%, 0)",
-        willChange: "transform",
-        contain: "layout paint",
-      }}
-    >
+   <div
+  className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
+  style={{
+    transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
+    willChange: 'transform',
+  }}
+>
+
       <img
         src={asset("/logo_improved.svg")}
         alt="Voskopulence"
-        className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
+        className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
         style={{
@@ -413,6 +415,8 @@ export default function Home() {
           backfaceVisibility: "hidden",
           WebkitBackfaceVisibility: "hidden",
         }}
+        style={{ textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}
+
       />
     </div>
 
@@ -465,9 +469,16 @@ export default function Home() {
             >
               <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
                 <span className="font-semibold text-white/95">Menu</span>
-                <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                </button>
+                <button
+  className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden
+             hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+  aria-label="Open menu" ...
+>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+</button>
+f
               </div>
 
               <nav className="grow grid place-items-center">
