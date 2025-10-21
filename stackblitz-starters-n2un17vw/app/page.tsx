@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
-const CAP_PX = 4; // tweak to 16/20/etc. and it WILL move
+const CAP_PX = 5; // tweak to 16/20/etc. and it WILL move
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
