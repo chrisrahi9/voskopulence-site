@@ -31,6 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
+        {/* Permanent status-bar cap (pre-hydration, never blinks) */}
+  <div
+    aria-hidden
+    className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[1000]"
+    style={{ opacity: 0.94 }}
+  />
         {/* Wrap any client component that might read routing state */}
         <Suspense fallback={null}>
           <ScrollToTop />
