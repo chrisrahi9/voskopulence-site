@@ -342,10 +342,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-    <header
+   <header
   className="fixed top-0 z-50 w-full text-white/95"
   style={{
-    // no paddingTop here; we’ll use a spacer for content instead
+    // no paddingTop here; the spacer below handles the notch
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
@@ -354,7 +354,7 @@ export default function Home() {
     WebkitTapHighlightColor: 'transparent',
   }}
 >
-  {/* Fading header background must start at top:0 so it sits under the status-bar cap */}
+  {/* Header background: starts at top:0 so there's never a seam under the layout cap */}
   <div
     className="absolute inset-x-0 top-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
                will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
@@ -372,13 +372,13 @@ export default function Home() {
 
   {/* Content wrapper */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-    {/* Spacer equals safe-area so content sits *below* the status bar,
-        while the background still covers all the way to the very top */}
+    {/* Spacer equals safe-area so content sits below the notch
+        while the background still covers all the way to the top */}
     <div className="h-[env(safe-area-inset-top)]" aria-hidden />
 
     <div
       className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-      style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
+      style={{ transform: 'translateZ(0)' }}
     >
       {/* LEFT: hamburger */}
       <div className="grow basis-0">
@@ -395,10 +395,10 @@ export default function Home() {
         </button>
       </div>
 
-      {/* CENTER: logo (same visual size, jitter-free by fixing heights) */}
+      {/* CENTER: logo — fixed heights (same visual size), pinned to its own layer */}
       <div
         className="absolute left-1/2 top-1/2 pointer-events-none"
-        style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+        style={{ transform: 'translate3d(-50%, -50%, 0)', willChange: 'transform' }}
       >
         <img
           src={asset("/logo_improved.svg")}
@@ -406,6 +406,11 @@ export default function Home() {
           className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
           loading="eager"
           decoding="async"
+          style={{
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+          }}
         />
       </div>
 
@@ -419,6 +424,7 @@ export default function Home() {
     </div>
   </div>
 </header>
+
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
