@@ -424,12 +424,19 @@ export default function Home() {
       aria-hidden={!menuOpen}
       className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
     >
-      {/* Backdrop — SAME color & blur */}
-      <div
-        className="absolute inset-0 bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
-        onClick={() => setMenuOpen(false)}
-      />
+   {/* Backdrop — blur + tint */}
+<div
+  className="absolute inset-0 bg-[#004642]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/60 transition-opacity duration-200"
+  style={{ opacity: menuOpen ? 1 : 0 }}
+  onClick={() => setMenuOpen(false)}
+/>
+
+{/* Solid cap to keep the top strip clean over the blur */}
+<div
+  className="absolute inset-x-0 top-0 z-[1001]"
+  style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642' }}
+  aria-hidden="true"
+/>
 
       {/* Menu content */}
       <div
