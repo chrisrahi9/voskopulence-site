@@ -346,27 +346,22 @@ export default function Home() {
 <header
   className="fixed top-0 z-50 w-full text-white/95"
   style={{
-    // promote to own layer & isolate paints = smoother on iOS
-    transform: "translateZ(0)",
-    willChange: "opacity, transform",
-    contain: "paint",
-    WebkitTapHighlightColor: "transparent",
+    // keep content below the notch (optional but recommended)
+    paddingTop: 'env(safe-area-inset-top)',
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    willChange: 'opacity',
+    contain: 'paint',
+    WebkitTapHighlightColor: 'transparent',
   }}
 >
-{/* Background layer – starts **below** the safe-area to avoid the top sliver */}
-<div
-  className="absolute left-0 right-0 bottom-0 pointer-events-none
-             [transition:opacity_300ms_ease] will-change-[opacity]
-             backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-  style={{
-    // don’t paint under the status bar area
-    top: "env(safe-area-inset-top)",
-    backgroundColor: "#004642",
-    opacity: scrolled ? 0.94 : 0,
-  }}
-  aria-hidden="true"
-/>
-
+  {/* 1) Always-on TOP CAP (status bar only) — no transition, never disappears */}
+  <div
+    className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
+    style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
+    aria-hidden="true"
+  />
 
   {/* 2) Fading header background BELOW the cap */}
   <div
