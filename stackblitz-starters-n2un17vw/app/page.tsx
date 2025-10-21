@@ -227,7 +227,7 @@ export default function Home() {
     if (!v) return;
 
     const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const MP4_SRC = asset("/hero_web.mp4");
+       const MP4_SRC = asset("/hero_web.mp4");
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
@@ -340,144 +340,138 @@ export default function Home() {
   }, []);
 
   return (
-  <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
-    {/* =================== NAVBAR =================== */}
-
-    <header
-      className="fixed top-0 z-50 w-full text-white/95"
-      style={{
-        // keep content below the notch (optional but recommended)
-        paddingTop: 'env(safe-area-inset-top)',
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden',
-        WebkitBackfaceVisibility: 'hidden',
-        willChange: 'opacity',
-        contain: 'paint',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      {/* 1) Always-on TOP CAP (status bar only) — no transition, never disappears */}
-      <div
-        className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
-        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
-        aria-hidden="true"
-      />
-
-      {/* 2) Fading header background BELOW the cap */}
-      <div
-        className="absolute left-0 right-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
-                   will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-        style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
-        aria-hidden="true"
-      />
-
-      {/* Content row */}
-      <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-        <div
-          className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-          style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
-        >
-          {/* LEFT: hamburger */}
-          <div className="grow basis-0">
-            <button
-              className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-menu"
-              onClick={() => setMenuOpen(true)}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 6h18M3 12h18M3 18h18" />
-              </svg>
-            </button>
-          </div>
-
-          {/* CENTER: logo (unchanged, keeps the premium layout) */}
-          <div
-            className="absolute left-1/2 top-1/2 pointer-events-none"
-            style={{ transform: 'translate3d(-50%, -50%, 0)' }}
-          >
-            <img
-              src={asset("/logo_improved.svg")}
-              alt="Voskopulence"
-              className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
-              loading="eager"
-              decoding="async"
-            />
-          </div>
-
-          {/* RIGHT: desktop nav */}
-          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-            <a href="/shop" className="hover:text-gray-200">Shop</a>
-            <a href="#about" className="hover:text-gray-200">About</a>
-            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-            <a href="/contact" className="hover:text-gray-200">Contact</a>
-          </nav>
-        </div>
-      </div>
-    </header>
-  </div>
-);
-
-{/* Fixed top cap to remove the first-scroll gap (status bar only) */}
-<div
-  className="fixed inset-x-0 top-0 z-[60] pointer-events-none"
-  style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
-  aria-hidden="true"
-/>
-
-      {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-{mounted && typeof document !== "undefined" &&
-  createPortal(
-    <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
-    >
-      {/* Backdrop — blur & tint all the way to the bottom */}
-      <div
-        className="fixed inset-0 min-h-[100dvh] bg-[#004642]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
-        onClick={() => setMenuOpen(false)}
-      />
-
-      {/* Only a TOP cap (keep status bar solid). No bottom cap at all. */}
-      <div
-        className="fixed inset-x-0 top-0 z-[1001]"
-        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642' }}
-        aria-hidden="true"
-      />
-
-      {/* Menu content */}
-      <div
-        className={`fixed inset-0 flex flex-col text-white
-                    pt-[env(safe-area-inset-top)]
-                    pb-[env(safe-area-inset-bottom)]
-                    transition-opacity duration-300
-                    ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
+      {/* =================== NAVBAR =================== */}
+      <header
+        className="fixed top-0 z-50 w-full text-white/95"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          willChange: 'opacity',
+          contain: 'paint',
+          WebkitTapHighlightColor: 'transparent',
+        }}
       >
-        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-          <span className="font-semibold text-white/95">Menu</span>
-          <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+        {/* TOP safe-area cap (keeps the green strip continuous) */}
+        <div
+          className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
+          style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
+          aria-hidden="true"
+        />
+        {/* Fading header background BELOW the cap */}
+        <div
+          className="absolute left-0 right-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
+                     will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+          style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
+          aria-hidden="true"
+        />
 
-        <nav className="grow grid place-items-center">
-          <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-            <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
-            <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
-            <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
-            <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
-          </ul>
-        </nav>
-      </div>
-    </div>,
-    document.body
-  )
-}
+        {/* Content row */}
+        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
+          <div
+            className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
+            style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
+          >
+            {/* LEFT: hamburger */}
+            <div className="grow basis-0">
+              <button
+                className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+                aria-label="Open menu"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-menu"
+                onClick={() => setMenuOpen(true)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* CENTER: logo (unchanged size) */}
+            <div
+              className="absolute left-1/2 top-1/2 pointer-events-none"
+              style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+            >
+              <img
+                src={asset("/logo_improved.svg")}
+                alt="Voskopulence"
+                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+
+            {/* RIGHT: desktop nav */}
+            <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+              <a href="/shop" className="hover:text-gray-200">Shop</a>
+              <a href="#about" className="hover:text-gray-200">About</a>
+              <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+              <a href="/contact" className="hover:text-gray-200">Contact</a>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* ===== Mobile curtain (portal) ===== */}
+      {mounted && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden={!menuOpen}
+            className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
+          >
+            {/* Backdrop — blur to the very bottom (no solid slab) */}
+            <div
+              className="fixed left-0 top-0 w-screen h-[100dvh] backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
+              style={{ opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)', transform: 'translateZ(0)' }}
+              onClick={() => setMenuOpen(false)}
+            />
+            {/* Bottom blur extender just for safe-area */}
+            <div
+              className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
+              style={{ height: 'env(safe-area-inset-bottom)', opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)' }}
+              aria-hidden="true"
+            />
+
+            {/* Keep top strip solid over blur while menu is open */}
+            <div
+              className="fixed inset-x-0 top-0 z-[1001]"
+              style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
+              aria-hidden="true"
+            />
+
+            {/* Menu content */}
+            <div
+              className={`fixed inset-0 flex flex-col text-white
+                          pt-[env(safe-area-inset-top)]
+                          pb-[env(safe-area-inset-bottom)]
+                          transition-opacity duration-300
+                          ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            >
+              <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+                <span className="font-semibold text-white/95">Menu</span>
+                <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <nav className="grow grid place-items-center">
+                <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+                  <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+                  <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+                  <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+                  <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+                </ul>
+              </nav>
+            </div>
+          </div>,
+          document.body
+        )
+      }
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
@@ -707,3 +701,4 @@ export default function Home() {
       `}</style>
     </div>
   );
+}
