@@ -353,27 +353,18 @@ export default function Home() {
   }}
 >
   {(() => {
-    const CAP = 2.5; // visual thickness of your top strip; try 2–3
+    // Tune these two numbers only
+    const CAP = 3;      // visual thickness of the top strip (px). Try 2–4
+    const ROW_H = 80;   // tallest row height you use (lg:h-[80px])
 
     return (
       <>
-        {/* Safety band: fixed 2px, covers Safari’s first-scroll nudge */}
+        {/* SINGLE fixed background (cap + fading header). Fixed prevents first-scroll split */}
         <div
-          className="fixed top-0 inset-x-0 pointer-events-none"
+          className="fixed inset-x-0 pointer-events-none"
           style={{
-            height: "2px",
-            backgroundColor: "#004642",
-            opacity: 0.94,
-            zIndex: 2147483000, // very high so it stays on top
-            transform: "translateZ(0)",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* Single, seam-free background: solid cap + fading header */}
-        <div
-          className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
-          style={{
+            top: 0,
+            height: `calc(${CAP}px + ${ROW_H}px)`,
             background: `
               linear-gradient(
                 to bottom,
@@ -383,21 +374,23 @@ export default function Home() {
                 rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
               )
             `,
-            transition: "background 300ms ease",
+            WebkitTransform: "translateZ(0)",
             transform: "translateZ(0)",
+            transition: "background 300ms ease",
+            zIndex: 0,
           }}
           aria-hidden="true"
         />
 
-        {/* Row (pad down by exactly CAP so content starts under the cap) */}
+        {/* Row — pad down by CAP so content starts below the strip */}
         <div
           className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-          style={{ paddingTop: `${CAP}px` }}
+          style={{ paddingTop: `${CAP}px`, zIndex: 1 }}
         >
           {/* Left: burger */}
           <div className="grow basis-0">
             <button
-              className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+              className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[2]"
               aria-label="Open menu"
               aria-expanded={menuOpen}
               aria-controls="mobile-menu"
@@ -444,6 +437,7 @@ export default function Home() {
     );
   })()}
 </header>
+
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
