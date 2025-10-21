@@ -41,12 +41,10 @@ body.curtain-open {
   backdrop-filter: blur(24px);
 }
 
-
 /* (Optional) If you ever see a white lip at the very bottom when iOS toolbar appears,
-   uncomment the block below. It paints the bottom safe-area solid green.
-   Keep it commented if you prefer relying on the portal’s blurred backdrop instead. */
-
-/* html::after {
+   uncomment this block to paint the bottom safe area solid green on every page. */
+/*
+html::after {
   content: "";
   position: fixed;
   left: 0; right: 0; bottom: 0;
@@ -56,7 +54,7 @@ body.curtain-open {
   pointer-events: none;
   z-index: 2147483647;
 }
-
+*/
 
 /* Make iOS rubber-band background green instead of white (behind overscroll) */
 html { background-color: #004642; }
