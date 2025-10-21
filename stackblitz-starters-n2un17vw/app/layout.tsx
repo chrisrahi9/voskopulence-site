@@ -26,18 +26,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
-       {/* Fixed green bar that doesn’t depend on env() */}
-<div
-  aria-hidden
-  className="fixed top-0 inset-x-0 pointer-events-none"
-  style={{
-    height: "18px", // fixed height for iPhone status bar
-    backgroundColor: "#004642",
-    opacity: 0.94,
-    zIndex: 9999,
-  }}
-/>
-
         <Suspense fallback={null}>
           <ScrollToTop />
         </Suspense>
