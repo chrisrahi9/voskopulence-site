@@ -359,7 +359,7 @@ export default function Home() {
   {/* 1) Top cap — solid green, always on */}
   <div
     className="absolute left-0 right-0 top-0"
-    style={{ height: "18px", backgroundColor: "#004642", opacity: 0.94 }}
+    style={{ height: "16px", backgroundColor: "#004642", opacity: 0.94 }}
     aria-hidden="true"
   />
 
@@ -367,7 +367,7 @@ export default function Home() {
   <div
     className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
-      top: "18px", // MUST match the cap above
+      top: "16px", // MUST match the cap above
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
       transform: "translateZ(0)",
@@ -377,7 +377,7 @@ export default function Home() {
   />
 
   {/* 3) Content offset — pushes row below the cap */}
-  <div style={{ height: "18px" }} aria-hidden="true" />
+  <div style={{ height: "16px" }} aria-hidden="true" />
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
