@@ -342,27 +342,30 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-   <header
+ <header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
     willChange: "opacity",
+    contain: "layout paint",
   }}
 >
-  {/* Background blur & tint (covers entire area) */}
+  {/* Background blur & tint (covers entire area, starts at top:0) */}
   <div
     className="absolute inset-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
+      transform: "translateZ(0)",
+      willChange: "opacity",
     }}
     aria-hidden="true"
   />
 
-  {/* Spacer for notch */}
-  <div className="h-[env(safe-area-inset-top)]" aria-hidden="true" />
+  {/* Spacer for status bar / notch — fixed to avoid iOS env() resizing on first scroll */}
+  <div style={{ height: "20px" }} aria-hidden="true" />
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
@@ -381,12 +384,13 @@ export default function Home() {
       </button>
     </div>
 
-    {/* Center: logo (GPU-pinned) */}
+    {/* Center: logo (GPU-pinned, fixed heights to stop jitter) */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none"
       style={{
         transform: "translate3d(-50%, -50%, 0)",
         willChange: "transform",
+        contain: "layout paint",
       }}
     >
       <img
@@ -412,6 +416,7 @@ export default function Home() {
     </nav>
   </div>
 </header>
+
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
