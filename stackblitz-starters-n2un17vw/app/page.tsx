@@ -395,20 +395,18 @@ export default function Home() {
             </div>
 
             {/* CENTER: logo (unchanged, keeps the premium layout) */}
-         <div
-  className="absolute left-1/2 top-1/2 pointer-events-none"
-  style={{ transform: 'translate3d(-50%, -50%, 0)' }}  // note the 3d
->
-  <img
-    src={asset("/logo_improved.svg")}
-    alt="Voskopulence"
-    className="block w-auto"
-    style={{ height: '80px' }}         // 👈 lock to a concrete px height to avoid sub-pixel reflow
-    loading="eager"
-    decoding="async"
-  />
-</div>
-
+  <div
+    className="absolute left-1/2 top-1/2 pointer-events-none"
+    style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+  >
+    <img
+      src={asset("/logo_improved.svg")}
+      alt="Voskopulence"
+      className="block w-auto h-[64px] md:h-[72px] lg:h-[80px]"
+      loading="eager"
+      decoding="async"
+    />
+  </div>
 
             {/* RIGHT: desktop nav */}
             <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
