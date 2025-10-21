@@ -345,7 +345,6 @@ export default function Home() {
 <header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
-    ['--cap' as any]: `${CAP_PX}px`,
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
@@ -353,78 +352,89 @@ export default function Home() {
     contain: "layout paint",
   }}
 >
-  {/* Single, seam-free background (cap + fade) */}
-  <div
-    className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
-    style={{
-      // One gradient paints the solid cap, then the fading header below it.
-      background: `
-        linear-gradient(
-          to bottom,
-          rgba(0,70,66,0.94) 0,
-          rgba(0,70,66,0.94) var(--cap),
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-        )
-      `,
-      transition: "background 300ms ease",
-      transform: "translateZ(0)",
-    }}
-    aria-hidden="true"
-  />
+  {/*
+    Single background: top cap + rest of header.
+    CHANGE THIS number to make the strip thinner/thicker:
+  */}
+  {(() => {
+    const CAP = 3; // try 2, 2.5, 3, 4… (hard-coded px, not a var)
 
-  {/* Spacer so the content row starts below the cap */}
-  <div style={{ height: "var(--cap)" }} aria-hidden="true" />
+    return (
+      <>
+        <div
+          className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
+          style={{
+            background: `
+              linear-gradient(
+                to bottom,
+                rgba(0,70,66,0.94) 0,
+                rgba(0,70,66,0.94) ${CAP}px,
+                rgba(0,70,66,${scrolled ? 0.94 : 0}) ${CAP}px,
+                rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+              )
+            `,
+            transition: "background 300ms ease",
+            transform: "translateZ(0)",
+          }}
+          aria-hidden="true"
+        />
 
-  {/* Row */}
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
-    {/* Left: burger */}
-    <div className="grow basis-0">
-      <button
-        className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-        aria-label="Open menu"
-        aria-expanded={menuOpen}
-        aria-controls="mobile-menu"
-        onClick={() => setMenuOpen(true)}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M3 6h18M3 12h18M3 18h18" />
-        </svg>
-      </button>
-    </div>
+        {/* Row (padded down by exactly CAP so text starts under the cap) */}
+        <div
+          className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
+          style={{ paddingTop: `${CAP}px` }}
+        >
+          {/* Left: burger */}
+          <div className="grow basis-0">
+            <button
+              className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMenuOpen(true)}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
+          </div>
 
-    {/* Center: logo (jitter-free) */}
-    <div
-      className="absolute left-1/2 top-1/2 pointer-events-none"
-      style={{
-        transform: "translate3d(-50%, -50%, 0)",
-        willChange: "transform",
-        contain: "layout paint",
-      }}
-    >
-      <img
-        src={asset("/logo_improved.svg")}
-        alt="Voskopulence"
-        className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
-        loading="eager"
-        decoding="async"
-        style={{
-          transform: "translateZ(0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-        }}
-      />
-    </div>
+          {/* Center: logo (jitter-free) */}
+          <div
+            className="absolute left-1/2 top-1/2 pointer-events-none"
+            style={{
+              transform: "translate3d(-50%, -50%, 0)",
+              willChange: "transform",
+              contain: "layout paint",
+            }}
+          >
+            <img
+              src={asset("/logo_improved.svg")}
+              alt="Voskopulence"
+              className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
+              loading="eager"
+              decoding="async"
+              style={{
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+            />
+          </div>
 
-    {/* Right: nav */}
-    <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-      <a href="/shop" className="hover:text-gray-200">Shop</a>
-      <a href="#about" className="hover:text-gray-200">About</a>
-      <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-      <a href="/contact" className="hover:text-gray-200">Contact</a>
-    </nav>
-  </div>
+          {/* Right: nav */}
+          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+            <a href="/shop" className="hover:text-gray-200">Shop</a>
+            <a href="#about" className="hover:text-gray-200">About</a>
+            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+            <a href="/contact" className="hover:text-gray-200">Contact</a>
+          </nav>
+        </div>
+      </>
+    );
+  })()}
 </header>
+
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
         createPortal(
