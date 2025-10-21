@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Make sure the page is allowed to paint behind the notch */
-@supports (padding: max(0px)) {
-  :root, html, body { background-color: #ffffff; } /* your page bg */
-}
-
 /* Smooth fonts for luxe look */
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
@@ -41,6 +36,12 @@ body.curtain-open {
   backdrop-filter: blur(24px);
 }
 
+/* Make iOS rubber-band background GREEN instead of white (off-page area) */
+html, body { background-color: #004642 !important; }
+
+/* Reduce scroll chaining / bounce revealing gaps on fast flicks */
+html, body { overscroll-behavior-y: contain; }
+
 /* (Optional) If you ever see a white lip at the very bottom when iOS toolbar appears,
    uncomment this block to paint the bottom safe area solid green on every page. */
 /*
@@ -55,9 +56,3 @@ html::after {
   z-index: 2147483647;
 }
 */
-
-/* Make iOS rubber-band background green instead of white (behind overscroll) */
-html { background-color: #004642; }
-
-/* Reduce scroll chaining / bounce revealing gaps on fast flicks */
-html, body { overscroll-behavior-y: contain; }
