@@ -357,7 +357,7 @@ export default function Home() {
     CHANGE THIS number to make the strip thinner/thicker:
   */}
   {(() => {
-    const CAP = 3; // try 2, 2.5, 3, 4… (hard-coded px, not a var)
+    const CAP = 2; // try 2, 2.5, 3, 4… (hard-coded px, not a var)
 
     return (
       <>
