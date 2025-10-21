@@ -41,24 +41,12 @@ body.curtain-open {
   backdrop-filter: blur(24px);
 }
 
-/* === Permanent iOS status-bar cap (renders BEFORE React) ===
-   Prevents the one-time “green strip rolls up” gap on first scroll. */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top);
-  background: #004642;       /* your green */
-  opacity: 0.94;             /* match header opacity */
-  pointer-events: none;
-  z-index: 2147483647;       /* visual-only, never blocks taps */
-}
 
 /* (Optional) If you ever see a white lip at the very bottom when iOS toolbar appears,
    uncomment the block below. It paints the bottom safe-area solid green.
    Keep it commented if you prefer relying on the portal’s blurred backdrop instead. */
 
-html::after {
+/* html::after {
   content: "";
   position: fixed;
   left: 0; right: 0; bottom: 0;
