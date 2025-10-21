@@ -397,7 +397,7 @@ export default function Home() {
               <img
                 src={asset("/logo_improved.svg")}
                 alt="Voskopulence"
-                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
+                className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
                 loading="eager"
                 decoding="async"
               />
