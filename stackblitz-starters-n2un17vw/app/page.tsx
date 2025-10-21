@@ -342,77 +342,83 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-      <header
-        className="fixed top-0 z-50 w-full text-white/95"
-        style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
-          willChange: 'opacity',
-          contain: 'paint',
-          WebkitTapHighlightColor: 'transparent',
-        }}
+    <header
+  className="fixed top-0 z-50 w-full text-white/95"
+  style={{
+    // no paddingTop here; we’ll use a spacer for content instead
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    willChange: 'opacity',
+    contain: 'paint',
+    WebkitTapHighlightColor: 'transparent',
+  }}
+>
+  {/* Fading header background must start at top:0 so it sits under the status-bar cap */}
+  <div
+    className="absolute inset-x-0 top-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
+               will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+    style={{ backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
+    aria-hidden="true"
+  />
+
+  {/* Optional soft gradient before scroll */}
+  {!scrolled && (
+    <div
+      className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
+      aria-hidden="true"
+    />
+  )}
+
+  {/* Content wrapper */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
+    {/* Spacer equals safe-area so content sits *below* the status bar,
+        while the background still covers all the way to the very top */}
+    <div className="h-[env(safe-area-inset-top)]" aria-hidden />
+
+    <div
+      className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
+      style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
+    >
+      {/* LEFT: hamburger */}
+      <div className="grow basis-0">
+        <button
+          className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+          onClick={() => setMenuOpen(true)}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+      </div>
+
+      {/* CENTER: logo (same visual size, jitter-free by fixing heights) */}
+      <div
+        className="absolute left-1/2 top-1/2 pointer-events-none"
+        style={{ transform: 'translate3d(-50%, -50%, 0)' }}
       >
-        {/* TOP safe-area cap (keeps the green strip continuous) */}
-        <div
-          className="absolute inset-x-0 top-0 pointer-events-none transform-gpu contain-paint"
-          style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
-          aria-hidden="true"
+        <img
+          src={asset("/logo_improved.svg")}
+          alt="Voskopulence"
+          className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
+          loading="eager"
+          decoding="async"
         />
-        {/* Fading header background BELOW the cap */}
-        <div
-          className="absolute left-0 right-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
-                     will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-          style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
-          aria-hidden="true"
-        />
+      </div>
 
-        {/* Content row */}
-        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-          <div
-            className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-            style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
-          >
-            {/* LEFT: hamburger */}
-            <div className="grow basis-0">
-              <button
-                className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-                aria-label="Open menu"
-                aria-expanded={menuOpen}
-                aria-controls="mobile-menu"
-                onClick={() => setMenuOpen(true)}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M3 6h18M3 12h18M3 18h18" />
-                </svg>
-              </button>
-            </div>
-
-            {/* CENTER: logo (unchanged size) */}
-            <div
-              className="absolute left-1/2 top-1/2 pointer-events-none"
-              style={{ transform: 'translate3d(-50%, -50%, 0)' }}
-            >
-              <img
-                src={asset("/logo_improved.svg")}
-                alt="Voskopulence"
-                className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
-                loading="eager"
-                decoding="async"
-              />
-            </div>
-
-            {/* RIGHT: desktop nav */}
-            <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-              <a href="/shop" className="hover:text-gray-200">Shop</a>
-              <a href="#about" className="hover:text-gray-200">About</a>
-              <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-              <a href="/contact" className="hover:text-gray-200">Contact</a>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* RIGHT: desktop nav */}
+      <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+        <a href="/shop" className="hover:text-gray-200">Shop</a>
+        <a href="#about" className="hover:text-gray-200">About</a>
+        <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+        <a href="/contact" className="hover:text-gray-200">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
