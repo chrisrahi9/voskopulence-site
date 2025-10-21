@@ -378,7 +378,7 @@ export default function Home() {
           className="absolute left-0 right-0 pointer-events-none"
           style={{
             top: "var(--cap)",
-            height: "2px",
+            height: "1px",
             background:
               "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
             transform: "translateZ(0)",
