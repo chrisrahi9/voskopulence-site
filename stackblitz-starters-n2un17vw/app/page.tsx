@@ -370,6 +370,9 @@ export default function Home() {
     style={{ top: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
     aria-hidden="true"
   />
+  {/* ...rest of your header content row... */}
+</header>
+
 
         {/* Content row */}
         <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
@@ -435,27 +438,19 @@ export default function Home() {
       aria-hidden={!menuOpen}
       className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
     >
-      {/* Backdrop — covers dynamic viewport; no solid band */}
+      {/* Backdrop — blur & tint all the way to the bottom */}
       <div
-        className="fixed left-0 top-0 w-screen h-[100dvh] backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)', transform: 'translateZ(0)' }}
+        className="fixed inset-0 min-h-[100dvh] bg-[#004642]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0 }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Bottom blur extender over the safe-area (prevents the green slab) */}
+      {/* Only a TOP cap (keep status bar solid). No bottom cap at all. */}
       <div
-        className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-        style={{ height: 'env(safe-area-inset-bottom)', opacity: menuOpen ? 1 : 0, backgroundColor: 'rgba(0,70,66,0.70)' }}
+        className="fixed inset-x-0 top-0 z-[1001]"
+        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642' }}
         aria-hidden="true"
       />
-
-      {/* (Optional) If you want the status bar to remain SOLID (not blurred) while open, keep this.
-          If you prefer it blurred too, delete this block. */}
-      {/* <div
-        className="fixed inset-x-0 top-0 z-[1001]"
-        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
-        aria-hidden="true"
-      /> */}
 
       {/* Menu content */}
       <div
@@ -465,7 +460,6 @@ export default function Home() {
                     transition-opacity duration-300
                     ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
-        {/* Top row */}
         <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
           <span className="font-semibold text-white/95">Menu</span>
           <button className="p-2 rounded-md hover:bg-white/10" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
