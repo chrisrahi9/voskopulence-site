@@ -356,19 +356,14 @@ export default function Home() {
     WebkitTapHighlightColor: 'transparent',
   }}
 >
-{/* Background layer – starts **below** the safe-area to avoid the top sliver */}
+{/* Background layer: smooth opacity, starts at top:0 */}
 <div
-  className="absolute left-0 right-0 bottom-0 pointer-events-none
-             [transition:opacity_300ms_ease] will-change-[opacity]
-             backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-  style={{
-    // don’t paint under the status bar area
-    top: "env(safe-area-inset-top)",
-    backgroundColor: "#004642",
-    opacity: scrolled ? 0.94 : 0,
-  }}
+  className="absolute inset-0 pointer-events-none [transition:opacity_300ms_ease]
+             will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
+  style={{ backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
   aria-hidden="true"
 />
+
 
 
 
