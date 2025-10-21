@@ -345,6 +345,9 @@ export default function Home() {
 <header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
+    // expose CAP as a CSS var so all children use the exact same value
+    // NOTE: CSS supports decimal px values; iOS is fine with 5.5px
+    ['--cap' as any]: `${CAP_PX}px`,
     transform: "translateZ(0)",
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
@@ -352,42 +355,49 @@ export default function Home() {
     contain: "layout paint",
   }}
 >
-  {/* 1) Top cap: solid, always-on, fixed height */}
+  {/* 1) Top cap — solid, always on */}
   <div
-    className="fixed top-0 left-0 right-0 pointer-events-none"
-    style={{
-      height: `${CAP_PX}px`,
-      backgroundColor: "#004642",
-      opacity: 0.94,
-      zIndex: 1, // above page, below header content
-      transform: "translateZ(0)",
-    }}
+    className="absolute left-0 right-0 top-0"
+    style={{ height: "var(--cap)", backgroundColor: "#004642", opacity: 0.94 }}
     aria-hidden="true"
   />
 
-  {/* 2) Header background: covers full header, but clipped so it starts exactly below the cap */}
+  {/* 2) Fading header background — starts immediately below the cap */}
   <div
-    className="absolute inset-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
+    className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
+      top: "var(--cap)",
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
-      clipPath: `inset(${CAP_PX}px 0 0 0)`, // <- cuts the top by CAP_PX
-      WebkitClipPath: `inset(${CAP_PX}px 0 0 0)`,
       transform: "translateZ(0)",
-      zIndex: 0,
+      willChange: "opacity",
     }}
     aria-hidden="true"
   />
 
-  {/* 3) Content offset so the row sits just under the cap */}
-  <div style={{ height: `${CAP_PX}px` }} aria-hidden="true" />
+  {/* 3) Anti-alias seam killer — a 2px vertical blend right at the junction */}
+  <div
+    className="absolute left-0 right-0 pointer-events-none"
+    style={{
+      top: "var(--cap)",
+      height: "2px",
+      // same green -> transparent over 2px hides the hairline completely
+      background:
+        "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
+      transform: "translateZ(0)",
+    }}
+    aria-hidden="true"
+  />
 
-  {/* 4) Row */}
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px] z-[2]">
+  {/* 4) Content offset so the row sits below the cap */}
+  <div style={{ height: "var(--cap)" }} aria-hidden="true" />
+
+  {/* Row */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
     {/* Left: burger */}
     <div className="grow basis-0">
       <button
-        className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[3]"
+        className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
         aria-label="Open menu"
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
@@ -423,7 +433,7 @@ export default function Home() {
     </div>
 
     {/* Right: nav */}
-    <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[3]">
+    <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
       <a href="/shop" className="hover:text-gray-200">Shop</a>
       <a href="#about" className="hover:text-gray-200">About</a>
       <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
