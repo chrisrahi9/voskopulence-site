@@ -416,6 +416,12 @@ export default function Home() {
           </div>
         </div>
       </header>
+{/* Fixed top cap to remove the first-scroll gap (status bar only) */}
+<div
+  className="fixed inset-x-0 top-0 z-[60] pointer-events-none"
+  style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
+  aria-hidden="true"
+/>
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
     {mounted && typeof document !== "undefined" &&
@@ -433,6 +439,12 @@ export default function Home() {
         style={{ opacity: menuOpen ? 1 : 0 }}
         onClick={() => setMenuOpen(false)}
       />
+{/* Bottom blur cap so the curtain stays blurred to the very bottom */}
+<div
+  className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
+  style={{ height: 'env(safe-area-inset-bottom)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
+  aria-hidden="true"
+/>
 
       {/* Only a TOP cap (keep status bar solid). No bottom cap at all. */}
       <div
