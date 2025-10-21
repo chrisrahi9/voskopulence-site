@@ -352,11 +352,22 @@ export default function Home() {
     contain: "layout paint",
   }}
 >
-  {/* Background blur & tint — starts exactly below the cap */}
+  {/*
+    SINGLE SOURCE OF TRUTH for the cap height.
+    If you want to tweak, change this one number in all three places below.
+  */}
+  {/* 1) Top cap — solid green, always on */}
+  <div
+    className="absolute left-0 right-0 top-0"
+    style={{ height: "18px", backgroundColor: "#004642", opacity: 0.94 }}
+    aria-hidden="true"
+  />
+
+  {/* 2) Fading header background — starts exactly below the cap */}
   <div
     className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
-      top: "18px",               // <-- CAP (must match the cap above)
+      top: "18px", // MUST match the cap above
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
       transform: "translateZ(0)",
@@ -365,7 +376,7 @@ export default function Home() {
     aria-hidden="true"
   />
 
-  {/* Spacer for status bar / notch — same CAP */}
+  {/* 3) Content offset — pushes row below the cap */}
   <div style={{ height: "18px" }} aria-hidden="true" />
 
   {/* Row */}
@@ -417,6 +428,7 @@ export default function Home() {
     </nav>
   </div>
 </header>
+
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
