@@ -425,7 +425,7 @@ export default function Home() {
 />
 
       {/* ===== Mobile curtain (portal, fixed inset-0) ===== */}
-    {mounted && typeof document !== "undefined" &&
+  {mounted && typeof document !== "undefined" &&
   createPortal(
     <div
       id="mobile-menu"
@@ -434,23 +434,23 @@ export default function Home() {
       aria-hidden={!menuOpen}
       className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
     >
-      {/* Backdrop — blur & tint all the way to the bottom */}
+      {/* Backdrop — fully covers dynamic viewport + bottom safe area */}
       <div
-        className="fixed inset-0 min-h-[100dvh] bg-[#004642]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
-        style={{ opacity: menuOpen ? 1 : 0 }}
+        className="fixed left-0 top-0 w-screen h-[100dvh] bg-[#004642]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
+        style={{ opacity: menuOpen ? 1 : 0, transform: 'translateZ(0)' }}
         onClick={() => setMenuOpen(false)}
       />
-{/* Bottom blur cap so the curtain stays blurred to the very bottom */}
-<div
-  className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-  style={{ height: 'env(safe-area-inset-bottom)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
-  aria-hidden="true"
-/>
+      {/* Bottom blur extender for iOS safe-area (prevents solid band) */}
+      <div
+        className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
+        style={{ height: 'env(safe-area-inset-bottom)', opacity: menuOpen ? 1 : 0, backgroundColor: '#004642' }}
+        aria-hidden="true"
+      />
 
-      {/* Only a TOP cap (keep status bar solid). No bottom cap at all. */}
+      {/* If you want the status bar area to remain solid over the blur, keep this; remove if you prefer it blurred */}
       <div
         className="fixed inset-x-0 top-0 z-[1001]"
-        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642' }}
+        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: menuOpen ? 1 : 0 }}
         aria-hidden="true"
       />
 
@@ -482,8 +482,6 @@ export default function Home() {
     document.body
   )
 }
-
-
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
