@@ -342,7 +342,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
- <header
+<header
   className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
     transform: "translateZ(0)",
@@ -352,10 +352,11 @@ export default function Home() {
     contain: "layout paint",
   }}
 >
-  {/* Background blur & tint (covers entire area, starts at top:0) */}
+  {/* Background blur & tint — starts exactly below the cap */}
   <div
-    className="absolute inset-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
+    className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
+      top: "20px",               // <-- CAP (must match the cap above)
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
       transform: "translateZ(0)",
@@ -364,7 +365,7 @@ export default function Home() {
     aria-hidden="true"
   />
 
-  {/* Spacer for status bar / notch — fixed to avoid iOS env() resizing on first scroll */}
+  {/* Spacer for status bar / notch — same CAP */}
   <div style={{ height: "20px" }} aria-hidden="true" />
 
   {/* Row */}
@@ -416,7 +417,6 @@ export default function Home() {
     </nav>
   </div>
 </header>
-
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
