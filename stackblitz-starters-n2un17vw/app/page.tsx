@@ -376,10 +376,11 @@ export default function Home() {
 
         {/* Content row */}
         <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-        <div
+       <div
   className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
   style={{ transform: 'translateZ(0)', willChange: 'opacity' }}
 >
+
 
 
             {/* LEFT: hamburger */}
@@ -402,13 +403,13 @@ export default function Home() {
     className="absolute left-1/2 top-1/2 pointer-events-none"
     style={{ transform: 'translate3d(-50%, -50%, 0)' }}
   >
-    <img
-      src={asset("/logo_improved.svg")}
-      alt="Voskopulence"
-      className="block w-auto h-[64px] md:h-[72px] lg:h-[80px]"
-      loading="eager"
-      decoding="async"
-    />
+               <img
+                src={asset("/logo_improved.svg")}
+                alt="Voskopulence"
+                className="block w-auto max-h-[120px] md:max-h-[132px] lg:max-h-[144px]"
+                loading="eager"
+                decoding="async"
+              />
   </div>
 
             {/* RIGHT: desktop nav */}
