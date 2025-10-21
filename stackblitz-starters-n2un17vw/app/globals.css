@@ -2,18 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Permanent iOS status-bar fill: renders BEFORE React, fixes first-scroll gap */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top);
-  background: #004642;
-  opacity: 0.94;
-  pointer-events: none;
-  z-index: 2147483647; /* above everything, but non-interactive */
-}
-
 /* Make sure the page is allowed to paint behind the notch */
 @supports (padding: max(0px)) {
   :root, html, body { background-color: #ffffff; } /* your page bg */
