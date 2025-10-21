@@ -339,20 +339,30 @@ export default function Home() {
       }
     };
   }, []);
+// Cap is only needed on phones; on desktop it should be 0
+const [capPx, setCapPx] = useState<number>(0);
+useEffect(() => {
+  const updateCap = () => {
+    setCapPx(window.innerWidth >= 1024 ? 0 : CAP_PX); // 0 on lg+, CAP_PX on small
+  };
+  updateCap();
+  window.addEventListener("resize", updateCap);
+  return () => window.removeEventListener("resize", updateCap);
+}, []);
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
       <header
         className="fixed top-0 left-0 right-0 z-50 text-white/95"
-        style={{
-          ["--cap" as any]: `${CAP_PX}px`,
-          transform: "translateZ(0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-          willChange: "opacity",
-          contain: "layout paint",
-        }}
+      style={{
+  ['--cap' as any]: `${capPx}px`,          // <-- responsive cap
+  transform: "translateZ(0)",
+  backfaceVisibility: "hidden",
+  WebkitBackfaceVisibility: "hidden",
+  willChange: "opacity",
+  contain: "layout paint",
+}}
       >
         {/* Single, seam-free background (cap + fade) */}
         <div
