@@ -343,90 +343,75 @@ export default function Home() {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
    <header
-  className="fixed top-0 z-50 w-full text-white/95"
+  className="fixed top-0 left-0 right-0 z-50 text-white/95"
   style={{
-    // no paddingTop here; the spacer below handles the notch
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    willChange: 'opacity',
-    contain: 'paint',
-    WebkitTapHighlightColor: 'transparent',
+    transform: "translateZ(0)",
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
+    willChange: "opacity",
   }}
 >
-  {/* Header background: starts at top:0 so there's never a seam under the layout cap */}
+  {/* Background blur & tint (covers entire area) */}
   <div
-    className="absolute inset-x-0 top-0 bottom-0 pointer-events-none [transition:opacity_300ms_ease]
-               will-change-[opacity] backdrop-blur-md backdrop-saturate-150 transform-gpu contain-paint"
-    style={{ backgroundColor: '#004642', opacity: scrolled ? 0.94 : 0 }}
+    className="absolute inset-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
+    style={{
+      backgroundColor: "#004642",
+      opacity: scrolled ? 0.94 : 0,
+    }}
     aria-hidden="true"
   />
 
-  {/* Optional soft gradient before scroll */}
-  {!scrolled && (
-    <div
-      className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-transparent"
-      aria-hidden="true"
-    />
-  )}
+  {/* Spacer for notch */}
+  <div className="h-[env(safe-area-inset-top)]" aria-hidden="true" />
 
-  {/* Content wrapper */}
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
-    {/* Spacer equals safe-area so content sits below the notch
-        while the background still covers all the way to the top */}
-    {/* Spacer equals frozen safe-area top to keep content below the notch */}
-<div className="h-[var(--safe-top-fixed)]" aria-hidden />
-
-
-    <div
-      className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
-      style={{ transform: 'translateZ(0)' }}
-    >
-      {/* LEFT: hamburger */}
-      <div className="grow basis-0">
-        <button
-          className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-          onClick={() => setMenuOpen(true)}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-          </svg>
-        </button>
-      </div>
-
-      {/* CENTER: logo — fixed heights (same visual size), pinned to its own layer */}
-      <div
-        className="absolute left-1/2 top-1/2 pointer-events-none"
-        style={{ transform: 'translate3d(-50%, -50%, 0)', willChange: 'transform' }}
+  {/* Row */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+    {/* Left: burger */}
+    <div className="grow basis-0">
+      <button
+        className="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 lg:hidden relative z-[1]"
+        aria-label="Open menu"
+        aria-expanded={menuOpen}
+        aria-controls="mobile-menu"
+        onClick={() => setMenuOpen(true)}
       >
-        <img
-          src={asset("/logo_improved.svg")}
-          alt="Voskopulence"
-          className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
-          loading="eager"
-          decoding="async"
-          style={{
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-          }}
-        />
-      </div>
-
-      {/* RIGHT: desktop nav */}
-      <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-        <a href="/shop" className="hover:text-gray-200">Shop</a>
-        <a href="#about" className="hover:text-gray-200">About</a>
-        <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-        <a href="/contact" className="hover:text-gray-200">Contact</a>
-      </nav>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
     </div>
+
+    {/* Center: logo (GPU-pinned) */}
+    <div
+      className="absolute left-1/2 top-1/2 pointer-events-none"
+      style={{
+        transform: "translate3d(-50%, -50%, 0)",
+        willChange: "transform",
+      }}
+    >
+      <img
+        src={asset("/logo_improved.svg")}
+        alt="Voskopulence"
+        className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
+        loading="eager"
+        decoding="async"
+        style={{
+          transform: "translateZ(0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
+      />
+    </div>
+
+    {/* Right: nav */}
+    <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+      <a href="/shop" className="hover:text-gray-200">Shop</a>
+      <a href="#about" className="hover:text-gray-200">About</a>
+      <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+      <a href="/contact" className="hover:text-gray-200">Contact</a>
+    </nav>
   </div>
 </header>
-
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" &&
