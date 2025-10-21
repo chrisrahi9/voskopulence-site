@@ -374,7 +374,9 @@ export default function Home() {
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6">
     {/* Spacer equals safe-area so content sits below the notch
         while the background still covers all the way to the top */}
-    <div className="h-[env(safe-area-inset-top)]" aria-hidden />
+    {/* Spacer equals frozen safe-area top to keep content below the notch */}
+<div className="h-[var(--safe-top-fixed)]" aria-hidden />
+
 
     <div
       className="relative flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]"
