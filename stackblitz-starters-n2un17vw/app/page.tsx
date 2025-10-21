@@ -356,7 +356,7 @@ export default function Home() {
   <div
     className="absolute left-0 right-0 bottom-0 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-300"
     style={{
-      top: "20px",               // <-- CAP (must match the cap above)
+      top: "18px",               // <-- CAP (must match the cap above)
       backgroundColor: "#004642",
       opacity: scrolled ? 0.94 : 0,
       transform: "translateZ(0)",
@@ -366,7 +366,7 @@ export default function Home() {
   />
 
   {/* Spacer for status bar / notch — same CAP */}
-  <div style={{ height: "20px" }} aria-hidden="true" />
+  <div style={{ height: "18px" }} aria-hidden="true" />
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
