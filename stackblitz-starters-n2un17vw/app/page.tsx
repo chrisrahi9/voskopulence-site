@@ -375,7 +375,7 @@ export default function Home() {
 
         {/* BLEND: hides any hairline at the cap edge */}
         <div
-          className="absolute left-0 right-0 pointer-events-none"
+          className="absolute left-0 right-0 pointer-events-none lg:hidden"
           style={{
             top: "var(--cap)",
             height: "0.5px",
