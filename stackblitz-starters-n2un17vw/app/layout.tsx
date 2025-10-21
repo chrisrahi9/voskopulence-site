@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   aria-hidden
   className="fixed top-0 inset-x-0 pointer-events-none"
   style={{
-    height: "20px", // fixed height for iPhone status bar
+    height: "18px", // fixed height for iPhone status bar
     backgroundColor: "#004642",
     opacity: 0.94,
     zIndex: 9999,
