@@ -18,25 +18,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
 
-        {/* Viewport + iOS safe areas (prevents the first-scroll top-strip repaint) */}
+        {/* Viewport + iOS safe areas */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        {/* Keep iOS Safari status-bar color stable during transitions */}
+
+        {/* Keep status bar green from first paint (light & dark) */}
         <meta name="theme-color" content="#004642" />
-        {/* Helpful iOS hints (safe even if not a PWA) */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#004642" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#004642" />
+
+        {/* Optional iOS hints */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
 
       <body>
         {/* Permanent status-bar cap (pre-hydration, never blinks) */}
-  <div
-    aria-hidden
-    className="pointer-events-none fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#004642] z-[1000]"
-    style={{ opacity: 0.94 }}
-  />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-0"
+          style={{
+            height: "env(safe-area-inset-top)",
+            background: "#004642",
+            opacity: 0.94,
+            zIndex: 2147483000, // extremely high so it never gets under other layers
+          }}
+        />
+
         {/* Wrap any client component that might read routing state */}
         <Suspense fallback={null}>
           <ScrollToTop />
