@@ -353,103 +353,121 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* =================== NAVBAR =================== */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 text-white/95"
-      style={{
-  ['--cap' as any]: `${capPx}px`,          // <-- responsive cap
-  transform: "translateZ(0)",
-  backfaceVisibility: "hidden",
-  WebkitBackfaceVisibility: "hidden",
-  willChange: "opacity",
-  contain: "layout paint",
-}}
+     <header
+  className="fixed top-0 left-0 right-0 z-50 text-white/95
+             md:[--row:72px] lg:[--row:80px]"
+  style={{
+    // config
+    ['--cap' as any]: `${CAP_PX}px`,   // your small status-bar cap (e.g. 5)
+    ['--row' as any]: '64px',          // mobile row height (overridden by md/lg classes)
+    ['--fade' as any]: scrolled ? '0.94' : '0',
+
+    // lock header box size & isolate it
+    height: 'calc(var(--cap) + var(--row))',
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    willChange: 'transform',
+    contain: 'layout paint',
+  }}
+>
+  {/* One paint: solid cap + fading header below (no layout thrash) */}
+  <div
+    className="absolute inset-0 pointer-events-none backdrop-blur-md backdrop-saturate-150"
+    style={{
+      background: `
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,0.94) 0,
+          rgba(0,70,66,0.94) var(--cap),
+          rgba(0,70,66,var(--fade)) var(--cap),
+          rgba(0,70,66,var(--fade)) 100%
+        )
+      `,
+      // transition ONLY the fade variable via opacity of this layer, not the background geometry
+      opacity: 1,
+      transition: 'opacity 300ms ease',
+      transform: 'translateZ(0)',
+    }}
+    aria-hidden="true"
+  />
+
+  {/* Hairline blend at the cap edge (mobile only) */}
+  <div
+    className="absolute left-0 right-0 pointer-events-none md:hidden"
+    style={{
+      top: 'var(--cap)',
+      height: '2px',
+      background: 'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
+      transform: 'translateZ(0)',
+    }}
+    aria-hidden="true"
+  />
+
+  {/* Spacer so the row starts below the cap */}
+  <div style={{ height: 'var(--cap)' }} aria-hidden="true" />
+
+  {/* Row — height locked via the same variable, own layer to avoid jitter */}
+  <div
+    className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between
+               [height:var(--row)]"
+    style={{
+      transform: 'translateZ(0)',
+      willChange: 'transform',
+      contain: 'layout paint',
+    }}
+  >
+    {/* Left: burger (unchanged) */}
+    <div className="grow basis-0 pl-1.5">
+      <button
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1]
+                   hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        aria-label="Open menu"
+        aria-expanded={menuOpen}
+        aria-controls="mobile-menu"
+        onClick={() => setMenuOpen(true)}
+        style={{ transform: 'translateY(-0.5px)' }}
       >
-        {/* Single, seam-free background (cap + fade) */}
-        <div
-          className="absolute inset-0 backdrop-blur-md backdrop-saturate-150"
-          style={{
-            background: `
-              linear-gradient(
-                to bottom,
-                rgba(0,70,66,0.94) 0,
-                rgba(0,70,66,0.94) var(--cap),
-                rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
-                rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-              )
-            `,
-            transition: "background 300ms ease",
-            transform: "translateZ(0)",
-          }}
-          aria-hidden="true"
-        />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
 
-        {/* BLEND: hides any hairline at the cap edge */}
-        <div
-          className="absolute left-0 right-0 pointer-events-none lg:hidden"
-          style={{
-            top: "var(--cap)",
-            height: "0.5px",
-            background:
-              "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
-            transform: "translateZ(0)",
-          }}
-          aria-hidden="true"
-        />
+    {/* Center: logo — keep your current scaling; just pin to GPU layer */}
+    <div
+      className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
+      style={{
+        transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
+        willChange: 'transform',
+        contain: 'layout paint',
+        textShadow: '0 1px 6px rgba(0,0,0,0.35)',
+      }}
+    >
+      <img
+        src={asset('/logo_improved.svg')}
+        alt="Voskopulence"
+        className="block w-auto h-[120px] md:h-[132px] lg:h-[144px]"
+        loading="eager"
+        decoding="async"
+        style={{
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      />
+    </div>
 
-        {/* Spacer so the content row starts below the cap */}
-        <div style={{ height: "var(--cap)" }} aria-hidden="true" />
+    {/* Right: nav (unchanged) */}
+    <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
+      <a href="/shop" className="hover:text-gray-200">Shop</a>
+      <a href="#about" className="hover:text-gray-200">About</a>
+      <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+      <a href="/contact" className="hover:text-gray-200">Contact</a>
+    </nav>
+  </div>
+</header>
 
-        {/* Row */}
-        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
-          {/* Left: burger */}
-          <div className="grow basis-0 pl-1.5">
-            <button
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-menu"
-              onClick={() => setMenuOpen(true)}
-              style={{ transform: "translateY(-0.5px)" }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Center: logo */}
-          <div
-            className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
-            style={{
-              transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
-              willChange: "transform",
-              contain: "layout paint",
-              textShadow: "0 1px 6px rgba(0,0,0,0.35)",
-            }}
-          >
-            <img
-              src={asset("/logo_improved.svg")}
-              alt="Voskopulence"
-              className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
-              loading="eager"
-              decoding="async"
-              style={{
-                transform: "translateZ(0)",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
-            />
-          </div>
-
-          {/* Right: nav */}
-          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-            <a href="/shop" className="hover:text-gray-200">Shop</a>
-            <a href="#about" className="hover:text-gray-200">About</a>
-            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-            <a href="/contact" className="hover:text-gray-200">Contact</a>
-          </nav>
-        </div>
-      </header>
 
      {/* ===== Mobile curtain (portal) ===== */}
 {mounted && typeof document !== "undefined" && menuOpen && // <-- unmount when closed
