@@ -360,16 +360,14 @@ useEffect(() => {
 <header
   className="fixed inset-x-0 top-0 z-[60] text-white/95"
   style={{
-    ['--cap' as any]: `${capPx}px`,     // e.g. 5 on phones, 0 on desktop
-    ['--row' as any]: '64px',           // base row height; md/lg handled below
-    // keep this layer simple; no transforms that can introduce sub-pixel drift
+    ['--cap' as any]: `${capPx}px`,   // e.g. 5 on phones, 0 on desktop
+    height: 'calc(var(--cap) + var(--row, 64px))',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
     contain: 'paint',
-    height: 'calc(var(--cap) + var(--row))',  // header’s total height = cap + row
   }}
 >
-  {/* Single background (solid cap + fading/blurred header) */}
+  {/* one background layer: solid cap + fade below */}
   <div
     className="absolute inset-0 pointer-events-none"
     style={{
@@ -389,25 +387,11 @@ useEffect(() => {
     aria-hidden="true"
   />
 
-  {/* Anti-hairline blend (hidden on desktop) */}
-  <div
-    className="absolute left-0 right-0 lg:hidden pointer-events-none"
-    style={{
-      top: 'var(--cap)',
-      height: '0.5px',
-      background:
-        'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
-    }}
-    aria-hidden="true"
-  />
-
-  {/* Row sits *inside* the one fixed header, padded down by the cap */}
+  {/* row content; push it down by the cap inside the SAME element */}
   <div
     className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between
                h-[64px] md:h-[72px] lg:h-[80px]"
-    style={{
-      paddingTop: 'var(--cap)',       // pushes row under the cap within same layer
-    }}
+    style={{ paddingTop: 'var(--cap)' }}
   >
     {/* LEFT: burger */}
     <div className="grow basis-0 pl-1.5">
@@ -426,13 +410,10 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* CENTER: logo — no scroll scaling (kept rock-solid) */}
+    {/* CENTER: logo (no scroll scaling) */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none"
-      style={{
-        transform: 'translate3d(-50%, -50%, 0)',
-        textShadow: '0 1px 6px rgba(0,0,0,0.35)',
-      }}
+      style={{ transform: 'translate3d(-50%, -50%, 0)', textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}
     >
       <img
         src={asset('/logo_improved.svg')}
