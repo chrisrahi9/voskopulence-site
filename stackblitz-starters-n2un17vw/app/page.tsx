@@ -528,13 +528,17 @@ useEffect(() => {
         </nav>
       </div>
 
-      {/* local keyframes */}
-      <style jsx>{`
-        @keyframes menuSlideIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+<style
+  dangerouslySetInnerHTML={{
+    __html: `
+@keyframes menuSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+    `,
+  }}
+/>
+
     </div>,
     document.body
   )
@@ -770,11 +774,15 @@ style={{
         </div>
       </section>
 
-      {/* Keyframes for the build-up press (scoped to this page) */}
-      <style jsx>{`
-        @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
-        @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
-      `}</style>
+<style
+  dangerouslySetInnerHTML={{
+    __html: `
+@keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
+@keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
+    `,
+  }}
+/>
+
     </div>
   );
 }
