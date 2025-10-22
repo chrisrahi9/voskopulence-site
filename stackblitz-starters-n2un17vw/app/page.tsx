@@ -389,17 +389,19 @@ useEffect(() => {
   aria-hidden="true"
 />
 
-{/* Tiny mobile hairline (now color-matched exactly) */}
+{/* Tiny mobile hairline (color-matched to top solid cap) */}
 <div
   className="absolute left-0 right-0 lg:hidden pointer-events-none"
   style={{
     top: "var(--cap)",
     height: "0.5px",
-    background: "rgba(0,70,66,0.94)", // same tone — no visible seam
+    background: "#004642", // exact same as top solid strip
+    opacity: 0.94,         // identical alpha — seamless
     transform: "translateZ(0)",
   }}
   aria-hidden="true"
 />
+
 
 
   {/* tiny 1-pixel blend under the cap (mobile only) */}
