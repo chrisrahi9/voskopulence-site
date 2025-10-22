@@ -390,33 +390,18 @@ useEffect(() => {
 />
 
 
-{/* Tiny mobile hairline (color-matched to top solid cap) */}
+{/* Tiny mobile hairline, blended seamlessly with top cap */}
 <div
   className="absolute left-0 right-0 lg:hidden pointer-events-none"
   style={{
-    top: "var(--cap)",
-    height: "0.5px",
-    background: "#004642", // exact same as top solid strip
-    opacity: 0.94,         // identical alpha — seamless
+    top: "calc(var(--cap) - 0.5px)", // ⬅️ overlaps by half a pixel
+    height: "1px",                   // ⬅️ slightly thicker to guarantee no seam
+    background: "#004642",           // same as top cap
+    opacity: 0.94,
     transform: "translateZ(0)",
   }}
   aria-hidden="true"
 />
-
-
-
-  {/* tiny 1-pixel blend under the cap (mobile only) */}
-  <div
-    className="absolute left-0 right-0 lg:hidden pointer-events-none"
-    style={{
-      top: 'var(--cap)',
-      height: '0.5px',
-      background:
-        'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
-      transform: 'translateZ(0)',
-    }}
-    aria-hidden="true"
-  />
 
   {/* Row (logo + burger) pinned under the cap */}
   <div
