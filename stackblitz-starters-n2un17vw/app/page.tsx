@@ -451,93 +451,74 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* ===== Mobile curtain (portal) ===== */}
- {mounted && typeof document !== "undefined" &&
+     {/* ===== Mobile curtain (portal) ===== */}
+{mounted && typeof document !== "undefined" && menuOpen && // <-- unmount when closed
   createPortal(
     <div
-  id="mobile-menu"
-  role="dialog"
-  aria-modal="true"
-  aria-hidden={!menuOpen}
-  className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}  // <-- add this toggle back
->
-
-      {/* Backdrop — blur to the very bottom (no solid slab) */}
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[1000]"
+      // keep its layers self-contained so it can’t influence the header
+      style={{ isolation: 'isolate', contain: 'layout paint', transform: 'translateZ(0)' }}
+    >
+      {/* Backdrop — smooth & a bit slower */}
       <div
-        className="fixed inset-0 z-[1000] w-screen h-[100dvh]
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55
-                   transition-opacity duration-[600ms] ease-[cubic-bezier(.16,1,.3,1)]"
-        style={{
-          opacity: menuOpen ? 1 : 0,
-          backgroundColor: "rgba(0,70,66,0.70)",
-          transform: "translateZ(0)",
-          pointerEvents: menuOpen ? "auto" : "none",
-        }}
+        className="fixed inset-0 w-screen h-[100dvh]
+                   transition-opacity duration-[480ms] ease-[cubic-bezier(.22,1,.36,1)]
+                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
+        style={{ backgroundColor: 'rgba(0,70,66,0.70)', opacity: 1 }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Bottom blur extender just for safe-area (won’t block taps) */}
+      {/* Bottom safe-area blur extender */}
       <div
-        className="fixed inset-x-0 bottom-0 z-[1001] pointer-events-none
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-        style={{
-          height: "env(safe-area-inset-bottom)",
-          opacity: menuOpen ? 1 : 0,
-          backgroundColor: "rgba(0,70,66,0.70)",
-        }}
+        className="fixed inset-x-0 bottom-0
+                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55
+                   transition-opacity duration-[480ms]"
+        style={{ height: 'env(safe-area-inset-bottom)', backgroundColor: 'rgba(0,70,66,0.70)', opacity: 1 }}
         aria-hidden="true"
       />
 
-      {/* Keep top strip solid over blur while menu is open (no tap capture) */}
+      {/* Keep the top status-bar cap solid while menu is open */}
       <div
-        className="fixed inset-x-0 top-0 z-[1002] pointer-events-none"
-        style={{
-          height: "env(safe-area-inset-top)",
-          backgroundColor: "#004642",
-          opacity: menuOpen ? 1 : 0,
-        }}
+        className="fixed inset-x-0 top-0 z-[1001]"
+        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
         aria-hidden="true"
       />
 
-      {/* Menu content (now highest z, gets the taps) */}
+      {/* Content — slow, floaty slide (no body scroll) */}
       <div
-        className={`
-          fixed inset-0 z-[1003] flex flex-col text-white
-          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-          transition-all duration-[700ms] ease-[cubic-bezier(.16,1,.3,1)]
-          will-change-[transform,opacity]
-          ${menuOpen
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 translate-y-[8vh] pointer-events-none"}
-        `}
-        style={{ overscrollBehaviorY: "contain" }}
+        className="fixed inset-0 flex flex-col text-white
+                   pt-[env(safe-area-inset-top)]
+                   pb-[env(safe-area-inset-bottom)]
+                   overflow-auto overscroll-contain
+                   transition-[opacity,transform]
+                   duration-[480ms] ease-[cubic-bezier(.22,1,.36,1)]"
+        style={{ transform: 'translateY(8px)', opacity: 1 }} // slight settle-in
       >
-        {/* Top row (title + X) */}
         <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
           <span className="font-semibold text-white/95">Menu</span>
           <button
             className="inline-flex h-11 w-11 items-center justify-center rounded-full
-                       hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative z-[1]"
+                       hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             aria-label="Close menu"
             onClick={() => setMenuOpen(false)}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" />
+              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" />
             </svg>
           </button>
         </div>
 
-        {/* Scrollable center (keeps taps responsive even if phone is at page bottom) */}
-        <div className="flex-1 overflow-y-auto">
-          <nav className="h-full grid place-items-center">
-            <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-              <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
-              <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
-              <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
-              <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
-            </ul>
-          </nav>
-        </div>
+        <nav className="grow grid place-items-center">
+          <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+            <li><a href="/shop"           onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+            <li><a href="#about"          onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+            <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+            <li><a href="/contact"        onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+          </ul>
+        </nav>
       </div>
     </div>,
     document.body
