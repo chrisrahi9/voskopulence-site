@@ -358,13 +358,15 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
 <header
-  className="fixed inset-x-0 top-0 z-[60] text-white/95"
+  className="fixed inset-x-0 top-0 z-[60] text-white/95 [--row:64px] md:[--row:72px] lg:[--row:80px]"
   style={{
-    ['--cap' as any]: `${capPx}px`,      // capPx is your existing state (5 on phones, 0 on desktop)
+    ['--cap' as any]: `${capPx}px`,
+    // real box for the header: cap + row
+    height: 'calc(var(--cap) + var(--row))',
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
-    contain: 'paint',                    // keep it simple; no layout containment
+    contain: 'paint',
   }}
 >
   {/* One background layer that includes the cap AND the header fade */}
@@ -380,7 +382,6 @@ useEffect(() => {
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )
       `,
-      // enable blur only when scrolled, so idle header stays crisp
       backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
       WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
       transition: 'background 300ms ease',
@@ -389,7 +390,7 @@ useEffect(() => {
     aria-hidden="true"
   />
 
-  {/* tiny 1-device-pixel blend just under the cap to hide any hairline (phones only) */}
+  {/* tiny 1-device-pixel blend just under the cap (phones only) */}
   <div
     className="absolute left-0 right-0 lg:hidden pointer-events-none"
     style={{
@@ -402,11 +403,15 @@ useEffect(() => {
     aria-hidden="true"
   />
 
-  {/* Push the content row below the cap */}
-  <div style={{ height: 'var(--cap)' }} aria-hidden="true" />
-
-  {/* Row (logo + burger) */}
-  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+  {/* Row (logo + burger) — absolutely pinned below the cap, cannot tuck */}
+  <div
+    className="absolute inset-x-0 mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between"
+    style={{
+      top: 'var(--cap)',
+      height: 'var(--row)',
+      transform: 'translateZ(0)',
+    }}
+  >
     {/* Left: burger */}
     <div className="grow basis-0 pl-1.5">
       <button
@@ -423,7 +428,7 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* Center: logo */}
+    {/* Center: logo (kept exactly as you had it) */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
       style={{
@@ -451,6 +456,7 @@ useEffect(() => {
     </nav>
   </div>
 </header>
+
 
      {/* ===== Mobile curtain (portal) ===== */}
 {/* ===== Mobile curtain (portal) ===== */}
