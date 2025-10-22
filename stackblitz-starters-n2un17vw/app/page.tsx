@@ -221,6 +221,11 @@ export default function Home() {
     const p = v.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
+// fixes seams by giving us 1 physical pixel to overlap with
+useEffect(() => {
+  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
+  document.documentElement.style.setProperty('--hairline', `${1 / dpr}px`);
+}, []);
 
   // --- Video setup (HLS with MP4 fallback)
   useEffect(() => {
@@ -369,16 +374,19 @@ useEffect(() => {
 <div
   className="[--row:64px] md:[--row:72px] lg:[--row:80px] fixed inset-x-0 z-[52] pointer-events-none"
   style={{
-    top: 'var(--cap)',
-    height: 'var(--row)',            // matches the row height exactly
+    // ⬇️ pull it up by one physical pixel and grow by one to cover the seam
+    top: 'calc(var(--cap) - var(--hairline))',
+    height: 'calc(var(--row) + var(--hairline))',
+
     backgroundColor: '#004642',
-    opacity: scrolled ? 0.94 : 0,    // fade only when scrolled
+    opacity: scrolled ? 0.94 : 0,
     backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
     WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
     transform: 'translateZ(0)',
   }}
   aria-hidden="true"
 />
+
 <div
   className="fixed inset-x-0 lg:hidden z-[53] pointer-events-none"
   style={{
