@@ -361,7 +361,6 @@ useEffect(() => {
   className="fixed inset-x-0 top-0 z-[60] text-white/95 [--row:64px] md:[--row:72px] lg:[--row:80px]"
   style={{
     ['--cap' as any]: `${capPx}px`,
-    // real box for the header: cap + row
     height: 'calc(var(--cap) + var(--row))',
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
@@ -369,9 +368,9 @@ useEffect(() => {
     contain: 'paint',
   }}
 >
-  {/* One background layer that includes the cap AND the header fade */}
+  {/* Unified background (cap + fade, smooth transition) */}
   <div
-    className="absolute inset-0 pointer-events-none"
+    className="absolute inset-0 pointer-events-none transition-[opacity,background] duration-[480ms] ease-[cubic-bezier(.22,1,.36,1)]"
     style={{
       background: `
         linear-gradient(
@@ -382,15 +381,15 @@ useEffect(() => {
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )
       `,
+      opacity: scrolled ? 1 : 0.85, // more gradual feel
       backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
       WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-      transition: 'background 300ms ease',
       transform: 'translateZ(0)',
     }}
     aria-hidden="true"
   />
 
-  {/* tiny 1-device-pixel blend just under the cap (phones only) */}
+  {/* tiny 1-pixel blend under the cap (mobile only) */}
   <div
     className="absolute left-0 right-0 lg:hidden pointer-events-none"
     style={{
@@ -403,7 +402,7 @@ useEffect(() => {
     aria-hidden="true"
   />
 
-  {/* Row (logo + burger) — absolutely pinned below the cap, cannot tuck */}
+  {/* Row (logo + burger) pinned under the cap */}
   <div
     className="absolute inset-x-0 mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between"
     style={{
@@ -428,7 +427,7 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* Center: logo (kept exactly as you had it) */}
+    {/* Center: logo */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
       style={{
@@ -447,7 +446,7 @@ useEffect(() => {
       />
     </div>
 
-    {/* Right: nav */}
+    {/* Right: nav (desktop only) */}
     <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
       <a href="/shop" className="hover:text-gray-200">Shop</a>
       <a href="#about" className="hover:text-gray-200">About</a>
@@ -456,7 +455,6 @@ useEffect(() => {
     </nav>
   </div>
 </header>
-
 
      {/* ===== Mobile curtain (portal) ===== */}
 {/* ===== Mobile curtain (portal) ===== */}
