@@ -406,10 +406,18 @@ useEffect(() => {
     aria-hidden="true"
   />
 
-  {/* Spacer so the content row starts below the cap */}
-  <div style={{ height: "var(--cap)" }} aria-hidden="true" />
+{/* Spacer so the content row starts below the cap */}
+<div style={{ height: "var(--cap)" }} aria-hidden="true" />
 
-  {/* Row (unchanged) */}
+{/* Row pinned below the cap */}
+<div
+  style={{
+    position: "sticky",
+    top: "var(--cap)",        // ← row can never cross into the cap
+    zIndex: 2,                // above the background layers
+    transform: "translateZ(0)"
+  }}
+>
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
     {/* Left: burger */}
     <div className="grow basis-0 pl-1.5">
@@ -427,7 +435,7 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* Center: logo */}
+    {/* Center: logo (unchanged) */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
       style={{
@@ -442,11 +450,7 @@ useEffect(() => {
         className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
-        style={{
-          transform: "translateZ(0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-        }}
+        style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       />
     </div>
 
@@ -458,77 +462,79 @@ useEffect(() => {
       <a href="/contact" className="hover:text-gray-200">Contact</a>
     </nav>
   </div>
+</div>
+
 </header>
 
      {/* ===== Mobile curtain (portal) ===== */}
-{mounted && typeof document !== "undefined" && menuOpen && // <-- unmount when closed
+{/* ===== Mobile curtain (portal) ===== */}
+{mounted && typeof document !== "undefined" && menuOpen &&
   createPortal(
-    <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[1000]"
-      // keep its layers self-contained so it can’t influence the header
-      style={{ isolation: 'isolate', contain: 'layout paint', transform: 'translateZ(0)' }}
-    >
-      {/* Backdrop — smooth & a bit slower */}
+    <div id="mobile-menu" role="dialog" aria-modal="true" className="lg:hidden">
+      {/* Backdrop – full screen, single layer */}
       <div
-        className="fixed inset-0 w-screen h-[100dvh]
-                   transition-opacity duration-[480ms] ease-[cubic-bezier(.22,1,.36,1)]
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-        style={{ backgroundColor: 'rgba(0,70,66,0.70)', opacity: 1 }}
+        className="fixed inset-0 z-[1000]"
+        style={{
+          backgroundColor: "rgba(0,70,66,0.70)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.3)",
+          backdropFilter: "blur(20px) saturate(1.3)",
+          opacity: 1,
+          transform: "translateZ(0)",
+          // click outside to close
+          cursor: "auto"
+        }}
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Bottom safe-area blur extender */}
+      {/* Menu content – slower & smoother entrance */}
       <div
-        className="fixed inset-x-0 bottom-0
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55
-                   transition-opacity duration-[480ms]"
-        style={{ height: 'env(safe-area-inset-bottom)', backgroundColor: 'rgba(0,70,66,0.70)', opacity: 1 }}
-        aria-hidden="true"
-      />
-
-      {/* Keep the top status-bar cap solid while menu is open */}
-      <div
-        className="fixed inset-x-0 top-0 z-[1001]"
-        style={{ height: 'env(safe-area-inset-top)', backgroundColor: '#004642', opacity: 0.94 }}
-        aria-hidden="true"
-      />
-
-      {/* Content — slow, floaty slide (no body scroll) */}
-      <div
-        className="fixed inset-0 flex flex-col text-white
-                   pt-[env(safe-area-inset-top)]
-                   pb-[env(safe-area-inset-bottom)]
-                   overflow-auto overscroll-contain
-                   transition-[opacity,transform]
-                   duration-[480ms] ease-[cubic-bezier(.22,1,.36,1)]"
-        style={{ transform: 'translateY(8px)', opacity: 1 }} // slight settle-in
+        className="fixed inset-0 z-[1001] flex flex-col text-white"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)"
+        }}
       >
-        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+        {/* top row */}
+        <div
+          className="flex items-center justify-between h-[64px] px-5 shrink-0"
+          // slide down slightly on mount
+          style={{
+            animation: "menuSlideIn 420ms cubic-bezier(.22,1,.36,1) both"
+          }}
+        >
           <span className="font-semibold text-white/95">Menu</span>
           <button
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full
-                       hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             aria-label="Close menu"
             onClick={() => setMenuOpen(false)}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" />
+              <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <nav className="grow grid place-items-center">
+        {/* links */}
+        <nav
+          className="grow grid place-items-center"
+          style={{ animation: "menuSlideIn 520ms cubic-bezier(.22,1,.36,1) both" }}
+        >
           <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-            <li><a href="/shop"           onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
-            <li><a href="#about"          onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+            <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+            <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
             <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
-            <li><a href="/contact"        onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+            <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
           </ul>
         </nav>
       </div>
+
+      {/* local keyframes */}
+      <style jsx>{`
+        @keyframes menuSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>,
     document.body
   )
