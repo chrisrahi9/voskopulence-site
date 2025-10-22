@@ -358,70 +358,57 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
 <header
-  className="fixed inset-x-0 top-0 z-[60] text-white/95 [--row:64px] md:[--row:72px] lg:[--row:80px]"
+  className="fixed inset-x-0 top-0 z-[60] text-white/95"
   style={{
-    ['--cap' as any]: `${capPx}px`,
-    height: 'calc(var(--cap) + var(--row))',
+    ['--cap' as any]: `${capPx}px`,     // 5-ish on phones, 0 on desktop
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
     contain: 'paint',
   }}
 >
- {/* Unified background (cap + fade, ultra-smooth transition) */}
-<div
-  className="absolute inset-0 pointer-events-none"
- style={{
-  top: "-1px", // ⬅️ pushes it 1px up to overlap the cap fully
-  background: `
-    linear-gradient(
-      to bottom,
-      rgba(0,70,66,0.94) 0,
-      rgba(0,70,66,0.94) calc(var(--cap) + 1px),
-      rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(var(--cap) + 1px),
-      rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-    )
-  `,
-  backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-  WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-  transition: 'background 900ms cubic-bezier(.22,1,.36,1), opacity 900ms cubic-bezier(.22,1,.36,1)',
-  transform: 'translateZ(0)',
-}}
-  aria-hidden="true"
-/>
-
-
-{/* Tiny mobile hairline, blended seamlessly with top cap */}
-<div
-  className="absolute left-0 right-0 lg:hidden pointer-events-none"
-  style={{
-    top: "calc(var(--cap) - 0.5px)", // ⬅️ overlaps by half a pixel
-    height: "1px",                   // ⬅️ slightly thicker to guarantee no seam
-    background: "#004642",           // same as top cap
-    opacity: 0.94,
-    transform: "translateZ(0)",
-  }}
-  aria-hidden="true"
-/>
-
-  {/* Row (logo + burger) pinned under the cap */}
+  {/* one background that paints BOTH the solid top strip and the fading header */}
   <div
-    className="absolute inset-x-0 mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between"
+    className="absolute inset-0 pointer-events-none"
     style={{
-      top: 'var(--cap)',
-      height: 'var(--row)',
+      background: `
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,0.94) 0,
+          rgba(0,70,66,0.94) var(--cap),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+        )
+      `,
+      // blur only when scrolled so the idle header remains crisp
+      backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+      WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+      transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
       transform: 'translateZ(0)',
     }}
-  >
-    {/* Left: burger */}
-    <div className="grow basis-0 pl-1.5">
+    aria-hidden="true"
+  />
+
+  {/* hairline under the cap (MOBILE ONLY) — exact same color/alpha as the cap */}
+  <div
+    className="absolute left-0 right-0 top-[var(--cap)] h-[0.5px] lg:hidden pointer-events-none"
+    style={{ background: '#004642', opacity: 0.94, transform: 'translateZ(0)' }}
+    aria-hidden="true"
+  />
+
+  {/* push the content row below the cap */}
+  <div style={{ height: 'var(--cap)' }} aria-hidden="true" />
+
+  {/* row (logo + burger + nav) */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+    {/* LEFT: burger (removed the tiny -0.5px nudge to avoid sub-pixel wobble) */}
+    <div className="grow basis-0">
       <button
         className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         aria-label="Open menu"
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
         onClick={() => setMenuOpen(true)}
-        style={{ transform: 'translateY(-0.5px)' }}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
@@ -429,7 +416,7 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* Center: logo */}
+    {/* CENTER: logo (unchanged) */}
     <div
       className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
       style={{
@@ -448,7 +435,7 @@ useEffect(() => {
       />
     </div>
 
-    {/* Right: nav (desktop only) */}
+    {/* RIGHT: nav */}
     <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
       <a href="/shop" className="hover:text-gray-200">Shop</a>
       <a href="#about" className="hover:text-gray-200">About</a>
@@ -457,6 +444,7 @@ useEffect(() => {
     </nav>
   </div>
 </header>
+
      {/* ===== Mobile curtain (portal) ===== */}
 {/* ===== Mobile curtain (portal) ===== */}
 {mounted && typeof document !== "undefined" && menuOpen &&
