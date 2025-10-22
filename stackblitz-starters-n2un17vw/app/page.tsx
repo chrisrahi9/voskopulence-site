@@ -357,11 +357,12 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
-     {/* ======= FIXED TOP CAP (never moves, never blurs) ======= */}
+{/* ======= FIXED TOP CAP (never moves, never blurs) ======= */}
 <div
-  className="fixed inset-x-0 top-0 z-[51] pointer-events-none"
+  className="fixed inset-x-0 top-0 z-[60] pointer-events-none"
   style={{
     ['--cap' as any]: `${capPx}px`,
+    ['--hairline' as any]: '0.66px',           // <= local default for the seam nudge
     height: 'var(--cap)',
     background: '#004642',
     opacity: 0.94,
@@ -370,11 +371,23 @@ useEffect(() => {
   aria-hidden="true"
 />
 
+{/* ======= FIXED HEADER HAIRLINE (mobile only) ======= */}
+<div
+  className="fixed inset-x-0 lg:hidden z-[59] pointer-events-none"
+  style={{
+    top: 'var(--cap)',
+    height: 'var(--hairline)',
+    background: 'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
+    transform: 'translateZ(0)',
+  }}
+  aria-hidden="true"
+/>
+
 {/* ======= FIXED HEADER BACKDROP (below the cap) ======= */}
 <div
-  className="[--row:64px] md:[--row:72px] lg:[--row:80px] fixed inset-x-0 z-[52] pointer-events-none"
+  className="[--row:64px] md:[--row:72px] lg:[--row:80px] fixed inset-x-0 z-[58] pointer-events-none"
   style={{
-    // ⬇️ pull it up by one physical pixel and grow by one to cover the seam
+    // pull up by the hairline & grow by the same amount to cover any seam
     top: 'calc(var(--cap) - var(--hairline))',
     height: 'calc(var(--row) + var(--hairline))',
 
@@ -387,22 +400,11 @@ useEffect(() => {
   aria-hidden="true"
 />
 
-<div
-  className="fixed inset-x-0 lg:hidden z-[53] pointer-events-none"
-  style={{
-    top: 'calc(var(--cap))',
-    height: '0.5px',
-    background: 'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
-    transform: 'translateZ(0)',
-  }}
-  aria-hidden="true"
-/>
-
 {/* ======= FIXED HEADER ROW (logo + burger) ======= */}
 <header
-  className="fixed inset-x-0 z-[60] text-white/95"
+  className="fixed inset-x-0 z-[57] text-white/95"
   style={{
-    top: 'var(--cap)',               // sits just under the cap
+    top: 'var(--cap)',               // sits exactly under the cap
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
@@ -454,6 +456,7 @@ useEffect(() => {
     </nav>
   </div>
 </header>
+
 
 
      {/* ===== Mobile curtain (portal) ===== */}
