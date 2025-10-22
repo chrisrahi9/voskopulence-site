@@ -370,24 +370,25 @@ useEffect(() => {
 >
  {/* Unified background (cap + fade, ultra-smooth transition) */}
 <div
-  className="absolute inset-0 pointer-events-none transition-all duration-[650ms] ease-[cubic-bezier(.22,1,.36,1)]"
+  className="absolute inset-0 pointer-events-none"
   style={{
     background: `
       linear-gradient(
         to bottom,
         rgba(0,70,66,0.94) 0,
         rgba(0,70,66,0.94) var(--cap),
-        rgba(0,70,66,${scrolled ? 0.94 : 0.92}) var(--cap),
-        rgba(0,70,66,${scrolled ? 0.94 : 0.92}) 100%
+        rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
+        rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
       )
     `,
-    opacity: scrolled ? 1 : 0.88, // smoother blend at top
-    backdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
-    WebkitBackdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
-    transform: "translateZ(0)",
+    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    transition: 'background 900ms cubic-bezier(.22,1,.36,1), opacity 900ms cubic-bezier(.22,1,.36,1)',
+    transform: 'translateZ(0)',
   }}
   aria-hidden="true"
 />
+
 
 {/* Tiny mobile hairline (color-matched to top solid cap) */}
 <div
