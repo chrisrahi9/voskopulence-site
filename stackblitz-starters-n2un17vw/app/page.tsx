@@ -357,6 +357,8 @@ useEffect(() => {
         className="fixed top-0 left-0 right-0 z-50 text-white/95"
       style={{
   ['--cap' as any]: `${capPx}px`,          // <-- responsive cap
+  position: "fixed",
+  isolation: "isolate",
   transform: "translateZ(0)",
   backfaceVisibility: "hidden",
   WebkitBackfaceVisibility: "hidden",
@@ -550,6 +552,12 @@ useEffect(() => {
               aria-hidden="true"
               disablePictureInPicture
               controlsList="nodownload noplaybackrate"
+              style={{
+  transform: "translateZ(0)",
+  willChange: "transform",
+  contain: "layout paint",
+}}
+
             />
 
             {/* Legibility overlay */}
