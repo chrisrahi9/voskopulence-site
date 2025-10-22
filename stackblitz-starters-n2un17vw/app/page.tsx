@@ -360,14 +360,14 @@ useEffect(() => {
 <header
   className="fixed inset-x-0 top-0 z-[60] text-white/95"
   style={{
-    ['--cap' as any]: `${capPx}px`,   // e.g. 5 on phones, 0 on desktop
-    height: 'calc(var(--cap) + var(--row, 64px))',
+    ['--cap' as any]: `${capPx}px`,      // capPx is your existing state (5 on phones, 0 on desktop)
+    transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
-    contain: 'paint',
+    contain: 'paint',                    // keep it simple; no layout containment
   }}
 >
-  {/* one background layer: solid cap + fade below */}
+  {/* One background layer that includes the cap AND the header fade */}
   <div
     className="absolute inset-0 pointer-events-none"
     style={{
@@ -380,24 +380,37 @@ useEffect(() => {
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )
       `,
+      // enable blur only when scrolled, so idle header stays crisp
       backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
       WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
       transition: 'background 300ms ease',
+      transform: 'translateZ(0)',
     }}
     aria-hidden="true"
   />
 
-  {/* row content; push it down by the cap inside the SAME element */}
+  {/* tiny 1-device-pixel blend just under the cap to hide any hairline (phones only) */}
   <div
-    className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between
-               h-[64px] md:h-[72px] lg:h-[80px]"
-    style={{ paddingTop: 'var(--cap)' }}
-  >
-    {/* LEFT: burger */}
+    className="absolute left-0 right-0 lg:hidden pointer-events-none"
+    style={{
+      top: 'var(--cap)',
+      height: '0.5px',
+      background:
+        'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
+      transform: 'translateZ(0)',
+    }}
+    aria-hidden="true"
+  />
+
+  {/* Push the content row below the cap */}
+  <div style={{ height: 'var(--cap)' }} aria-hidden="true" />
+
+  {/* Row (logo + burger) */}
+  <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
+    {/* Left: burger */}
     <div className="grow basis-0 pl-1.5">
       <button
-        className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1]
-                   hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         aria-label="Open menu"
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
@@ -410,10 +423,14 @@ useEffect(() => {
       </button>
     </div>
 
-    {/* CENTER: logo (no scroll scaling) */}
+    {/* Center: logo */}
     <div
-      className="absolute left-1/2 top-1/2 pointer-events-none"
-      style={{ transform: 'translate3d(-50%, -50%, 0)', textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}
+      className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
+      style={{
+        transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
+        contain: 'paint',
+        textShadow: '0 1px 6px rgba(0,0,0,0.35)',
+      }}
     >
       <img
         src={asset('/logo_improved.svg')}
@@ -421,11 +438,11 @@ useEffect(() => {
         className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
-        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+        style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       />
     </div>
 
-    {/* RIGHT: nav */}
+    {/* Right: nav */}
     <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
       <a href="/shop" className="hover:text-gray-200">Shop</a>
       <a href="#about" className="hover:text-gray-200">About</a>
