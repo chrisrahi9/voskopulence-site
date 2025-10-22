@@ -352,70 +352,53 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
-      {/* =================== NAVBAR =================== */}
-<header
-  className="fixed top-0 left-0 right-0 z-50 text-white/95"
+     {/* ======= FIXED TOP CAP (never moves, never blurs) ======= */}
+<div
+  className="fixed inset-x-0 top-0 z-[51] pointer-events-none"
   style={{
     ['--cap' as any]: `${capPx}px`,
-    position: "fixed",
-    isolation: "isolate",
-    transform: "translateZ(0)",
-    backfaceVisibility: "hidden",
-    WebkitBackfaceVisibility: "hidden",
+    height: 'var(--cap)',
+    background: '#004642',
+    opacity: 0.94,
+    transform: 'translateZ(0)',
   }}
->
-  {/* 1) Solid green top cap (no blur, never transparent) */}
-  <div
-    className="absolute inset-x-0 top-0 pointer-events-none"
-    style={{
-      height: "var(--cap)",
-      background: "#004642",
-      opacity: 0.94,
-      transform: "translateZ(0)",
-    }}
-    aria-hidden="true"
-  />
+  aria-hidden="true"
+/>
 
-  {/* 2) Header background below the cap
-        - only visible (and blurred) when scrolled
-        - fully transparent & NO blur when at top */}
-  <div
-    className="absolute left-0 right-0 bottom-0 pointer-events-none transition-opacity duration-300"
-    style={{
-      top: "var(--cap)",
-      backgroundColor: "#004642",
-      opacity: scrolled ? 0.94 : 0,
-      // enable blur only when scrolled:
-      backdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
-      WebkitBackdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
-      transform: "translateZ(0)",
-    }}
-    aria-hidden="true"
-  />
-
-  {/* Optional mobile hairline to hide any seam at the cap edge */}
-  <div
-    className="absolute left-0 right-0 pointer-events-none lg:hidden"
-    style={{
-      top: "var(--cap)",
-      height: "0.5px",
-      background:
-        "linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))",
-      transform: "translateZ(0)",
-    }}
-    aria-hidden="true"
-  />
-
-{/* Spacer so the content row starts below the cap */}
-<div style={{ height: "var(--cap)" }} aria-hidden="true" />
-
-{/* Row pinned below the cap */}
+{/* ======= FIXED HEADER BACKDROP (below the cap) ======= */}
 <div
+  className="[--row:64px] md:[--row:72px] lg:[--row:80px] fixed inset-x-0 z-[52] pointer-events-none"
   style={{
-    position: "sticky",
-    top: "var(--cap)",        // ← row can never cross into the cap
-    zIndex: 2,                // above the background layers
-    transform: "translateZ(0)"
+    top: 'var(--cap)',
+    height: 'var(--row)',            // matches the row height exactly
+    backgroundColor: '#004642',
+    opacity: scrolled ? 0.94 : 0,    // fade only when scrolled
+    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    transform: 'translateZ(0)',
+  }}
+  aria-hidden="true"
+/>
+<div
+  className="fixed inset-x-0 lg:hidden z-[53] pointer-events-none"
+  style={{
+    top: 'calc(var(--cap))',
+    height: '0.5px',
+    background: 'linear-gradient(to bottom, rgba(0,70,66,0.94), rgba(0,70,66,0))',
+    transform: 'translateZ(0)',
+  }}
+  aria-hidden="true"
+/>
+
+{/* ======= FIXED HEADER ROW (logo + burger) ======= */}
+<header
+  className="fixed inset-x-0 z-[60] text-white/95"
+  style={{
+    top: 'var(--cap)',               // sits just under the cap
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    contain: 'layout paint',
   }}
 >
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
@@ -427,7 +410,7 @@ useEffect(() => {
         aria-expanded={menuOpen}
         aria-controls="mobile-menu"
         onClick={() => setMenuOpen(true)}
-        style={{ transform: "translateY(-0.5px)" }}
+        style={{ transform: 'translateY(-0.5px)' }}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
@@ -440,17 +423,17 @@ useEffect(() => {
       className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
       style={{
         transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
-        contain: "layout paint",
-        textShadow: "0 1px 6px rgba(0,0,0,0.35)",
+        contain: 'layout paint',
+        textShadow: '0 1px 6px rgba(0,0,0,0.35)',
       }}
     >
       <img
-        src={asset("/logo_improved.svg")}
+        src={asset('/logo_improved.svg')}
         alt="Voskopulence"
         className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
-        style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+        style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       />
     </div>
 
@@ -462,9 +445,8 @@ useEffect(() => {
       <a href="/contact" className="hover:text-gray-200">Contact</a>
     </nav>
   </div>
-</div>
-
 </header>
+
 
      {/* ===== Mobile curtain (portal) ===== */}
 {/* ===== Mobile curtain (portal) ===== */}
