@@ -452,96 +452,69 @@ useEffect(() => {
       </header>
 
       {/* ===== Mobile curtain (portal) ===== */}
-   {mounted && typeof document !== "undefined" &&
-  createPortal(
-    <div
-      id="mobile-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden={!menuOpen}
-      className="lg:hidden fixed inset-0 z-[1000]"
-    >
-      {/* Backdrop — blur to the very bottom (no solid slab) */}
-      <div
-        className="fixed inset-0 z-[1000] w-screen h-[100dvh]
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55
-                   transition-opacity duration-[600ms] ease-[cubic-bezier(.16,1,.3,1)]"
-        style={{
-          opacity: menuOpen ? 1 : 0,
-          backgroundColor: "rgba(0,70,66,0.70)",
-          transform: "translateZ(0)",
-          pointerEvents: menuOpen ? "auto" : "none",
-        }}
-        onClick={() => setMenuOpen(false)}
-      />
-
-      {/* Bottom blur extender just for safe-area (won’t block taps) */}
-      <div
-        className="fixed inset-x-0 bottom-0 z-[1001] pointer-events-none
-                   backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
-        style={{
-          height: "env(safe-area-inset-bottom)",
-          opacity: menuOpen ? 1 : 0,
-          backgroundColor: "rgba(0,70,66,0.70)",
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Keep top strip solid over blur while menu is open (no tap capture) */}
-      <div
-        className="fixed inset-x-0 top-0 z-[1002] pointer-events-none"
-        style={{
-          height: "env(safe-area-inset-top)",
-          backgroundColor: "#004642",
-          opacity: menuOpen ? 1 : 0,
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Menu content (now highest z, gets the taps) */}
-      <div
-        className={`
-          fixed inset-0 z-[1003] flex flex-col text-white
-          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-          transition-all duration-[700ms] ease-[cubic-bezier(.16,1,.3,1)]
-          will-change-[transform,opacity]
-          ${menuOpen
-            ? "opacity-100 translate-x-0 pointer-events-auto"
-            : "opacity-0 translate-x-[8vw] pointer-events-none"}
-        `}
-        style={{ overscrollBehaviorY: "contain" }}
-      >
-        {/* Top row (title + X) */}
-        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-          <span className="font-semibold text-white/95">Menu</span>
-          <button
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full
-                       hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative z-[1]"
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
+  {mounted && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden={!menuOpen}
+            className={`lg:hidden fixed inset-0 z-[1000] ${menuOpen ? "" : "hidden"}`}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
+            {/* Backdrop — blur to the very bottom (no solid slab) */}
+            <div
+              className="fixed left-0 top-0 w-screen h-[100dvh] backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55 transition-opacity duration-200"
+              style={{ opacity: menuOpen ? 1 : 0, backgroundColor: "rgba(0,70,66,0.70)", transform: "translateZ(0)" }}
+              onClick={() => setMenuOpen(false)}
+            />
+            {/* Bottom blur extender just for safe-area */}
+            <div
+              className="fixed inset-x-0 bottom-0 backdrop-blur-xl supports-[backdrop-filter]:bg-[#004642]/55"
+              style={{ height: "env(safe-area-inset-bottom)", opacity: menuOpen ? 1 : 0, backgroundColor: "rgba(0,70,66,0.70)" }}
+              aria-hidden="true"
+            />
 
-        {/* Scrollable center (keeps taps responsive even if phone is at page bottom) */}
-        <div className="flex-1 overflow-y-auto">
-          <nav className="h-full grid place-items-center">
-            <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-              <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Shop</a></li>
-              <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">About</a></li>
-              <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Sustainability</a></li>
-              <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200 transition-colors">Contact</a></li>
-            </ul>
-          </nav>
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
+            {/* Keep top strip solid over blur while menu is open */}
+            <div
+              className="fixed inset-x-0 top-0 z-[1001]"
+              style={{ height: "env(safe-area-inset-top)", backgroundColor: "#004642", opacity: menuOpen ? 1 : 0 }}
+              aria-hidden="true"
+            />
+
+            {/* Menu content */}
+            <div
+              className={`fixed inset-0 flex flex-col text-white
+                          pt-[env(safe-area-inset-top)]
+                          pb-[env(safe-area-inset-bottom)]
+                          transition-opacity duration-300
+                          ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            >
+              <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+                <span className="font-semibold text-white/95">Menu</span>
+                <button
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                  aria-label="Close menu"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M18 6L6 18M6 6l12 12" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <nav className="grow grid place-items-center">
+                <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+                  <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+                  <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+                  <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+                  <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+                </ul>
+              </nav>
+            </div>
+          </div>,
+          document.body
+        )
+      }
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
