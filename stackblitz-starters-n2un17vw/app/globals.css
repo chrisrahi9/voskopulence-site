@@ -56,3 +56,15 @@ html::after {
   z-index: 2147483647;
 }
 */
+/* --- Safari fixed-layer stability patch --- */
+header,
+.fixed-header {
+  position: fixed;
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: opacity, transform;
+  contain: paint;
+  isolation: isolate;
+  z-index: 60;
+}
