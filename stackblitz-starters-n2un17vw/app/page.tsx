@@ -371,21 +371,22 @@ useEffect(() => {
  {/* Unified background (cap + fade, ultra-smooth transition) */}
 <div
   className="absolute inset-0 pointer-events-none"
-  style={{
-    background: `
-      linear-gradient(
-        to bottom,
-        rgba(0,70,66,0.94) 0,
-        rgba(0,70,66,0.94) var(--cap),
-        rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
-        rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-      )
-    `,
-    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-    transition: 'background 900ms cubic-bezier(.22,1,.36,1), opacity 900ms cubic-bezier(.22,1,.36,1)',
-    transform: 'translateZ(0)',
-  }}
+ style={{
+  top: "-1px", // ⬅️ pushes it 1px up to overlap the cap fully
+  background: `
+    linear-gradient(
+      to bottom,
+      rgba(0,70,66,0.94) 0,
+      rgba(0,70,66,0.94) calc(var(--cap) + 1px),
+      rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(var(--cap) + 1px),
+      rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+    )
+  `,
+  backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+  WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+  transition: 'background 900ms cubic-bezier(.22,1,.36,1), opacity 900ms cubic-bezier(.22,1,.36,1)',
+  transform: 'translateZ(0)',
+}}
   aria-hidden="true"
 />
 
