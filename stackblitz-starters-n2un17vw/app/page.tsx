@@ -370,25 +370,25 @@ useEffect(() => {
   }}
 >
   {/* Single background: paints the solid cap AND the fading header */}
-  <div
-    className="absolute inset-0 pointer-events-none"
-    style={{
-      background: `
-        linear-gradient(
-          to bottom,
-          rgba(0,70,66,0.94) 0,
-          rgba(0,70,66,0.94) var(--cap),
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--cap),
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-        )
-      `,
-      backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-      WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-      transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
-      transform: 'translateZ(0)',
-    }}
-    aria-hidden="true"
-  />
+<div
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    background: `
+      linear-gradient(
+        to bottom,
+        rgba(0,70,66,0.94) 0,
+        rgba(0,70,66,0.94) calc(var(--cap) + var(--hairline)),
+        rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(var(--cap) + var(--hairline)),
+        rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+      )
+    `,
+    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
+    transform: 'translateZ(0)',
+  }}
+  aria-hidden="true"
+/>
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
