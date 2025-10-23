@@ -380,27 +380,24 @@ const setup = async () => {
     };
   }, []);
 // Cap is only needed on phones; on desktop it should be 0
-const [capPx, setCapPx] = useState<number>(() => {
-  if (typeof window === "undefined") return CAP_PX;        // SSR fallback
-  return window.innerWidth >= 1024 ? 0 : CAP_PX;           // 0 on desktop, CAP_PX on phones
-});
+const [capPx, setCapPx] = useState<number>(0);
 
 useEffect(() => {
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const ua = navigator.userAgent || "";
   const isIOS =
     /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
 
-  // iOS gets the 5px safe-area cap; others none
+  // iOS phones get a 5px cap, everyone else 0
   setCapPx(isIOS ? 5 : 0);
 
-  // optional: adapt if user resizes from mobile → desktop
   const onResize = () => {
     const isLarge = window.innerWidth >= 1024;
-    setCapPx(isIOS ? 5 : isLarge ? 0 : 0); // keeps 5 on iOS, 0 elsewhere
+    setCapPx(isIOS ? 5 : 0); // stays 5 on iOS, 0 elsewhere (desktop/tablet)
   };
   window.addEventListener("resize", onResize);
   return () => window.removeEventListener("resize", onResize);
 }, []);
+
 
 const hasCap = (capPx ?? 0) > 0;
   return (
