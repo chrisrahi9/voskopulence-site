@@ -410,7 +410,7 @@ const hasCap = (capPx ?? 0) > 0;
   style={{
     ['--cap' as any]: `${(capPx ?? CAP_PX) || CAP_PX}px`, // 5 on phones, 0 on desktop
     // NEW: only add the 1-px bleed when cap > 0
-    ['--bleed' as any]: capPx > 0 ? 'calc(var(--cap) + var(--hairline))' : 'var(--cap)',
+    ['--bleed' as any]: capPx > 0 ? 'calc(var(--cap) + var(--hairline, 1px))' : 'var(--cap)',
 
     paddingTop: 'var(--cap)',
     isolation: 'isolate',
@@ -430,14 +430,14 @@ const hasCap = (capPx ?? 0) > 0;
         linear-gradient(
           to bottom,
           rgba(0,70,66,0.94) 0,
-          rgba(0,70,66,0.94) calc(${capPx}px + var(--hairline)),
-          transparent           calc(${capPx}px + var(--hairline)),
+          rgba(0,70,66,0.94) calc(${capPx}px + var(--hairline, 1px)),
+          transparent           calc(${capPx}px + var(--hairline, 1px)),
           transparent           100%
         ),
         /* LAYER 2: header tint below the cap */
         linear-gradient(
           to bottom,
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(${capPx}px + var(--hairline)),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(${capPx}px + var(--hairline, 1px)),
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )`
       : `
