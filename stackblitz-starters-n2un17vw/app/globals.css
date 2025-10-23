@@ -68,3 +68,7 @@ header,
   isolation: isolate;
   z-index: 60;
 }
+@supports (-webkit-touch-callout: none) {
+  :root { --cap-alpha: 0.94; } /* optional */
+}
+
