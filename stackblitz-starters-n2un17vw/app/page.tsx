@@ -408,9 +408,12 @@ useEffect(() => {
 <header
   className="fixed inset-x-0 top-0 z-[60] text-white/95"
   style={{
-    ['--cap' as any]: `${(capPx ?? CAP_PX) || CAP_PX}px`,      // 5 on phones, 0 on desktop
-    paddingTop: 'var(--cap)',            // <-- replaces the spacer div
-    isolation: 'isolate',                // keep it on its own plane
+    ['--cap' as any]: `${(capPx ?? CAP_PX) || CAP_PX}px`, // 5 on phones, 0 on desktop
+    // NEW: only add the 1-px bleed when cap > 0
+    ['--bleed' as any]: capPx > 0 ? 'calc(var(--cap) + var(--hairline))' : 'var(--cap)',
+
+    paddingTop: 'var(--cap)',
+    isolation: 'isolate',
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
@@ -418,34 +421,33 @@ useEffect(() => {
   }}
 >
   {/* Single background: paints the solid cap AND the fading header */}
-<div
-  className="absolute inset-0 pointer-events-none"
-  style={{
-    // Top layer = solid cap + 1px bleed (always on)
-    // Bottom layer = header tint (only when scrolled)
-    background: `
-      /* LAYER 1: cap + micro-bleed */
-      linear-gradient(
-        to bottom,
-        rgba(0,70,66,0.94) 0,
-        rgba(0,70,66,0.94) calc(var(--cap) + var(--hairline)),
-        transparent           calc(var(--cap) + var(--hairline)),
-        transparent           100%
-      ),
-      /* LAYER 2: header backdrop below the cap */
-      linear-gradient(
-        to bottom,
-        rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(var(--cap) + var(--hairline)),
-        rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-      )
-    `,
-    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-    transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
-    transform: 'translateZ(0)',
-  }}
-  aria-hidden="true"
-/>
+  <div
+    className="absolute inset-0 pointer-events-none"
+    style={{
+      background: `
+        /* LAYER 1: cap + optional micro-bleed (only when cap > 0) */
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,0.94) 0,
+          rgba(0,70,66,0.94) var(--bleed),
+          transparent           var(--bleed),
+          transparent           100%
+        ),
+        /* LAYER 2: header backdrop below the cap */
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--bleed),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+        )
+      `,
+      backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+      WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+      transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
+      transform: 'translateZ(0)',
+    }}
+    aria-hidden="true"
+  />
+  {/* ...the rest of your header content stays exactly the same... */}
 
 
   {/* Row */}
@@ -494,7 +496,6 @@ useEffect(() => {
   </div>
 </header>
 
-     {/* ===== Mobile curtain (portal) ===== */}
 {/* ===== Mobile curtain (portal) ===== */}
 {mounted && typeof document !== "undefined" && menuOpen &&
   createPortal(
