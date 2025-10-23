@@ -36,8 +36,14 @@ body.curtain-open {
   backdrop-filter: blur(24px);
 }
 
-/* Make iOS rubber-band background GREEN instead of white (off-page area) */
-html, body { background-color: #004642 !important; }
+/* default page bg for desktop */
+html, body { background-color: #ffffff; }
+
+/* iOS/Android touch devices: make overscroll background green */
+@media (hover: none) and (pointer: coarse) {
+  html, body { background-color: #004642 !important; }
+}
+
 
 /* Reduce scroll chaining / bounce revealing gaps on fast flicks */
 html, body { overscroll-behavior-y: contain; }
