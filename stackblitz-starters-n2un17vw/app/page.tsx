@@ -239,74 +239,108 @@ useEffect(() => {
     v.poster = POSTER;
     let destroyed = false;
 
-    const setup = async () => {
-      const isIOS =
-        /iP(hone|od|ad)/.test(navigator.platform) ||
-        (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
+const setup = async () => {
+  const isIOS =
+    /iP(hone|od|ad)/.test(navigator.platform) ||
+    (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
 
-      if (isIOS) {
+  if (isIOS) {
+    // Prefer a 1080-only HLS playlist on iOS (forces 1080p)
+    let loaded = false;
+    const onLoadedData = () => { loaded = true; console.log("iOS HLS (1080-only) loaded:", v.videoWidth, "x", v.videoHeight); };
+    const onError = () => {
+      if (!loaded) {
+        console.warn("iOS HLS 1080-only failed; falling back to MP4.");
+        v.removeEventListener("loadeddata", onLoadedData);
         v.src = MP4_SRC;
         try { v.load(); } catch {}
         tryPlay(v);
-        return;
       }
-
-      if (v.canPlayType("application/vnd.apple.mpegurl")) {
-        v.src = HLS_SRC;
-        try { v.load(); } catch {}
-        tryPlay(v);
-        return;
-      }
-
-      try {
-        const Hls = (await import("hls.js")).default;
-        if (Hls?.isSupported?.()) {
-          const hls = new Hls({
-            capLevelToPlayerSize: true,
-            startLevel: -1,
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
-            backBufferLength: 0,
-            enableWorker: true,
-            fragLoadingRetryDelay: 500,
-            fragLoadingMaxRetry: 3,
-          });
-          // @ts-expect-error – not in local typings
-          hls.config.maxInitialBitrate = 2_500_000;
-
-          hlsRef.current = hls;
-          hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => { if (!destroyed) hls.loadSource(HLS_SRC); });
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            try {
-              if (hls.levels?.length) {
-                const lvls = hls.levels;
-                let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
-                if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
-                if (pick < 0) pick = lvls.length - 1;
-                hls.currentLevel = pick;
-                setTimeout(() => { hls.loadLevel = -1; }, 3000);
-              }
-            } catch {}
-            if (!destroyed) tryPlay(v);
-          });
-          hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
-            if (data?.fatal) {
-              try { hls.destroy(); } catch {}
-              hlsRef.current = null;
-              v.src = MP4_SRC;
-              try { v.load(); } catch {}
-              tryPlay(v);
-            }
-          });
-          return;
-        }
-      } catch {}
-
-      v.src = MP4_SRC;
-      try { v.load(); } catch {}
-      tryPlay(v);
     };
+
+    v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
+    v.addEventListener("error", onError, { once: true } as any);
+
+    v.src = HLS_SRC_IOS_1080;   // <- force 1080p (single variant)
+    try { v.load(); } catch {}
+    tryPlay(v);
+
+    // Safety timeout fallback in case the error event doesn't fire
+    setTimeout(() => {
+      if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) {
+        onError();
+      }
+    }, 2000);
+
+    // Also log any size changes
+    v.addEventListener("resize", () => {
+      console.log("iOS video resized:", v.videoWidth, "x", v.videoHeight);
+    });
+
+    return;
+  }
+
+  // ===== non-iOS (your existing HLS.js logic) =====
+  if (v.canPlayType("application/vnd.apple.mpegurl")) {
+    v.src = HLS_SRC;
+    try { v.load(); } catch {}
+    tryPlay(v);
+    return;
+  }
+
+  try {
+    const Hls = (await import("hls.js")).default;
+    if (Hls?.isSupported?.()) {
+      const hls = new Hls({
+        capLevelToPlayerSize: true,
+        startLevel: -1,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 20,
+        backBufferLength: 0,
+        enableWorker: true,
+        fragLoadingRetryDelay: 500,
+        fragLoadingMaxRetry: 3,
+      });
+      // @ts-expect-error – not in local typings
+      hls.config.maxInitialBitrate = 2_500_000;
+
+      hlsRef.current = hls;
+      hls.attachMedia(v);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(HLS_SRC); });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        try {
+          if (hls.levels?.length) {
+            const lvls = hls.levels;
+            let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
+            if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
+            if (pick < 0) pick = lvls.length - 1;
+            hls.currentLevel = pick;          // start near 1080p
+            setTimeout(() => { hls.loadLevel = -1; }, 3000); // then return to auto
+          }
+        } catch {}
+        tryPlay(v);
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_e: any, data: any) => {
+        const lvl = hls.levels?.[data.level];
+        console.log("HLS level →", { index: data.level, height: lvl?.height, bitrate: lvl?.bitrate });
+      });
+      hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
+        if (data?.fatal) {
+          try { hls.destroy(); } catch {}
+          hlsRef.current = null;
+          v.src = MP4_SRC;
+          try { v.load(); } catch {}
+          tryPlay(v);
+        }
+      });
+      return;
+    }
+  } catch {}
+
+  v.src = MP4_SRC;
+  try { v.load(); } catch {}
+  tryPlay(v);
+};
 
     setup();
 
