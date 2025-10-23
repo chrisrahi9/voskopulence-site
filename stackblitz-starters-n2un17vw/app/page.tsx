@@ -402,7 +402,7 @@ useEffect(() => {
   return () => window.removeEventListener("resize", onResize);
 }, []);
 
-
+const hasCap = (capPx ?? 0) > 0;
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
 <header
@@ -421,33 +421,39 @@ useEffect(() => {
   }}
 >
   {/* Single background: paints the solid cap AND the fading header */}
-  <div
-    className="absolute inset-0 pointer-events-none"
-    style={{
-      background: `
-        /* LAYER 1: cap + optional micro-bleed (only when cap > 0) */
+<div
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    background: hasCap
+      ? `
+        /* LAYER 1: cap + micro-bleed (phones only) */
         linear-gradient(
           to bottom,
           rgba(0,70,66,0.94) 0,
-          rgba(0,70,66,0.94) var(--bleed),
-          transparent           var(--bleed),
+          rgba(0,70,66,0.94) calc(${capPx}px + var(--hairline)),
+          transparent           calc(${capPx}px + var(--hairline)),
           transparent           100%
         ),
-        /* LAYER 2: header backdrop below the cap */
+        /* LAYER 2: header tint below the cap */
         linear-gradient(
           to bottom,
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) var(--bleed),
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(${capPx}px + var(--hairline)),
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-        )
-      `,
-      backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-      WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
-      transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
-      transform: 'translateZ(0)',
-    }}
-    aria-hidden="true"
-  />
-  {/* ...the rest of your header content stays exactly the same... */}
+        )`
+      : `
+        /* Desktop: only the header tint (no cap/bleed at all) */
+        linear-gradient(
+          to bottom,
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) 0,
+          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
+        )`,
+    backdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    WebkitBackdropFilter: scrolled ? 'blur(12px) saturate(1.5)' : 'none',
+    transition: 'background 360ms cubic-bezier(.22,1,.36,1)',
+    transform: 'translateZ(0)',
+  }}
+  aria-hidden="true"
+/>
 
 
   {/* Row */}
