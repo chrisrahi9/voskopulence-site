@@ -373,11 +373,20 @@ useEffect(() => {
 <div
   className="absolute inset-0 pointer-events-none"
   style={{
+    // Top layer = solid cap + 1px bleed (always on)
+    // Bottom layer = header tint (only when scrolled)
     background: `
+      /* LAYER 1: cap + micro-bleed */
       linear-gradient(
         to bottom,
         rgba(0,70,66,0.94) 0,
         rgba(0,70,66,0.94) calc(var(--cap) + var(--hairline)),
+        transparent           calc(var(--cap) + var(--hairline)),
+        transparent           100%
+      ),
+      /* LAYER 2: header backdrop below the cap */
+      linear-gradient(
+        to bottom,
         rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(var(--cap) + var(--hairline)),
         rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
       )
@@ -389,6 +398,7 @@ useEffect(() => {
   }}
   aria-hidden="true"
 />
+
 
   {/* Row */}
   <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px] lg:h-[80px]">
