@@ -346,14 +346,24 @@ useEffect(() => {
   }, []);
 // Cap is only needed on phones; on desktop it should be 0
 const [capPx, setCapPx] = useState<number>(0);
+
 useEffect(() => {
-  const updateCap = () => {
-    setCapPx(window.innerWidth >= 1024 ? 0 : CAP_PX); // 0 on lg+, CAP_PX on small
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS =
+    /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
+
+  // iOS gets the 5px safe-area cap; others none
+  setCapPx(isIOS ? 5 : 0);
+
+  // optional: adapt if user resizes from mobile → desktop
+  const onResize = () => {
+    const isLarge = window.innerWidth >= 1024;
+    setCapPx(isIOS ? 5 : isLarge ? 0 : 0); // keeps 5 on iOS, 0 elsewhere
   };
-  updateCap();
-  window.addEventListener("resize", updateCap);
-  return () => window.removeEventListener("resize", updateCap);
+  window.addEventListener("resize", onResize);
+  return () => window.removeEventListener("resize", onResize);
 }, []);
+
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
