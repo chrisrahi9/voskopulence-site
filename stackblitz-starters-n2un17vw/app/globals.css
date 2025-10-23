@@ -71,4 +71,8 @@ header,
 @supports (-webkit-touch-callout: none) {
   :root { --cap-alpha: 0.94; } /* optional */
 }
+:root { --hairline: 1px; }
+@media (min-resolution: 2dppx)   { :root { --hairline: 0.5px; } }
+@media (min-resolution: 3dppx)   { :root { --hairline: 0.3334px; } }
+@media (min-resolution: 4dppx)   { :root { --hairline: 0.25px; } }
 
