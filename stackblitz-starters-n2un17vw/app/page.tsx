@@ -233,6 +233,7 @@ useEffect(() => {
     if (!v) return;
 
     const HLS_SRC = asset("/hero_hls/master.m3u8");
+    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
     const MP4_SRC = asset("/hero_web.mp4");
     const POSTER = asset("/hero_poster.jpg");
 
