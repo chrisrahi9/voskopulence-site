@@ -21,6 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <meta name="theme-color" content="#004642" />
+        <meta name="theme-color" content="#004642" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#004642" media="(prefers-color-scheme: dark)">
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
