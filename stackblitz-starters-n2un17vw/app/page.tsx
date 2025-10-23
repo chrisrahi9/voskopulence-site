@@ -380,7 +380,10 @@ const setup = async () => {
     };
   }, []);
 // Cap is only needed on phones; on desktop it should be 0
-const [capPx, setCapPx] = useState<number>(0);
+const [capPx, setCapPx] = useState<number>(() => {
+  if (typeof window === "undefined") return CAP_PX;        // SSR fallback
+  return window.innerWidth >= 1024 ? 0 : CAP_PX;           // 0 on desktop, CAP_PX on phones
+});
 
 useEffect(() => {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
@@ -405,7 +408,7 @@ useEffect(() => {
 <header
   className="fixed inset-x-0 top-0 z-[60] text-white/95"
   style={{
-    ['--cap' as any]: `${capPx}px`,      // 5 on phones, 0 on desktop
+    ['--cap' as any]: `${(capPx ?? CAP_PX) || CAP_PX}px`,      // 5 on phones, 0 on desktop
     paddingTop: 'var(--cap)',            // <-- replaces the spacer div
     isolation: 'isolate',                // keep it on its own plane
     transform: 'translateZ(0)',
