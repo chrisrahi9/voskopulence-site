@@ -466,6 +466,28 @@ export default function Home() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+useEffect(() => {
+  const v = videoRef.current;
+  if (!v) return;
+
+  // iOS/Safari/Chrome autoplay nudge
+  v.muted = true;
+  v.setAttribute("playsinline", "true");
+  // @ts-ignore
+  v.setAttribute("webkit-playsinline", "true");
+
+  const tryPlay = () => v.play().catch(() => {});
+  if (v.readyState >= 2) {
+    tryPlay();
+  } else {
+    const onCanPlay = () => { tryPlay(); v.removeEventListener("canplay", onCanPlay); };
+    v.addEventListener("canplay", onCanPlay);
+  }
+
+  // safety: if nothing fires in 1s, show poster (remove opacity gate)
+  const t = setTimeout(() => v.classList.add("opacity-100"), 1000);
+  return () => clearTimeout(t);
+}, []);
 
   // Safari fixed-header stability nudge (no jitter, runs only on restore)
   useEffect(() => {
@@ -725,28 +747,37 @@ export default function Home() {
               }}
             />
 
-            <video
-              ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] pointer-events-none"
-              poster={asset("/hero_poster.jpg")}
-              autoPlay
-              muted
-              playsInline
-              preload="auto"
-              loop
-              disablePictureInPicture
-              controlsList="nodownload noplaybackrate"
-              aria-hidden="true"
-              onCanPlay={() => videoRef.current?.classList.add("opacity-100")}
-              style={{
-                transform: "translateZ(0)",
-                willChange: "opacity",
-                contain: "layout paint",
-              }}
-            >
-              <source src={asset("/hero_video.webm")} type="video/webm" />
-              <source src={asset("/hero_video.mp4")} type="video/mp4" />
-            </video>
+           <video
+  ref={videoRef}
+  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms]"
+  poster={asset("/hero_poster.jpg")}
+  // autoplay essentials
+  autoPlay
+  muted
+  playsInline
+  loop
+  preload="auto"
+  // keep video from blocking clicks
+  aria-hidden="true"
+  disablePictureInPicture
+  controlsList="nodownload noplaybackrate"
+  // make *sure* we fade in even if play() is blocked
+  onLoadedData={(e) => {
+    e.currentTarget.classList.add("opacity-100");
+  }}
+  onPlay={(e) => {
+    e.currentTarget.classList.add("opacity-100");
+  }}
+  onError={() => {
+    // last-resort: remove opacity gate so poster shows
+    videoRef.current?.classList.add("opacity-100");
+  }}
+  style={{ willChange: "opacity", transform: "translateZ(0)" }}
+>
+  {/* Put WEBM first for Chrome/Edge, then MP4(H.264) for Safari/others */}
+  <source src={asset("/hero_video.webm")} type="video/webm" />
+  <source src={asset("/hero_video.mp4")} type="video/mp4; codecs=avc1" />
+</video>
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
