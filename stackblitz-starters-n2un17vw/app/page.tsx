@@ -458,6 +458,7 @@ export default function Home() {
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
+          position: 'fixed', top: 'env(safe-area-inset-top)',
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
           paddingTop: "var(--cap)",
