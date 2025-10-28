@@ -448,6 +448,39 @@ export default function Home() {
       }
     };
   }, []);
+// Force autoplay on desktop (Chrome, Edge)
+useEffect(() => {
+  const v = videoRef.current;
+  if (!v) return;
+
+  v.muted = true;
+  v.setAttribute("playsinline", "true");
+  // @ts-ignore
+  v.setAttribute("webkit-playsinline", "true");
+
+  const tryPlay = () => v.play().catch(() => {});
+  const showPoster = () => v.classList.add("opacity-100");
+
+  // Try to play immediately
+  tryPlay();
+
+  // If stuck frozen, try again when visible and when canplay triggers
+  const onCanPlay = () => tryPlay();
+  const onVis = () =>
+    document.visibilityState === "visible" ? tryPlay() : v.pause();
+
+  v.addEventListener("canplay", onCanPlay);
+  document.addEventListener("visibilitychange", onVis);
+
+  // Fallback: fade poster if no play within 2s
+  const t = setTimeout(showPoster, 2000);
+
+  return () => {
+    v.removeEventListener("canplay", onCanPlay);
+    document.removeEventListener("visibilitychange", onVis);
+    clearTimeout(t);
+  };
+}, []);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
