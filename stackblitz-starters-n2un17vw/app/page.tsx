@@ -20,6 +20,10 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  // For header portal
+  const [hdrReady, setHdrReady] = useState(false);
+  useEffect(() => setHdrReady(true), []);
+
   // For portals
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -41,9 +45,7 @@ export default function Home() {
     const LONG_MS = 700;
     longTimer.current = window.setTimeout(() => {
       setIsLongPress(true);
-      try {
-        if (canVibrate) navigator.vibrate(18);
-      } catch {}
+      try { if (canVibrate) navigator.vibrate(18); } catch {}
     }, LONG_MS);
   };
 
@@ -75,9 +77,7 @@ export default function Home() {
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
-  useEffect(() => {
-    menuOpenRef.current = menuOpen;
-  }, [menuOpen]);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
   // Frosted header on scroll (throttled with requestAnimationFrame)
   const rafId = useRef<number | null>(null);
@@ -100,24 +100,20 @@ export default function Home() {
   // Smooth scroll to first next section
   const scrollDown = () => {
     const targets = ["spotlight", "about"];
-    const reduce =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
       const el = document.getElementById(id);
       if (!el) continue;
       const top = el.getBoundingClientRect().top;
       if (top > 80) {
         const yOffset =
-          window.innerWidth < 640
-            ? -window.innerHeight * 0.12
-            : -window.innerHeight * 0.25;
+          window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
         const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
         window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
         return;
       }
     }
-    document
-      .getElementById("about")
+    document.getElementById("about")
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
@@ -126,10 +122,7 @@ export default function Home() {
     let scrollYBefore = 0;
 
     if (menuOpen) {
-      // remember current scroll
       scrollYBefore = window.scrollY;
-
-      // lock body (works on iOS)
       const body = document.body;
       body.style.position = "fixed";
       body.style.top = `-${scrollYBefore}px`;
@@ -138,11 +131,9 @@ export default function Home() {
       body.style.width = "100%";
       body.style.overflow = "hidden";
 
-      // avoid rubber-band overscroll
       const html = document.documentElement;
       html.style.overscrollBehaviorY = "none";
     } else {
-      // restore body
       const body = document.body;
       const top = body.style.top;
       body.style.position = "";
@@ -155,7 +146,6 @@ export default function Home() {
       const html = document.documentElement;
       html.style.overscrollBehaviorY = "";
 
-      // return to previous scroll position
       if (top) {
         const y = -parseInt(top, 10) || 0;
         window.scrollTo(0, y);
@@ -163,7 +153,6 @@ export default function Home() {
     }
 
     return () => {
-      // safety: if component unmounts while open, restore styles
       const body = document.body;
       body.style.position = "";
       body.style.top = "";
@@ -179,15 +168,11 @@ export default function Home() {
   // Edge-swipe to open/close mobile menu (touch only)
   useEffect(() => {
     if (!isTouch) return;
-    let startX = 0,
-      startY = 0,
-      tracking = false,
-      openedFromEdge = false;
+    let startX = 0, startY = 0, tracking = false, openedFromEdge = false;
 
     const onStart = (e: TouchEvent) => {
       const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
+      startX = t.clientX; startY = t.clientY;
       openedFromEdge = !menuOpen && startX <= 50;
       tracking = openedFromEdge || menuOpen;
     };
@@ -197,36 +182,24 @@ export default function Home() {
       const t = e.touches[0];
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
-      if (Math.abs(dy) > Math.abs(dx) + 10) {
-        tracking = false;
-        return;
-      }
-      if (openedFromEdge && Math.abs(dx) > 10 && Math.abs(dy) < 40)
-        e.preventDefault();
+      if (Math.abs(dy) > Math.abs(dx) + 10) { tracking = false; return; }
+      if (openedFromEdge && Math.abs(dx) > 10 && Math.abs(dy) < 40) e.preventDefault();
     };
 
     const onEnd = (e: TouchEvent) => {
       if (!tracking) return;
-      const t =
-        (e.changedTouches && e.changedTouches[0]) ||
-        (e.touches && e.touches[0]);
-      if (!t) {
-        tracking = false;
-        return;
-      }
+      const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+      if (!t) { tracking = false; return; }
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
       const horizontalEnough = Math.abs(dx) >= 45 && Math.abs(dy) <= 50;
-      if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0)
-        setMenuOpen(true);
+      if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0) setMenuOpen(true);
       else if (menuOpen && horizontalEnough && dx < 0) setMenuOpen(false);
       tracking = false;
     };
 
     window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchmove", onMove as unknown as EventListener, {
-      passive: false,
-    });
+    window.addEventListener("touchmove", onMove as unknown as EventListener, { passive: false });
     window.addEventListener("touchend", onEnd, { passive: true });
 
     return () => {
@@ -259,16 +232,13 @@ export default function Home() {
     if (!v) return;
 
     const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8"); // iOS-friendly variant
-    const MP4_SRC = asset("/hero_web.mp4"); // align with <source> below
+    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
+    const MP4_SRC = asset("/hero_web.mp4");
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
 
-    // Reveal poster quickly if anything stalls
-    const revealPoster = () => {
-      v.style.opacity = "1";
-    };
+    const revealPoster = () => { v.style.opacity = "1"; };
     v.addEventListener("loadeddata", revealPoster, { once: true } as any);
 
     let destroyed = false;
@@ -279,32 +249,24 @@ export default function Home() {
         /iP(hone|od|ad)/.test(navigator.platform) ||
         (/\bMac\b/.test(ua) && "ontouchend" in document);
 
-      // Safari desktop: MP4 is more reliable than HLS there
       const isSafariDesktop =
         /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
 
       if (isSafariDesktop) {
         v.src = MP4_SRC;
-        try {
-          v.load();
-        } catch {}
+        try { v.load(); } catch {}
         tryPlay(v);
         return;
       }
 
-      // iOS: use 1080-only HLS, fallback to MP4 if it fails
       if (isiOS) {
         let loaded = false;
-        const onLoadedData = () => {
-          loaded = true;
-        };
+        const onLoadedData = () => { loaded = true; };
         const onError = () => {
           if (!loaded) {
             v.removeEventListener("loadeddata", onLoadedData);
             v.src = MP4_SRC;
-            try {
-              v.load();
-            } catch {}
+            try { v.load(); } catch {}
             tryPlay(v);
           }
         };
@@ -312,12 +274,9 @@ export default function Home() {
         v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
         v.addEventListener("error", onError, { once: true } as any);
         v.src = HLS_SRC_IOS_1080;
-        try {
-          v.load();
-        } catch {}
+        try { v.load(); } catch {}
         tryPlay(v);
 
-        // Safety timeout in case the error event never fires
         setTimeout(() => {
           if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
         }, 2000);
@@ -325,17 +284,13 @@ export default function Home() {
         return;
       }
 
-      // Non-Safari desktop: prefer native HLS if supported
       if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = HLS_SRC;
-        try {
-          v.load();
-        } catch {}
+        try { v.load(); } catch {}
         tryPlay(v);
         return;
       }
 
-      // Otherwise use hls.js
       try {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
@@ -354,37 +309,26 @@ export default function Home() {
 
           hlsRef.current = hls;
           hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-            if (!destroyed) hls.loadSource(HLS_SRC);
-          });
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => { if (!destroyed) hls.loadSource(HLS_SRC); });
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
               if (hls.levels?.length) {
                 const lvls = hls.levels;
                 let pick = lvls.findIndex((l: any) => (l.height ?? 0) >= 1080);
-                if (pick < 0)
-                  pick = lvls.findIndex((l: any) =>
-                    /1080/i.test(l.name ?? "")
-                  );
+                if (pick < 0) pick = lvls.findIndex((l: any) => /1080/i.test(l.name ?? ""));
                 if (pick < 0) pick = lvls.length - 1;
-                hls.currentLevel = pick; // start near 1080p
-                setTimeout(() => {
-                  hls.loadLevel = -1;
-                }, 3000); // return to auto after a few seconds
+                hls.currentLevel = pick;
+                setTimeout(() => { hls.loadLevel = -1; }, 3000);
               }
             } catch {}
             tryPlay(v);
           });
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
-              try {
-                hls.destroy();
-              } catch {}
+              try { hls.destroy(); } catch {}
               hlsRef.current = null;
               v.src = MP4_SRC;
-              try {
-                v.load();
-              } catch {}
+              try { v.load(); } catch {}
               tryPlay(v);
             }
           });
@@ -392,43 +336,28 @@ export default function Home() {
         }
       } catch {}
 
-      // Last fallback: MP4
       v.src = MP4_SRC;
-      try {
-        v.load();
-      } catch {}
+      try { v.load(); } catch {}
       tryPlay(v);
     };
 
     setup();
 
     const onLoaded = () => tryPlay(v);
-    const onCanPlay = () => {
-      if (v.paused) tryPlay(v);
-    };
+    const onCanPlay = () => { if (v.paused) tryPlay(v); };
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
 
-    // Fade in when video starts
-    const onPlaying = () => {
-      v.style.opacity = "1";
-    };
+    const onPlaying = () => { v.style.opacity = "1"; };
     v.addEventListener("playing", onPlaying);
 
-    // Pause when hidden; resume when visible
-    const onVis = () =>
-      document.visibilityState === "visible" ? tryPlay(v) : v.pause();
+    const onVis = () => document.visibilityState === "visible" ? tryPlay(v) : v.pause();
     document.addEventListener("visibilitychange", onVis);
 
-    // Pause off-screen, resume on-screen (saves CPU + avoids Safari hiccups)
     const io = new IntersectionObserver(
       ([e]) => {
-        if (menuOpenRef.current) {
-          tryPlay(v);
-          return;
-        }
-        if (e.intersectionRatio > 0.03) tryPlay(v);
-        else v.pause();
+        if (menuOpenRef.current) { tryPlay(v); return; }
+        if (e.intersectionRatio > 0.03) tryPlay(v); else v.pause();
       },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
@@ -441,141 +370,100 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
+        try { hlsRef.current.destroy(); } catch {}
         hlsRef.current = null;
       }
     };
   }, []);
-// Force autoplay on desktop (Chrome, Edge)
-useEffect(() => {
-  const v = videoRef.current;
-  if (!v) return;
 
-  v.muted = true;
-  v.setAttribute("playsinline", "true");
-  // @ts-ignore
-  v.setAttribute("webkit-playsinline", "true");
+  // One small autoplay nudge + poster safety (no duplicates)
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
 
-  const tryPlay = () => v.play().catch(() => {});
-  const showPoster = () => v.classList.add("opacity-100");
+    v.muted = true;
+    v.setAttribute("playsinline", "true");
+    // @ts-ignore
+    v.setAttribute("webkit-playsinline", "true");
 
-  // Try to play immediately
-  tryPlay();
+    const tryOnce = () => v.play().catch(() => {});
+    if (v.readyState >= 2) tryOnce();
+    else {
+      const onCanPlay = () => { tryOnce(); v.removeEventListener("canplay", onCanPlay); };
+      v.addEventListener("canplay", onCanPlay);
+    }
 
-  // If stuck frozen, try again when visible and when canplay triggers
-  const onCanPlay = () => tryPlay();
-  const onVis = () =>
-    document.visibilityState === "visible" ? tryPlay() : v.pause();
-
-  v.addEventListener("canplay", onCanPlay);
-  document.addEventListener("visibilitychange", onVis);
-
-  // Fallback: fade poster if no play within 2s
-  const t = setTimeout(showPoster, 2000);
-
-  return () => {
-    v.removeEventListener("canplay", onCanPlay);
-    document.removeEventListener("visibilitychange", onVis);
-    clearTimeout(t);
-  };
-}, []);
+    const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
+    return () => clearTimeout(t);
+  }, []);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
-
   useEffect(() => {
     const ua = navigator.userAgent || "";
     const isIOS =
       /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
-
-    // iOS phones get a 5px cap, everyone else 0
     setCapPx(isIOS ? 5 : 0);
-
-    const onResize = () => {
-      setCapPx(isIOS ? 5 : 0); // stays 5 on iOS, 0 elsewhere
-    };
+    const onResize = () => setCapPx(isIOS ? 5 : 0);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-useEffect(() => {
-  const v = videoRef.current;
-  if (!v) return;
 
-  // iOS/Safari/Chrome autoplay nudge
-  v.muted = true;
-  v.setAttribute("playsinline", "true");
-  // @ts-ignore
-  v.setAttribute("webkit-playsinline", "true");
-
-  const tryPlay = () => v.play().catch(() => {});
-  if (v.readyState >= 2) {
-    tryPlay();
-  } else {
-    const onCanPlay = () => { tryPlay(); v.removeEventListener("canplay", onCanPlay); };
-    v.addEventListener("canplay", onCanPlay);
-  }
-
-  // safety: if nothing fires in 1s, show poster (remove opacity gate)
-  const t = setTimeout(() => v.classList.add("opacity-100"), 1000);
-  return () => clearTimeout(t);
-}, []);
-
-  // Safari fixed-header stability nudge (no jitter, runs only on restore)
+  // Stronger Safari fixed-header nudge
   useEffect(() => {
     const header = document.querySelector("header") as HTMLElement | null;
     if (!header) return;
 
     const nudge = () => {
-      // one-shot GPU tick to re-pin the fixed layer
       header.style.willChange = "transform";
       const prev = header.style.transform;
-      header.style.transform = "translateZ(0)"; // force composite
+      header.style.transform = "translateZ(0)";
       requestAnimationFrame(() => {
         header.style.willChange = "auto";
-        header.style.transform = prev; // restore whatever you had
+        header.style.transform = prev;
       });
     };
 
-    // fire when page is restored from bfcache or tab returns
     const onPageShow = (e: PageTransitionEvent) => {
-      if ((e as any).persisted) nudge();
+      // @ts-ignore
+      if (e.persisted) nudge();
     };
-    const onVis = () => {
-      if (document.visibilityState === "visible") nudge();
-    };
+    const onVis = () => { if (document.visibilityState === "visible") nudge(); };
+    const onOri = () => nudge();
+    const vv = (window as any).visualViewport;
+    const onVV = () => nudge();
 
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("orientationchange", onOri);
+    vv?.addEventListener?.("resize", onVV);
+    vv?.addEventListener?.("scroll", onVV);
 
-    // also do a first tick after initial paint on Safari
     setTimeout(nudge, 0);
 
     return () => {
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("orientationchange", onOri);
+      vv?.removeEventListener?.("resize", onVV);
+      vv?.removeEventListener?.("scroll", onVV);
     };
   }, []);
 
-  const hasCap = (capPx ?? 0) > 0;
+  // ---- SiteHeader component (portal-safe) ----
+  function SiteHeader({ scrolled, capPx }: { scrolled: boolean; capPx: number }) {
+    const hasCap = (capPx ?? 0) > 0;
 
-  return (
-    <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
+    return (
       <header
-        className="fixed inset-x-0 top-0 z-[60] text-white/95"
+        className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
-          ["--cap" as any]: `${(capPx ?? CAP_PX) || CAP_PX}px`, // 5 on phones, 0 on desktop
-          // only add the 1-px bleed when cap > 0
-          ["--bleed" as any]:
-            capPx > 0 ? "calc(var(--cap) + var(--hairline, 1px))" : "var(--cap)",
-
+          ["--cap" as any]: `${capPx}px`,
+          ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
           paddingTop: "var(--cap)",
-          isolation: "isolate",
           transform: "translateZ(0)",
-          backfaceVisibility: "hidden",
           WebkitBackfaceVisibility: "hidden",
-          contain: "paint",
+          backfaceVisibility: "hidden",
         }}
       >
         {/* Single background: paints the solid cap AND the fading header */}
@@ -584,7 +472,6 @@ useEffect(() => {
           style={{
             background: hasCap
               ? `
-        /* LAYER 1: cap + micro-bleed (phones only) */
         linear-gradient(
           to bottom,
           rgba(0,70,66,0.94) 0,
@@ -592,14 +479,12 @@ useEffect(() => {
           transparent           calc(${capPx}px + var(--hairline, 1px)),
           transparent           100%
         ),
-        /* LAYER 2: header tint below the cap */
         linear-gradient(
           to bottom,
           rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(${capPx}px + var(--hairline, 1px)),
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )`
               : `
-        /* Desktop: only the header tint (no cap/bleed at all) */
         linear-gradient(
           to bottom,
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 0,
@@ -645,36 +530,31 @@ useEffect(() => {
               className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
               loading="eager"
               decoding="async"
-              style={{
-                transform: "translateZ(0)",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
+              style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
             />
           </div>
 
           {/* Right: nav */}
           <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-            <a href="/shop" className="hover:text-gray-200">
-              Shop
-            </a>
-            <a href="#about" className="hover:text-gray-200">
-              About
-            </a>
-            <a href="/sustainability" className="hover:text-gray-200">
-              Sustainability
-            </a>
-            <a href="/contact" className="hover:text-gray-200">
-              Contact
-            </a>
+            <a href="/shop" className="hover:text-gray-200">Shop</a>
+            <a href="#about" className="hover:text-gray-200">About</a>
+            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
+            <a href="/contact" className="hover:text-gray-200">Contact</a>
           </nav>
         </div>
       </header>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
+      {/* === Header Portal === */}
+      {hdrReady
+        ? createPortal(<SiteHeader scrolled={scrolled} capPx={capPx} />, document.body)
+        : <SiteHeader scrolled={scrolled} capPx={capPx} />}
 
       {/* ===== Mobile curtain (portal) ===== */}
-      {mounted &&
-        typeof document !== "undefined" &&
-        menuOpen &&
+      {mounted && typeof document !== "undefined" && menuOpen &&
         createPortal(
           <div id="mobile-menu" role="dialog" aria-modal="true" className="lg:hidden">
             {/* Backdrop – full screen, single layer */}
@@ -686,7 +566,7 @@ useEffect(() => {
                 backdropFilter: "blur(20px) saturate(1.3)",
                 opacity: 1,
                 transform: "translateZ(0)",
-                cursor: "auto",
+                cursor: "auto"
               }}
               onClick={() => setMenuOpen(false)}
             />
@@ -696,15 +576,13 @@ useEffect(() => {
               className="fixed inset-0 z-[1001] flex flex-col text-white"
               style={{
                 paddingTop: "env(safe-area-inset-top)",
-                paddingBottom: "env(safe-area-inset-bottom)",
+                paddingBottom: "env(safe-area-inset-bottom)"
               }}
             >
               {/* top row */}
               <div
                 className="flex items-center justify-between h-[64px] px-5 shrink-0"
-                style={{
-                  animation: "menuSlideIn 420ms cubic-bezier(.22,1,.36,1) both",
-                }}
+                style={{ animation: "menuSlideIn 420ms cubic-bezier(.22,1,.36,1) both" }}
               >
                 <span className="font-semibold text-white/95">Menu</span>
                 <button
@@ -724,30 +602,10 @@ useEffect(() => {
                 style={{ animation: "menuSlideIn 520ms cubic-bezier(.22,1,.36,1) both" }}
               >
                 <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-                  <li>
-                    <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
-                      Shop
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
-                      About
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/sustainability"
-                      onClick={() => setMenuOpen(false)}
-                      className="hover:text-gray-200"
-                    >
-                      Sustainability
-                    </a>
-                  </li>
-                  <li>
-                    <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
-                      Contact
-                    </a>
-                  </li>
+                  <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+                  <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+                  <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+                  <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
                 </ul>
               </nav>
             </div>
@@ -759,7 +617,7 @@ useEffect(() => {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-        `,
+              `,
               }}
             />
           </div>,
@@ -768,49 +626,36 @@ useEffect(() => {
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
-        <div className="relative h-[96svh] md:h-[96svh] lg:h-[96dvh]">
+        <div className="relative h-[96dvh] md:h-[96dvh] lg:h-[96dvh]">
           {/* 12px taller wrapper prevents seams */}
           <div className="absolute inset-x-0 top-0 -bottom-[16px]">
             {/* instant static background before video loads */}
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${asset("/hero_poster.jpg")})`,
-                filter: "brightness(0.9)",
-              }}
+              style={{ backgroundImage: `url(${asset("/hero_poster.jpg")})`, filter: "brightness(0.9)" }}
             />
 
-           <video
-  ref={videoRef}
-  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms]"
-  poster={asset("/hero_poster.jpg")}
-  // autoplay essentials
-  autoPlay
-  muted
-  playsInline
-  loop
-  preload="auto"
-  // keep video from blocking clicks
-  aria-hidden="true"
-  disablePictureInPicture
-  controlsList="nodownload noplaybackrate"
-  // make *sure* we fade in even if play() is blocked
-  onLoadedData={(e) => {
-    e.currentTarget.classList.add("opacity-100");
-  }}
-  onPlay={(e) => {
-    e.currentTarget.classList.add("opacity-100");
-  }}
-  onError={() => {
-    // last-resort: remove opacity gate so poster shows
-    videoRef.current?.classList.add("opacity-100");
-  }}
-  style={{ willChange: "opacity", transform: "translateZ(0)" }}
->
-  {/* Put WEBM first for Chrome/Edge, then MP4(H.264) for Safari/others */}
-  <source src={asset("/hero_web.webm")} type="video/webm" />
-  <source src={asset("/hero_web.mp4")} type="video/mp4; codecs=avc1" />
-</video>
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms]"
+              poster={asset("/hero_poster.jpg")}
+              autoPlay
+              muted
+              playsInline
+              loop
+              preload="auto"
+              aria-hidden="true"
+              disablePictureInPicture
+              controlsList="nodownload noplaybackrate"
+              onLoadedData={(e) => { e.currentTarget.classList.add("opacity-100"); }}
+              onPlay={(e) => { e.currentTarget.classList.add("opacity-100"); }}
+              onError={() => { videoRef.current?.classList.add("opacity-100"); }}
+              style={{ willChange: "opacity", transform: "translateZ(0)" }}
+            >
+              {/* WEBM then MP4 (H.264) */}
+              <source src={asset("/hero_web.webm")} type="video/webm" />
+              <source src={asset("/hero_web.mp4")} type="video/mp4; codecs=avc1" />
+            </video>
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
@@ -851,9 +696,7 @@ useEffect(() => {
                   WebkitUserSelect: "none",
                   userSelect: "none",
                   touchAction: "none",
-                  ...(pressing
-                    ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
-                    : {}),
+                  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
                 }}
                 onContextMenu={(e) => e.preventDefault()}
                 className={`group relative mt-10 inline-flex items-center justify-center
@@ -878,36 +721,22 @@ useEffect(() => {
                     ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
                     group-hover:opacity-0
                   `}
-                  style={
-                    pressing
-                      ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
-                      : {}
-                  }
+                  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
                 />
                 {/* Chevron */}
                 <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
+                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
                   className={`absolute z-10 transition-all duration-500
                     ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
                     group-hover:opacity-100 group-hover:translate-y-[2px]`}
                 >
-                  <path
-                    d="M6 9.5 L12 15.5 L18 9.5"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             </div>
           </div>
 
-          {/* (NEW) 3px underlap to prevent any seam at narrow widths */}
+          {/* 3px underlap to prevent any seam at narrow widths */}
           <div className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[6px] bg-[#004642]/20" />
         </div>
       </section>
@@ -939,15 +768,10 @@ useEffect(() => {
           </div>
 
           <div className="text-center md:text-left">
-            <p className="uppercase tracking-[0.25em] text-sm text-neutral-600">
-              Spotlight
-            </p>
-            <h3 className="mt-3 heading-script text-3xl sm:text-4xl text-[#004642]">
-              Mediterranean Rosemary Bar
-            </h3>
+            <p className="uppercase tracking-[0.25em] text-sm text-neutral-600">Spotlight</p>
+            <h3 className="mt-3 heading-script text-3xl sm:text-4xl text-[#004642]">Mediterranean Rosemary Bar</h3>
             <p className="mt-4 text-neutral-700 max-w-md mx-auto md:mx-0">
-              Solid shampoo crafted to COSMOS standards with rosemary and mint.
-              Clean, concentrated, travel-ready.
+              Solid shampoo crafted to COSMOS standards with rosemary and mint. Clean, concentrated, travel-ready.
             </p>
 
             <div className="mt-6 flex items-center gap-3 justify-center md:justify-start">
@@ -961,34 +785,17 @@ useEffect(() => {
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/60"
               >
                 <span>Discover the bar</span>
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  className="transition-transform duration-300 group-hover:translate-x-[2.5px]"
-                  strokeWidth="2.2"
-                >
-                  <path
-                    d="M4 12H20M15 7L20 12L15 17"
-                    stroke="currentColor"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <svg width="22" height="22" viewBox="0 0 24 24" className="transition-transform duration-300 group-hover:translate-x-[2.5px]" strokeWidth="2.2">
+                  <path d="M4 12H20M15 7L20 12L15 17" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
 
-              <a
-                href="#about"
-                className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4"
-              >
+              <a href="#about" className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4">
                 Learn about the formula
               </a>
             </div>
 
-            <div className="mt-4 text-xs text-neutral-500">
-              COSMOS-standard • Vegan & Cruelty-Free • 40+ washes
-            </div>
+            <div className="mt-4 text-xs text-neutral-500">COSMOS-standard • Vegan & Cruelty-Free • 40+ washes</div>
           </div>
         </div>
 
@@ -1053,7 +860,7 @@ useEffect(() => {
           __html: `
 @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
 @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
-        `,
+          `,
         }}
       />
     </div>
