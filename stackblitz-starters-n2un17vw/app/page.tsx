@@ -260,7 +260,7 @@ export default function Home() {
 
     const HLS_SRC = asset("/hero_hls/master.m3u8");
     const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8"); // iOS-friendly variant
-    const MP4_SRC = asset("/hero_video.mp4"); // align with <source> below
+    const MP4_SRC = asset("/hero_web.mp4"); // align with <source> below
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
@@ -775,8 +775,8 @@ useEffect(() => {
   style={{ willChange: "opacity", transform: "translateZ(0)" }}
 >
   {/* Put WEBM first for Chrome/Edge, then MP4(H.264) for Safari/others */}
-  <source src={asset("/hero_video.webm")} type="video/webm" />
-  <source src={asset("/hero_video.mp4")} type="video/mp4; codecs=avc1" />
+  <source src={asset("/hero_web.webm")} type="video/webm" />
+  <source src={asset("/hero_web.mp4")} type="video/mp4; codecs=avc1" />
 </video>
 
             {/* Legibility overlay */}
