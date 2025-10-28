@@ -240,7 +240,7 @@ useEffect(() => {
     v.poster = POSTER;
     let destroyed = false;
 // TEMP TEST near your HLS setup branch:
-const FORCE_MP4_TEST = false; // set to true to verify
+const FORCE_MP4_TEST = true; // set to true to verify
 
 if (FORCE_MP4_TEST) {
   v.src = MP4_SRC;
