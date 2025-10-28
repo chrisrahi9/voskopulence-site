@@ -8,14 +8,6 @@ const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const CAP_PX = 5; // adjust per device taste
-const [suspendBlur, setSuspendBlur] = useState(false);
-const [isIOSSafari, setIsIOSSafari] = useState(false);
-useEffect(() => {
-  const ua = navigator.userAgent || "";
-  const isiOS = /iP(hone|od|ad)/.test(navigator.platform) || (/\bMac\b/.test(ua) && "ontouchend" in document);
-  const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
-  setIsIOSSafari(isiOS && isSafari);
-}, []);
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
@@ -35,6 +27,32 @@ export default function Home() {
   // For portals
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // iOS-Safari detection + blur suspension during active scroll
+  const [suspendBlur, setSuspendBlur] = useState(false);
+  const [isIOSSafari, setIsIOSSafari] = useState(false);
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    const isiOS =
+      /iP(hone|od|ad)/.test(navigator.platform) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in document);
+    const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
+    setIsIOSSafari(isiOS && isSafari);
+  }, []);
+  useEffect(() => {
+    if (!isIOSSafari) return;
+    let t: any = null;
+    const onScroll = () => {
+      if (!suspendBlur) setSuspendBlur(true);
+      clearTimeout(t);
+      t = setTimeout(() => setSuspendBlur(false), 180);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(t);
+    };
+  }, [isIOSSafari, suspendBlur]);
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
@@ -104,17 +122,6 @@ export default function Home() {
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
-useEffect(() => {
-  if (!isIOSSafari) return;
-  let t: any = null;
-  const onScroll = () => {
-    if (!suspendBlur) setSuspendBlur(true);          // kill blur during active scroll
-    clearTimeout(t);
-    t = setTimeout(() => setSuspendBlur(false), 180); // restore after 180ms idle
-  };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  return () => { window.removeEventListener("scroll", onScroll); clearTimeout(t); };
-}, [isIOSSafari, suspendBlur]);
 
   // Smooth scroll to first next section
   const scrollDown = () => {
@@ -470,16 +477,16 @@ useEffect(() => {
   }, []);
 
   // ---- SiteHeader component (portal-safe) ----
-  function SiteHeader({ scrolled, capPx }: { scrolled: boolean; capPx: number }) {
+  function SiteHeader({ scrolled, capPx, suspendBlur }: { scrolled: boolean; capPx: number; suspendBlur: boolean }) {
     const hasCap = (capPx ?? 0) > 0;
 
     return (
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
-          position: 'fixed', top: 'env(safe-area-inset-top)',
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
+          // include safe-area to avoid URL bar overlap on iOS
           paddingTop: "calc(var(--cap) + env(safe-area-inset-top, 0px))",
           transform: "translateZ(0)",
           WebkitBackfaceVisibility: "hidden",
@@ -510,8 +517,9 @@ useEffect(() => {
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 0,
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )`,
-           backdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
-          WebkitBackdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
+            // gate blur while actively scrolling on iOS
+            backdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
+            WebkitBackdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
             transition: "background 360ms cubic-bezier(.22,1,.36,1)",
             transform: "translateZ(0)",
           }}
@@ -570,8 +578,8 @@ useEffect(() => {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       {/* === Header Portal === */}
       {hdrReady
-        ? createPortal(<SiteHeader scrolled={scrolled} capPx={capPx} />, document.body)
-        : <SiteHeader scrolled={scrolled} capPx={capPx} />}
+        ? createPortal(<SiteHeader scrolled={scrolled} capPx={capPx} suspendBlur={suspendBlur} />, document.body)
+        : <SiteHeader scrolled={scrolled} capPx={capPx} suspendBlur={suspendBlur} />}
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" && menuOpen &&
