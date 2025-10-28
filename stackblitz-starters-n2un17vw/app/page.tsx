@@ -398,6 +398,42 @@ useEffect(() => {
   return () => window.removeEventListener("resize", onResize);
 }, []);
 
+  // Safari fixed-header stability nudge (no jitter, runs only on restore)
+useEffect(() => {
+  const header = document.querySelector('header') as HTMLElement | null;
+  if (!header) return;
+
+  const nudge = () => {
+    // one-shot GPU tick to re-pin the fixed layer
+    header.style.willChange = 'transform';
+    const prev = header.style.transform;
+    header.style.transform = 'translateZ(0)';  // force composite
+    requestAnimationFrame(() => {
+      header.style.willChange = 'auto';
+      header.style.transform = prev;           // restore whatever you had
+    });
+  };
+
+  // fire when page is restored from bfcache or tab returns
+  const onPageShow = (e: PageTransitionEvent) => {
+    if (e.persisted) nudge();
+  };
+  const onVis = () => {
+    if (document.visibilityState === 'visible') nudge();
+  };
+
+  window.addEventListener('pageshow', onPageShow);
+  document.addEventListener('visibilitychange', onVis);
+
+  // also do a first tick after initial paint on Safari
+  setTimeout(nudge, 0);
+
+  return () => {
+    window.removeEventListener('pageshow', onPageShow);
+    document.removeEventListener('visibilitychange', onVis);
+  };
+}, []);
+
 const hasCap = (capPx ?? 0) > 0;
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
