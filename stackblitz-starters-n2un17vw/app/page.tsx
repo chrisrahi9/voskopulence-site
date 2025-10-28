@@ -411,7 +411,6 @@ const hasCap = (capPx ?? 0) > 0;
     paddingTop: 'var(--cap)',
     isolation: 'isolate',
     transform: 'translateZ(0)',
-    willChange: "transform, opacity",
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
     contain: 'paint',
