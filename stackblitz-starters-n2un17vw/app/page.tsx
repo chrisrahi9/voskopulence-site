@@ -398,34 +398,6 @@ useEffect(() => {
   return () => window.removeEventListener("resize", onResize);
 }, []);
 
-// --- iOS Safari header reattachment fix ---
-useEffect(() => {
-  const repaint = () => {
-    document.body.style.willChange = 'transform';
-    document.body.style.transform = 'translateZ(0)';
-    setTimeout(() => {
-      document.body.style.transform = '';
-      document.body.style.willChange = '';
-    }, 60);
-  };
-
-  repaint(); // run once on mount
-
-  window.addEventListener('pageshow', repaint);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') repaint();
-  });
-  window.addEventListener('scroll', () => {
-    if (window.scrollY < 5) repaint();
-  });
-
-  return () => {
-    window.removeEventListener('pageshow', repaint);
-    window.removeEventListener('scroll', repaint);
-    document.removeEventListener('visibilitychange', repaint);
-  };
-}, []);
-
 const hasCap = (capPx ?? 0) > 0;
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
