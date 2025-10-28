@@ -642,26 +642,25 @@ const hasCap = (capPx ?? 0) > 0;
 <video
   ref={videoRef}
   className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
-  poster={asset("/hero_poster.jpg")}
+  poster={asset('/hero_poster.jpg')}
   autoPlay
   muted
   playsInline
-  // @ts-ignore
-  webkit-playsinline="true"
+  preload="auto"
   loop
-  preload="auto"                   // changed from metadata → auto
-  crossOrigin="anonymous"          // ensures Edge/Safari load CDN video
-  aria-hidden="true"
   disablePictureInPicture
   controlsList="nodownload noplaybackrate"
+  onCanPlay={() => videoRef.current?.classList.add('opacity-100')}
   style={{
-    transform: "translateZ(0)",
-    willChange: "transform, opacity",   // helps Safari stability
-    contain: "layout paint",
-    position: "relative",
-    zIndex: 0,
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+    contain: 'layout paint',
   }}
-/>
+>
+  <source src={asset('/hero_video.mp4')} type="video/mp4" />
+  <source src={asset('/hero_video.webm')} type="video/webm" />
+</video>
+
 
 
             {/* Legibility overlay */}
