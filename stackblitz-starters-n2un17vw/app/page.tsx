@@ -12,6 +12,33 @@ const CAP_PX = 5; // adjust per device taste
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+function TopSentinel() {
+  // Pins a tiny fixed layer at the very top so Safari keeps the header's layer stable
+  useEffect(() => {
+    const s = document.createElement("div");
+    Object.assign(s.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      width: "1px",
+      height: "calc(env(safe-area-inset-top, 0px) + 1px)",
+      pointerEvents: "none",
+      zIndex: "2147483647", // highest
+      // force compositing & keep it super cheap
+      transform: "translateZ(0)",
+      willChange: "transform",
+      WebkitBackfaceVisibility: "hidden",
+      backfaceVisibility: "hidden",
+      contain: "strict",
+      // completely invisible
+      opacity: "0",
+    });
+    document.body.appendChild(s);
+    return () => { try { document.body.removeChild(s); } catch {} };
+  }, []);
+  return null;
+}
+
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -576,6 +603,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
+      <TopSentinel />
       {/* === Header Portal === */}
       {hdrReady
         ? createPortal(<SiteHeader scrolled={scrolled} capPx={capPx} suspendBlur={suspendBlur} />, document.body)
