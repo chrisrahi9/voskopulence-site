@@ -227,167 +227,186 @@ useEffect(() => {
   document.documentElement.style.setProperty('--hairline', `${1 / dpr}px`);
 }, []);
 
-  // --- Video setup (HLS with MP4 fallback)
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
+// --- Video setup (HLS with MP4 fallback)
+useEffect(() => {
+  const v = videoRef.current;
+  if (!v) return;
 
-    const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
-    const MP4_SRC = asset("/hero_web.mp4");
-    const POSTER = asset("/hero_poster.jpg");
+  /* =======================================================
+     TEMP DEBUG: force MP4 on all devices + autoplay unlock
+     ======================================================= */
+  v.muted = true;
+  v.controls = true; // temporary visible controls
+  v.crossOrigin = "anonymous";
+  v.style.opacity = "1"; // visible for testing
 
-    v.poster = POSTER;
-    let destroyed = false;
-// TEMP TEST near your HLS setup branch:
-const FORCE_MP4_TEST = true; // set to true to verify
+  // autoplay unlock
+  const unlock = () => { tryPlay(v); };
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
 
-if (FORCE_MP4_TEST) {
-  v.src = MP4_SRC;
-  try { v.load(); } catch {}
-  tryPlay(v);
-  return;
-}
-
-const setup = async () => {
-  const isIOS =
-    /iP(hone|od|ad)/.test(navigator.platform) ||
-    (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
-
-  if (isIOS) {
-    // Prefer a 1080-only HLS playlist on iOS (forces 1080p)
-    let loaded = false;
-    const onLoadedData = () => { loaded = true; console.log("iOS HLS (1080-only) loaded:", v.videoWidth, "x", v.videoHeight); };
-    const onError = () => {
-      if (!loaded) {
-        console.warn("iOS HLS 1080-only failed; falling back to MP4.");
-        v.removeEventListener("loadeddata", onLoadedData);
-        v.src = MP4_SRC;
-        try { v.load(); } catch {}
-        tryPlay(v);
-      }
-    };
-
-    v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
-    v.addEventListener("error", onError, { once: true } as any);
-
-    v.src = HLS_SRC_IOS_1080;   // <- force 1080p (single variant)
-    try { v.load(); } catch {}
-    tryPlay(v);
-
-    // Safety timeout fallback in case the error event doesn't fire
-    setTimeout(() => {
-      if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) {
-        onError();
-      }
-    }, 2000);
-
-    // Also log any size changes
-    v.addEventListener("resize", () => {
-      console.log("iOS video resized:", v.videoWidth, "x", v.videoHeight);
+  // verbose logging
+  const log = (name: string) => () =>
+    console.log(`[video] ${name}`, {
+      readyState: v.readyState,
+      networkState: v.networkState,
+      currentSrc: v.currentSrc,
+      error: v.error,
     });
 
-    return;
-  }
+  v.addEventListener("loadstart", log("loadstart"));
+  v.addEventListener("loadedmetadata", log("loadedmetadata"));
+  v.addEventListener("loadeddata", log("loadeddata"));
+  v.addEventListener("canplay", log("canplay"));
+  v.addEventListener("canplaythrough", log("canplaythrough"));
+  v.addEventListener("playing", log("playing"));
+  v.addEventListener("stalled", log("stalled"));
+  v.addEventListener("suspend", log("suspend"));
+  v.addEventListener("error", () => console.error("[video] error", v.error));
 
-  // ===== non-iOS (your existing HLS.js logic) =====
-  if (v.canPlayType("application/vnd.apple.mpegurl")) {
-    v.src = HLS_SRC;
+  const HLS_SRC = asset("/hero_hls/master.m3u8");
+  const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
+  const MP4_SRC = asset("/hero_web.mp4");
+  const POSTER = asset("/hero_poster.jpg");
+
+  v.poster = POSTER;
+
+  // TEMP: force MP4 to test playback on all devices
+  const FORCE_MP4_TEST = true;
+  if (FORCE_MP4_TEST) {
+    v.src = MP4_SRC;
     try { v.load(); } catch {}
     tryPlay(v);
     return;
   }
 
-  try {
-    const Hls = (await import("hls.js")).default;
-    if (Hls?.isSupported?.()) {
-      const hls = new Hls({
-        capLevelToPlayerSize: true,
-        startLevel: -1,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 20,
-        backBufferLength: 0,
-        enableWorker: true,
-        fragLoadingRetryDelay: 500,
-        fragLoadingMaxRetry: 3,
-      });
-      // @ts-expect-error – not in local typings
-      hls.config.maxInitialBitrate = 2_500_000;
+  // ======= normal HLS logic below (unchanged) =======
+  let destroyed = false;
+  const setup = async () => {
+    const isIOS =
+      /iP(hone|od|ad)/.test(navigator.platform) ||
+      (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
 
-      hlsRef.current = hls;
-      hls.attachMedia(v);
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(HLS_SRC); });
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        try {
-          if (hls.levels?.length) {
-            const lvls = hls.levels;
-            let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
-            if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
-            if (pick < 0) pick = lvls.length - 1;
-            hls.currentLevel = pick;          // start near 1080p
-            setTimeout(() => { hls.loadLevel = -1; }, 3000); // then return to auto
-          }
-        } catch {}
-        tryPlay(v);
-      });
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_e: any, data: any) => {
-        const lvl = hls.levels?.[data.level];
-        console.log("HLS level →", { index: data.level, height: lvl?.height, bitrate: lvl?.bitrate });
-      });
-      hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
-        if (data?.fatal) {
-          try { hls.destroy(); } catch {}
-          hlsRef.current = null;
+    if (isIOS) {
+      let loaded = false;
+      const onLoadedData = () => { loaded = true; };
+      const onError = () => {
+        if (!loaded) {
+          v.removeEventListener("loadeddata", onLoadedData);
           v.src = MP4_SRC;
           try { v.load(); } catch {}
           tryPlay(v);
         }
-      });
+      };
+      v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
+      v.addEventListener("error", onError, { once: true } as any);
+      v.src = HLS_SRC_IOS_1080;
+      try { v.load(); } catch {}
+      tryPlay(v);
+      setTimeout(() => { if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError(); }, 2000);
       return;
     }
-  } catch {}
 
-  v.src = MP4_SRC;
-  try { v.load(); } catch {}
-  tryPlay(v);
-};
+    if (v.canPlayType("application/vnd.apple.mpegurl")) {
+      v.src = HLS_SRC;
+      try { v.load(); } catch {}
+      tryPlay(v);
+      return;
+    }
 
-    setup();
+    try {
+      const Hls = (await import("hls.js")).default;
+      if (Hls?.isSupported?.()) {
+        const hls = new Hls({
+          capLevelToPlayerSize: true,
+          startLevel: -1,
+          maxBufferLength: 10,
+          maxMaxBufferLength: 20,
+          backBufferLength: 0,
+          enableWorker: true,
+          fragLoadingRetryDelay: 500,
+          fragLoadingMaxRetry: 3,
+        });
+        // @ts-expect-error – not in local typings
+        hls.config.maxInitialBitrate = 2_500_000;
 
-    const onLoaded = () => tryPlay(v);
-    const onCanPlay = () => { if (v.paused) tryPlay(v); };
-    v.addEventListener("loadedmetadata", onLoaded);
-    v.addEventListener("canplay", onCanPlay);
-
-    // Fade in when video starts
-    v.addEventListener("playing", () => { v.style.opacity = "1"; });
-
-    const onVis = () =>
-      document.visibilityState === "visible" ? tryPlay(v) : v.pause();
-    document.addEventListener("visibilitychange", onVis);
-
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (menuOpenRef.current) { tryPlay(v); return; }
-        if (e.intersectionRatio > 0.03) tryPlay(v);
-        else v.pause();
-      },
-      { threshold: [0, 0.01, 0.02, 0.03, 0.1, 0.25, 0.5, 1] }
-    );
-    io.observe(v);
-
-    return () => {
-      destroyed = true;
-      v.removeEventListener("loadedmetadata", onLoaded);
-      v.removeEventListener("canplay", onCanPlay);
-      document.removeEventListener("visibilitychange", onVis);
-      io.disconnect();
-      if (hlsRef.current) {
-        try { hlsRef.current.destroy(); } catch {}
-        hlsRef.current = null;
+        hlsRef.current = hls;
+        hls.attachMedia(v);
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(HLS_SRC); });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          try {
+            if (hls.levels?.length) {
+              const lvls = hls.levels;
+              let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
+              if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
+              if (pick < 0) pick = lvls.length - 1;
+              hls.currentLevel = pick;
+              setTimeout(() => { hls.loadLevel = -1; }, 3000);
+            }
+          } catch {}
+          tryPlay(v);
+        });
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_e: any, data: any) => {
+          const lvl = hls.levels?.[data.level];
+          console.log("HLS level →", { index: data.level, height: lvl?.height, bitrate: lvl?.bitrate });
+        });
+        hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
+          if (data?.fatal) {
+            try { hls.destroy(); } catch {}
+            hlsRef.current = null;
+            v.src = MP4_SRC;
+            try { v.load(); } catch {}
+            tryPlay(v);
+          }
+        });
+        return;
       }
-    };
-  }, []);
+    } catch {}
+
+    v.src = MP4_SRC;
+    try { v.load(); } catch {}
+    tryPlay(v);
+  };
+
+  setup();
+
+  const onLoaded = () => tryPlay(v);
+  const onCanPlay = () => { if (v.paused) tryPlay(v); };
+  v.addEventListener("loadedmetadata", onLoaded);
+  v.addEventListener("canplay", onCanPlay);
+
+  v.addEventListener("playing", () => { v.style.opacity = "1"; });
+
+  const onVis = () =>
+    document.visibilityState === "visible" ? tryPlay(v) : v.pause();
+  document.addEventListener("visibilitychange", onVis);
+
+  const io = new IntersectionObserver(
+    ([e]) => {
+      if (menuOpenRef.current) { tryPlay(v); return; }
+      if (e.intersectionRatio > 0.03) tryPlay(v);
+      else v.pause();
+    },
+    { threshold: [0, 0.01, 0.02, 0.03, 0.1, 0.25, 0.5, 1] }
+  );
+  io.observe(v);
+
+  return () => {
+    destroyed = true;
+    v.removeEventListener("loadedmetadata", onLoaded);
+    v.removeEventListener("canplay", onCanPlay);
+    document.removeEventListener("visibilitychange", onVis);
+    io.disconnect();
+    if (hlsRef.current) {
+      try { hlsRef.current.destroy(); } catch {}
+      hlsRef.current = null;
+    }
+    // cleanup temp listeners
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("touchstart", unlock);
+  };
+}, []);
+
 // Cap is only needed on phones; on desktop it should be 0
 const [capPx, setCapPx] = useState<number>(0);
 
