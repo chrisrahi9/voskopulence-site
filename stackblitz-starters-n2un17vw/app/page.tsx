@@ -537,7 +537,6 @@ const hasCap = (capPx ?? 0) > 0;
         className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
-        crossOrigin="anonymous"
         style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       />
     </div>
@@ -772,7 +771,6 @@ const hasCap = (capPx ?? 0) > 0;
               src="https://cdn.voskopulence.com/Spotlight_pic.png"
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
-              crossOrigin="anonymous"
             />
           </div>
 
@@ -840,7 +838,6 @@ const hasCap = (capPx ?? 0) > 0;
             style={{ objectPosition: "right center" }}
             loading="lazy"
             decoding="async"
-            crossOrigin="anonymous"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-[#00000080] via-[#00000060] to-[#00000040]" />
