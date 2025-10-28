@@ -398,6 +398,26 @@ useEffect(() => {
   return () => window.removeEventListener("resize", onResize);
 }, []);
 
+  // --- Safari header repaint fix ---
+useEffect(() => {
+  const forceRepaint = () => {
+    document.body.style.transform = 'translateZ(0)';
+    requestAnimationFrame(() => { document.body.style.transform = ''; });
+  };
+
+  // Trigger immediately and whenever Safari resumes a page
+  forceRepaint();
+  window.addEventListener('pageshow', forceRepaint);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') forceRepaint();
+  });
+
+  return () => {
+    window.removeEventListener('pageshow', forceRepaint);
+    document.removeEventListener('visibilitychange', forceRepaint);
+  };
+}, []);
+
 
 const hasCap = (capPx ?? 0) > 0;
   return (
