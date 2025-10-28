@@ -82,3 +82,15 @@ header,
 @media (min-resolution: 3dppx)   { :root { --hairline: 0.3334px; } }
 @media (min-resolution: 4dppx)   { :root { --hairline: 0.25px; } }
 
+/* --- Safari fixed-header stability fix --- */
+@supports (-webkit-backdrop-filter: blur(0)) {
+  header {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0;
+    transform: translateZ(0);
+    will-change: transform;
+    z-index: 999;
+  }
+}
+
