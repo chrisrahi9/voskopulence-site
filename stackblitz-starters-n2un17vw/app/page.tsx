@@ -8,6 +8,14 @@ const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const CAP_PX = 5; // adjust per device taste
+const [suspendBlur, setSuspendBlur] = useState(false);
+const [isIOSSafari, setIsIOSSafari] = useState(false);
+useEffect(() => {
+  const ua = navigator.userAgent || "";
+  const isiOS = /iP(hone|od|ad)/.test(navigator.platform) || (/\bMac\b/.test(ua) && "ontouchend" in document);
+  const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
+  setIsIOSSafari(isiOS && isSafari);
+}, []);
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
@@ -96,6 +104,17 @@ export default function Home() {
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
+useEffect(() => {
+  if (!isIOSSafari) return;
+  let t: any = null;
+  const onScroll = () => {
+    if (!suspendBlur) setSuspendBlur(true);          // kill blur during active scroll
+    clearTimeout(t);
+    t = setTimeout(() => setSuspendBlur(false), 180); // restore after 180ms idle
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => { window.removeEventListener("scroll", onScroll); clearTimeout(t); };
+}, [isIOSSafari, suspendBlur]);
 
   // Smooth scroll to first next section
   const scrollDown = () => {
@@ -461,7 +480,7 @@ export default function Home() {
           position: 'fixed', top: 'env(safe-area-inset-top)',
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
-          paddingTop: "var(--cap)",
+          paddingTop: "calc(var(--cap) + env(safe-area-inset-top, 0px))",
           transform: "translateZ(0)",
           WebkitBackfaceVisibility: "hidden",
           backfaceVisibility: "hidden",
@@ -491,8 +510,8 @@ export default function Home() {
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 0,
           rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
         )`,
-            backdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
-            WebkitBackdropFilter: scrolled ? "blur(12px) saturate(1.5)" : "none",
+           backdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
+          WebkitBackdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
             transition: "background 360ms cubic-bezier(.22,1,.36,1)",
             transform: "translateZ(0)",
           }}
