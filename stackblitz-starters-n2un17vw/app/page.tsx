@@ -398,26 +398,33 @@ useEffect(() => {
   return () => window.removeEventListener("resize", onResize);
 }, []);
 
-  // --- Safari header repaint fix ---
+// --- iOS Safari header reattachment fix ---
 useEffect(() => {
-  const forceRepaint = () => {
+  const repaint = () => {
+    document.body.style.willChange = 'transform';
     document.body.style.transform = 'translateZ(0)';
-    requestAnimationFrame(() => { document.body.style.transform = ''; });
+    setTimeout(() => {
+      document.body.style.transform = '';
+      document.body.style.willChange = '';
+    }, 60);
   };
 
-  // Trigger immediately and whenever Safari resumes a page
-  forceRepaint();
-  window.addEventListener('pageshow', forceRepaint);
+  repaint(); // run once on mount
+
+  window.addEventListener('pageshow', repaint);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') forceRepaint();
+    if (document.visibilityState === 'visible') repaint();
+  });
+  window.addEventListener('scroll', () => {
+    if (window.scrollY < 5) repaint();
   });
 
   return () => {
-    window.removeEventListener('pageshow', forceRepaint);
-    document.removeEventListener('visibilitychange', forceRepaint);
+    window.removeEventListener('pageshow', repaint);
+    window.removeEventListener('scroll', repaint);
+    document.removeEventListener('visibilitychange', repaint);
   };
 }, []);
-
 
 const hasCap = (capPx ?? 0) > 0;
   return (
