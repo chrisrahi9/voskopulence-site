@@ -227,67 +227,51 @@ useEffect(() => {
   document.documentElement.style.setProperty('--hairline', `${1 / dpr}px`);
 }, []);
 
-// --- Video setup (HLS with MP4 fallback)
+// --- Video setup (HLS with MP4 fallback) ---
 useEffect(() => {
   const v = videoRef.current;
   if (!v) return;
 
-  /* =======================================================
-     TEMP DEBUG: force MP4 on all devices + autoplay unlock
-     ======================================================= */
-  v.muted = true;
-  v.controls = true; // temporary visible controls
-  v.crossOrigin = "anonymous";
-  v.style.opacity = "1"; // visible for testing
-
-  // autoplay unlock
-  const unlock = () => { tryPlay(v); };
-  window.addEventListener("pointerdown", unlock, { once: true });
-  window.addEventListener("touchstart", unlock, { once: true });
-
-  // verbose logging
-  const log = (name: string) => () =>
-    console.log(`[video] ${name}`, {
-      readyState: v.readyState,
-      networkState: v.networkState,
-      currentSrc: v.currentSrc,
-      error: v.error,
-    });
-
-  v.addEventListener("loadstart", log("loadstart"));
-  v.addEventListener("loadedmetadata", log("loadedmetadata"));
-  v.addEventListener("loadeddata", log("loadeddata"));
-  v.addEventListener("canplay", log("canplay"));
-  v.addEventListener("canplaythrough", log("canplaythrough"));
-  v.addEventListener("playing", log("playing"));
-  v.addEventListener("stalled", log("stalled"));
-  v.addEventListener("suspend", log("suspend"));
-  v.addEventListener("error", () => console.error("[video] error", v.error));
-
   const HLS_SRC = asset("/hero_hls/master.m3u8");
-  const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
+  const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8"); // your 1080-only variant
   const MP4_SRC = asset("/hero_web.mp4");
   const POSTER = asset("/hero_poster.jpg");
 
   v.poster = POSTER;
 
-  // TEMP: force MP4 to test playback on all devices
-  const FORCE_MP4_TEST = true;
-  if (FORCE_MP4_TEST) {
-    v.src = MP4_SRC;
-    try { v.load(); } catch {}
-    tryPlay(v);
-    return;
-  }
+  // Ensure we at least see the poster if autoplay stalls (Edge fix)
+  const revealPoster = () => { v.style.opacity = "1"; };
+  v.addEventListener("loadeddata", revealPoster, { once: true } as any);
 
-  // ======= normal HLS logic below (unchanged) =======
   let destroyed = false;
-  const setup = async () => {
-    const isIOS =
-      /iP(hone|od|ad)/.test(navigator.platform) ||
-      (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
 
-    if (isIOS) {
+  const tryPlay = (el: HTMLVideoElement) => {
+    el.muted = true;
+    // @ts-ignore
+    el.setAttribute("webkit-playsinline", "true");
+    el.setAttribute("playsinline", "true");
+    const p = el.play?.();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  };
+
+  const setup = async () => {
+    const ua = navigator.userAgent || "";
+    const isiOS =
+      /iP(hone|od|ad)/.test(navigator.platform) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in document);
+
+    // Safari desktop: use MP4 directly (more reliable than HLS there)
+    const isSafariDesktop = /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+
+    if (isSafariDesktop) {
+      v.src = MP4_SRC;
+      try { v.load(); } catch {}
+      tryPlay(v);
+      return;
+    }
+
+    // iOS (iPhone/iPad): use your 1080-only HLS variant, fall back to MP4 if it fails
+    if (isiOS) {
       let loaded = false;
       const onLoadedData = () => { loaded = true; };
       const onError = () => {
@@ -298,15 +282,22 @@ useEffect(() => {
           tryPlay(v);
         }
       };
+
       v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
       v.addEventListener("error", onError, { once: true } as any);
       v.src = HLS_SRC_IOS_1080;
       try { v.load(); } catch {}
       tryPlay(v);
-      setTimeout(() => { if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError(); }, 2000);
+
+      // Safety timeout in case the error event never fires
+      setTimeout(() => {
+        if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
+      }, 2000);
+
       return;
     }
 
+    // Non-Safari desktop: prefer native HLS if supported
     if (v.canPlayType("application/vnd.apple.mpegurl")) {
       v.src = HLS_SRC;
       try { v.load(); } catch {}
@@ -314,6 +305,7 @@ useEffect(() => {
       return;
     }
 
+    // Otherwise use hls.js
     try {
       const Hls = (await import("hls.js")).default;
       if (Hls?.isSupported?.()) {
@@ -327,12 +319,12 @@ useEffect(() => {
           fragLoadingRetryDelay: 500,
           fragLoadingMaxRetry: 3,
         });
-        // @ts-expect-error – not in local typings
+        // @ts-expect-error
         hls.config.maxInitialBitrate = 2_500_000;
 
         hlsRef.current = hls;
         hls.attachMedia(v);
-        hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(HLS_SRC); });
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => { if (!destroyed) hls.loadSource(HLS_SRC); });
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           try {
             if (hls.levels?.length) {
@@ -340,15 +332,11 @@ useEffect(() => {
               let pick = lvls.findIndex((l) => (l.height ?? 0) >= 1080);
               if (pick < 0) pick = lvls.findIndex((l) => /1080/i.test(l.name ?? ""));
               if (pick < 0) pick = lvls.length - 1;
-              hls.currentLevel = pick;
-              setTimeout(() => { hls.loadLevel = -1; }, 3000);
+              hls.currentLevel = pick;          // start near 1080p
+              setTimeout(() => { hls.loadLevel = -1; }, 3000); // return to auto
             }
           } catch {}
           tryPlay(v);
-        });
-        hls.on(Hls.Events.LEVEL_SWITCHED, (_e: any, data: any) => {
-          const lvl = hls.levels?.[data.level];
-          console.log("HLS level →", { index: data.level, height: lvl?.height, bitrate: lvl?.bitrate });
         });
         hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
           if (data?.fatal) {
@@ -363,6 +351,7 @@ useEffect(() => {
       }
     } catch {}
 
+    // Last fallback: MP4
     v.src = MP4_SRC;
     try { v.load(); } catch {}
     tryPlay(v);
@@ -375,10 +364,11 @@ useEffect(() => {
   v.addEventListener("loadedmetadata", onLoaded);
   v.addEventListener("canplay", onCanPlay);
 
-  v.addEventListener("playing", () => { v.style.opacity = "1"; });
+  // Fade in when video starts
+  const onPlaying = () => { v.style.opacity = "1"; };
+  v.addEventListener("playing", onPlaying);
 
-  const onVis = () =>
-    document.visibilityState === "visible" ? tryPlay(v) : v.pause();
+  const onVis = () => document.visibilityState === "visible" ? tryPlay(v) : v.pause();
   document.addEventListener("visibilitychange", onVis);
 
   const io = new IntersectionObserver(
@@ -387,7 +377,7 @@ useEffect(() => {
       if (e.intersectionRatio > 0.03) tryPlay(v);
       else v.pause();
     },
-    { threshold: [0, 0.01, 0.02, 0.03, 0.1, 0.25, 0.5, 1] }
+    { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
   );
   io.observe(v);
 
@@ -395,17 +385,16 @@ useEffect(() => {
     destroyed = true;
     v.removeEventListener("loadedmetadata", onLoaded);
     v.removeEventListener("canplay", onCanPlay);
+    v.removeEventListener("playing", onPlaying);
     document.removeEventListener("visibilitychange", onVis);
     io.disconnect();
     if (hlsRef.current) {
       try { hlsRef.current.destroy(); } catch {}
       hlsRef.current = null;
     }
-    // cleanup temp listeners
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("touchstart", unlock);
   };
 }, []);
+
 
 // Cap is only needed on phones; on desktop it should be 0
 const [capPx, setCapPx] = useState<number>(0);
@@ -548,6 +537,7 @@ const hasCap = (capPx ?? 0) > 0;
         className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
         loading="eager"
         decoding="async"
+        crossOrigin="anonymous"
         style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       />
     </div>
@@ -650,30 +640,30 @@ const hasCap = (capPx ?? 0) > 0;
               style={{ backgroundImage: `url(${asset("/hero_poster.jpg")})`, filter: "brightness(0.9)" }}
             />
 
-            <video
-              ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
-              poster={asset("/hero_poster.jpg")}
-              autoPlay
-              muted
-              playsInline
-              // @ts-ignore
-              webkit-playsinline="true"
-              loop
-              preload="metadata"
-              aria-hidden="true"
-              disablePictureInPicture
-              controlsList="nodownload noplaybackrate"
-style={{
-  transform: "translateZ(0)",
-  willChange: "transform",
-  contain: "layout paint",
-  position: "relative",
-  zIndex: 0,
-}}
+<video
+  ref={videoRef}
+  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)]"
+  poster={asset("/hero_poster.jpg")}
+  autoPlay
+  muted
+  playsInline
+  // @ts-ignore
+  webkit-playsinline="true"
+  loop
+  preload="auto"                   // changed from metadata → auto
+  crossOrigin="anonymous"          // ensures Edge/Safari load CDN video
+  aria-hidden="true"
+  disablePictureInPicture
+  controlsList="nodownload noplaybackrate"
+  style={{
+    transform: "translateZ(0)",
+    willChange: "transform, opacity",   // helps Safari stability
+    contain: "layout paint",
+    position: "relative",
+    zIndex: 0,
+  }}
+/>
 
-
-            />
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
@@ -782,6 +772,7 @@ style={{
               src="https://cdn.voskopulence.com/Spotlight_pic.png"
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
+              crossOrigin="anonymous"
             />
           </div>
 
@@ -849,6 +840,7 @@ style={{
             style={{ objectPosition: "right center" }}
             loading="lazy"
             decoding="async"
+            crossOrigin="anonymous"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-[#00000080] via-[#00000060] to-[#00000040]" />
