@@ -8,12 +8,15 @@ const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const CAP_PX = 5; // adjust per device taste
+const PROG_DISTANCE = 120; // px of scroll to reach full header state
+const EASE = 0.12;         // smoothing factor for lerp
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+
+// ---- Tiny fixed top sentinel to pin iOS compositor ----
 function TopSentinel() {
-  // Pins a tiny fixed layer at the very top so Safari keeps the header's layer stable
   useEffect(() => {
     const s = document.createElement("div");
     Object.assign(s.style, {
@@ -23,14 +26,12 @@ function TopSentinel() {
       width: "1px",
       height: "calc(env(safe-area-inset-top, 0px) + 1px)",
       pointerEvents: "none",
-      zIndex: "2147483647", // highest
-      // force compositing & keep it super cheap
+      zIndex: "2147483647",
       transform: "translateZ(0)",
       willChange: "transform",
       WebkitBackfaceVisibility: "hidden",
       backfaceVisibility: "hidden",
       contain: "strict",
-      // completely invisible
       opacity: "0",
     });
     document.body.appendChild(s);
@@ -39,13 +40,11 @@ function TopSentinel() {
   return null;
 }
 
-
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
 
   // For header portal
   const [hdrReady, setHdrReady] = useState(false);
@@ -54,32 +53,6 @@ export default function Home() {
   // For portals
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
-  // iOS-Safari detection + blur suspension during active scroll
-  const [suspendBlur, setSuspendBlur] = useState(false);
-  const [isIOSSafari, setIsIOSSafari] = useState(false);
-  useEffect(() => {
-    const ua = navigator.userAgent || "";
-    const isiOS =
-      /iP(hone|od|ad)/.test(navigator.platform) ||
-      (/\bMac\b/.test(ua) && "ontouchend" in document);
-    const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
-    setIsIOSSafari(isiOS && isSafari);
-  }, []);
-  useEffect(() => {
-    if (!isIOSSafari) return;
-    let t: any = null;
-    const onScroll = () => {
-      if (!suspendBlur) setSuspendBlur(true);
-      clearTimeout(t);
-      t = setTimeout(() => setSuspendBlur(false), 180);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      clearTimeout(t);
-    };
-  }, [isIOSSafari, suspendBlur]);
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
@@ -107,18 +80,12 @@ export default function Home() {
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
     if (Math.hypot(dx, dy) > 24) {
-      if (longTimer.current) {
-        clearTimeout(longTimer.current);
-        longTimer.current = null;
-      }
+      if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
     }
   };
 
   const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
-    if (longTimer.current) {
-      clearTimeout(longTimer.current);
-      longTimer.current = null;
-    }
+    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
     const delay = isLongPress ? 120 : 0;
     window.setTimeout(() => {
       if (!isLongPress) scrollDown();
@@ -132,21 +99,48 @@ export default function Home() {
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
-  // Frosted header on scroll (throttled with requestAnimationFrame)
-  const rafId = useRef<number | null>(null);
+  // === Ultra-smooth header progress (no stutter) ===
+  // We compute a continuous progress 0..1 with rAF + easing and expose via CSS variable --hdrProg.
   useEffect(() => {
-    const onScroll = () => {
-      if (rafId.current != null) return;
-      rafId.current = requestAnimationFrame(() => {
-        rafId.current = null;
-        setScrolled(window.scrollY > 24);
-      });
+    const root = document.documentElement;
+    let target = 0;  // target progress based on scroll
+    let prog = 0;    // eased progress we actually render
+    let raf: number | null = null;
+
+    const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
+
+    const read = () => {
+      const y = window.scrollY || 0;
+      target = clamp01(y / PROG_DISTANCE);
     };
-    onScroll(); // set initial
+
+    const tick = () => {
+      // smooth approach to target
+      prog += (target - prog) * EASE;
+      if (Math.abs(target - prog) < 0.001) prog = target;
+      root.style.setProperty("--hdrProg", prog.toFixed(4));
+      // keep ticking while there’s motion
+      if (prog !== target) raf = requestAnimationFrame(tick);
+      else raf = null;
+    };
+
+    const onScroll = () => {
+      read();
+      if (raf == null) raf = requestAnimationFrame(tick);
+    };
+
+    // init
+    read();
+    root.style.setProperty("--hdrProg", "0");
+    onScroll();
+
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
     return () => {
-      if (rafId.current != null) cancelAnimationFrame(rafId.current);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf != null) cancelAnimationFrame(raf);
     };
   }, []);
 
@@ -159,8 +153,7 @@ export default function Home() {
       if (!el) continue;
       const top = el.getBoundingClientRect().top;
       if (top > 80) {
-        const yOffset =
-          window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
+        const yOffset = window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
         const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
         window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
         return;
@@ -183,7 +176,6 @@ export default function Home() {
       body.style.right = "0";
       body.style.width = "100%";
       body.style.overflow = "hidden";
-
       const html = document.documentElement;
       html.style.overscrollBehaviorY = "none";
     } else {
@@ -195,10 +187,8 @@ export default function Home() {
       body.style.right = "";
       body.style.width = "";
       body.style.overflow = "";
-
       const html = document.documentElement;
       html.style.overscrollBehaviorY = "";
-
       if (top) {
         const y = -parseInt(top, 10) || 0;
         window.scrollTo(0, y);
@@ -330,10 +320,7 @@ export default function Home() {
         try { v.load(); } catch {}
         tryPlay(v);
 
-        setTimeout(() => {
-          if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
-        }, 2000);
-
+        setTimeout(() => { if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError(); }, 2000);
         return;
       }
 
@@ -429,23 +416,20 @@ export default function Home() {
     };
   }, []);
 
-  // One small autoplay nudge + poster safety (no duplicates)
+  // One small autoplay nudge + poster safety
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-
     v.muted = true;
     v.setAttribute("playsinline", "true");
     // @ts-ignore
     v.setAttribute("webkit-playsinline", "true");
-
     const tryOnce = () => v.play().catch(() => {});
     if (v.readyState >= 2) tryOnce();
     else {
       const onCanPlay = () => { tryOnce(); v.removeEventListener("canplay", onCanPlay); };
       v.addEventListener("canplay", onCanPlay);
     }
-
     const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
     return () => clearTimeout(t);
   }, []);
@@ -462,7 +446,7 @@ export default function Home() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Stronger Safari fixed-header nudge
+  // Stronger Safari fixed-header nudge (kept)
   useEffect(() => {
     const header = document.querySelector("header") as HTMLElement | null;
     if (!header) return;
@@ -503,51 +487,51 @@ export default function Home() {
     };
   }, []);
 
-  // ---- SiteHeader component (portal-safe) ----
-  function SiteHeader({ scrolled, capPx, suspendBlur }: { scrolled: boolean; capPx: number; suspendBlur: boolean }) {
+  // ---- SiteHeader (reads CSS vars for buttery transitions) ----
+  function SiteHeader({ capPx }: { capPx: number }) {
     const hasCap = (capPx ?? 0) > 0;
 
+    // CSS var --hdrProg is 0..1; derive visuals from it inside styles
     return (
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
-          // include safe-area to avoid URL bar overlap on iOS
           paddingTop: "calc(var(--cap) + env(safe-area-inset-top, 0px))",
           transform: "translateZ(0)",
           WebkitBackfaceVisibility: "hidden",
           backfaceVisibility: "hidden",
         }}
       >
-        {/* Single background: paints the solid cap AND the fading header */}
+        {/* Background layer driven by --hdrProg */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
+            // blur and tint scale with progress; no JS re-renders on scroll
+            backdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
+            WebkitBackdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
             background: hasCap
               ? `
-        linear-gradient(
-          to bottom,
-          rgba(0,70,66,0.94) 0,
-          rgba(0,70,66,0.94) calc(${capPx}px + var(--hairline, 1px)),
-          transparent           calc(${capPx}px + var(--hairline, 1px)),
-          transparent           100%
-        ),
-        linear-gradient(
-          to bottom,
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) calc(${capPx}px + var(--hairline, 1px)),
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-        )`
+                linear-gradient(
+                  to bottom,
+                  rgba(0,70,66,0.94) 0,
+                  rgba(0,70,66,0.94) calc(${capPx}px + var(--hairline, 1px)),
+                  transparent           calc(${capPx}px + var(--hairline, 1px)),
+                  transparent           100%
+                ),
+                linear-gradient(
+                  to bottom,
+                  rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) calc(${capPx}px + var(--hairline, 1px)),
+                  rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) 100%
+                )`
               : `
-        linear-gradient(
-          to bottom,
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) 0,
-          rgba(0,70,66,${scrolled ? 0.94 : 0}) 100%
-        )`,
-            // gate blur while actively scrolling on iOS
-            backdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
-            WebkitBackdropFilter: scrolled && !suspendBlur ? "blur(12px) saturate(1.5)" : "none",
-            transition: "background 360ms cubic-bezier(.22,1,.36,1)",
+                linear-gradient(
+                  to bottom,
+                  rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) 0,
+                  rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) 100%
+                )`,
+            transition: "backdrop-filter 120ms linear, -webkit-backdrop-filter 120ms linear",
             transform: "translateZ(0)",
           }}
           aria-hidden="true"
@@ -560,7 +544,6 @@ export default function Home() {
             <button
               className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               aria-label="Open menu"
-              aria-expanded={menuOpen}
               aria-controls="mobile-menu"
               onClick={() => setMenuOpen(true)}
             >
@@ -570,11 +553,12 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Center: logo */}
+          {/* Center: logo (scale by --hdrProg) */}
           <div
-            className="absolute left-1/2 top-1/2 pointer-events-none transition-transform duration-300"
+            className="absolute left-1/2 top-1/2 pointer-events-none"
             style={{
-              transform: `translate3d(-50%, -50%, 0) scale(${scrolled ? 0.96 : 1})`,
+              transform: "translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
+              transition: "transform 60ms linear", // tiny smoothing if rAF frames drop
               contain: "paint",
               textShadow: "0 1px 6px rgba(0,0,0,0.35)",
             }}
@@ -604,10 +588,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       <TopSentinel />
+
       {/* === Header Portal === */}
       {hdrReady
-        ? createPortal(<SiteHeader scrolled={scrolled} capPx={capPx} suspendBlur={suspendBlur} />, document.body)
-        : <SiteHeader scrolled={scrolled} capPx={capPx} suspendBlur={suspendBlur} />}
+        ? createPortal(<SiteHeader capPx={capPx} />, document.body)
+        : <SiteHeader capPx={capPx} />}
 
       {/* ===== Mobile curtain (portal) ===== */}
       {mounted && typeof document !== "undefined" && menuOpen &&
@@ -728,7 +713,7 @@ export default function Home() {
                 Welcome to Voskopulence
               </h1>
               <p className="mt-6 text-white/95 md:drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.5)] text-sans text-base lg:text-lg">
-                Solid shampoo &amp; conditioner bars crafted to COSMOS standards
+                Solid shampoo &amp; conditioner bars crafted to COSOS standards
                 with botanicals inspired by sunlit coasts — rosemary, lemon,
                 cedar &amp; fig.
               </p>
