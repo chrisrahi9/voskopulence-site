@@ -104,75 +104,29 @@ export default function Home() {
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
-// === CTA morph + drift engine (no isTouch gating) ===
-type CtaAnim = {
-  x: number; y: number; sx: number; sy: number;
-  tx: number; ty: number; tsx: number; tsy: number;
-  raf: number | null; pressing: boolean;
+// === CTA morph vars + helpers (touch-only) ===
+const ctaVarsInit = useRef(false);
+const initCtaVars = () => {
+  if (!isTouch) return;
+  const el = ctaRef.current;
+  if (!el || ctaVarsInit.current) return;
+  el.style.setProperty("--cta-x", "0px");
+  el.style.setProperty("--cta-y", "0px");
+  el.style.setProperty("--cta-sx", "1");
+  el.style.setProperty("--cta-sy", "1");
+  ctaVarsInit.current = true;
 };
-const ctaAnim = useRef<CtaAnim>({
-  x: 0, y: 0, sx: 1, sy: 1,
-  tx: 0, ty: 0, tsx: 1, tsy: 1,
-  raf: null, pressing: false,
-});
 
-// init CSS vars exactly when ref attaches (no timing issues)
-const setCtaRef = (el: HTMLButtonElement | null) => {
-  (ctaRef as any).current = el;
-  if (el) {
-    el.style.setProperty("--cta-x", "0px");
-    el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--cta-sx", "1");
-    el.style.setProperty("--cta-sy", "1");
-  }
-};
+useEffect(() => { initCtaVars(); }, []); // safe no-op on desktop
 
 const CTA_DRIFT_MAX = 18;     // px
-const CTA_SQUISH_MAX = 0.25;  // up to 1.25x
-const CTA_EASE = 0.18;        // press ease
-const CTA_RETURN_EASE = 0.14; // release ease
+const CTA_SQUISH_MAX = 0.25;  // up to 1.25x on main axis
+const clamp = (v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 
-const startCtaRaf = () => {
-  if (ctaAnim.current.raf != null) return;
-  const tick = () => {
-    const a = ctaAnim.current;
-    const ease = a.pressing ? CTA_EASE : CTA_RETURN_EASE;
-    a.x += (a.tx - a.x) * ease;
-    a.y += (a.ty - a.y) * ease;
-    a.sx += (a.tsx - a.sx) * ease;
-    a.sy += (a.tsy - a.sy) * ease;
-
-    const btn = ctaRef.current;
-    if (btn) {
-      btn.style.setProperty("--cta-x", `${a.x.toFixed(2)}px`);
-      btn.style.setProperty("--cta-y", `${a.y.toFixed(2)}px`);
-      btn.style.setProperty("--cta-sx", a.sx.toFixed(3));
-      btn.style.setProperty("--cta-sy", a.sy.toFixed(3));
-    }
-
-    if (
-      Math.abs(a.tx - a.x) > 0.05 ||
-      Math.abs(a.ty - a.y) > 0.05 ||
-      Math.abs(a.tsx - a.sx) > 0.005 ||
-      Math.abs(a.tsy - a.sy) > 0.005
-    ) {
-      a.raf = requestAnimationFrame(tick);
-    } else {
-      a.raf = null;
-    }
-  };
-  ctaAnim.current.raf = requestAnimationFrame(tick);
-};
-
-const setCtaTarget = (tx: number, ty: number, tsx: number, tsy: number) => {
-  const a = ctaAnim.current;
-  a.tx = tx; a.ty = ty; a.tsx = tsx; a.tsy = tsy;
-  startCtaRaf();
-};
-
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-
-const updateCtaFromDelta = (dx: number, dy: number) => {
+const updateCTA = (dx:number, dy:number) => {
+  if (!isTouch) return;
+  initCtaVars();
+  const el = ctaRef.current; if (!el) return;
   const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
   const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
   const ax = Math.abs(ddx), ay = Math.abs(ddy);
@@ -182,18 +136,30 @@ const updateCtaFromDelta = (dx: number, dy: number) => {
   const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
   const sx = alongX ? boost : shrink;
   const sy = alongX ? shrink : boost;
-  setCtaTarget(ddx, ddy, sx, sy);
+
+  el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
+  el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
+  el.style.setProperty("--cta-sx", sx.toFixed(3));
+  el.style.setProperty("--cta-sy", sy.toFixed(3));
 };
 
-// === Handlers (works on touch AND mouse so you can test on desktop) ===
+const resetCTA = () => {
+  if (!isTouch) return;
+  const el = ctaRef.current; if (!el) return;
+  el.style.setProperty("--cta-x", "0px");
+  el.style.setProperty("--cta-y", "0px");
+  el.style.setProperty("--cta-sx", "1");
+  el.style.setProperty("--cta-sy", "1");
+};
+
+
 const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch || e.pointerType !== "touch") return; // mobile only
   startPos.current = { x: e.clientX, y: e.clientY };
   setPressing(true);
   setShowArrow(true);
-  ctaAnim.current.pressing = true;
-
-  // initial squish
-  setCtaTarget(0, 0, 1.06, 0.94);
+  initCtaVars();
+  updateCTA(0, 0);
 
   const LONG_MS = 700;
   longTimer.current = window.setTimeout(() => {
@@ -203,33 +169,23 @@ const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 };
 
 const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch || e.pointerType !== "touch") return;
   if (!startPos.current) return;
   const dx = e.clientX - startPos.current.x;
   const dy = e.clientY - startPos.current.y;
+
   if (Math.hypot(dx, dy) > 24 && longTimer.current) {
     clearTimeout(longTimer.current);
     longTimer.current = null;
   }
-  if (pressing) updateCtaFromDelta(dx, dy);
+  if (pressing) updateCTA(dx, dy);
 };
 
 const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+  if (!isTouch) return;
   if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-
-  ctaAnim.current.pressing = false;
-  setCtaTarget(0, 0, 1, 1);
-  setShowArrow(false);
-
-  // hard reset in the next frame to avoid “stuck arrow”
-  requestAnimationFrame(() => {
-    const btn = ctaRef.current;
-    if (btn) {
-      btn.style.setProperty("--cta-x", "0px");
-      btn.style.setProperty("--cta-y", "0px");
-      btn.style.setProperty("--cta-sx", "1");
-      btn.style.setProperty("--cta-sy", "1");
-    }
-  });
+  setShowArrow(false);          // avoid “stuck arrow”
+  resetCTA();                   // ease back to rest
 
   const delay = isLongPress ? 120 : 0;
   window.setTimeout(() => {
@@ -238,7 +194,6 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     setPressing(false);
   }, delay);
 };
-
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -824,13 +779,17 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
               </p>
 
 <button
-  ref={setCtaRef}
+  ref={ctaRef}
   onClick={scrollDown}
-  onPointerDown={handlePointerDown}
-  onPointerUp={handlePointerEnd}
-  onPointerMove={handlePointerMove}
-  onPointerCancel={handlePointerEnd}
-  onPointerLeave={handlePointerEnd}
+  {...(isTouch
+    ? {
+        onPointerDown: handlePointerDown,
+        onPointerUp: handlePointerEnd,
+        onPointerMove: handlePointerMove,
+        onPointerCancel: handlePointerEnd,
+        onPointerLeave: handlePointerEnd,
+      }
+    : {})}
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
@@ -839,13 +798,13 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     WebkitUserSelect: "none",
     userSelect: "none",
     touchAction: "none",
-    ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
-    // live morph + drift
+    // harmless on desktop; active on touch
     transform: `
       translate3d(var(--cta-x,0), var(--cta-y,0), 0)
       scale(var(--cta-sx,1), var(--cta-sy,1))
     `,
     willChange: "transform",
+    ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
   }}
   onContextMenu={(e) => e.preventDefault()}
   className={`group relative mt-10 inline-flex items-center justify-center
@@ -853,14 +812,14 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     ring-1 ring-white/30 hover:ring-white/60
     bg-white/10 hover:bg-white/10
     backdrop-blur-[3px]
-    transition-[transform] duration-[120ms] ease-linear
+    transition-[transform] duration-100 ease-linear
     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
     before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
     ${isLongPress ? "ring-2 ring-white/60" : ""}
     ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
   `}
 >
-  {/* Soft glowing dot */}
+  {/* dot */}
   <div
     className={`
       relative h-2.5 w-2.5 rounded-full bg-white/95
@@ -871,7 +830,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     `}
     style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
   />
-  {/* Chevron */}
+  {/* arrow */}
   <svg
     width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
     className={`absolute z-10 transition-all duration-500
