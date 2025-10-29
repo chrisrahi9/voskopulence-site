@@ -824,7 +824,8 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
         onPointerDown: handlePointerDown,
         onPointerUp: handlePointerEnd,
         onPointerMove: handlePointerMove,
-        onPointerCancel: handlePointerEnd,
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
       }
     : {})}
   aria-label="Scroll to next section"
