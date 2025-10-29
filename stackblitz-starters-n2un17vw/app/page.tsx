@@ -39,6 +39,44 @@ function TopSentinel() {
   }, []);
   return null;
 }
+// ---- Robust scroll lock (no jump) ----
+const scrollYRef = { current: 0 };
+
+function lockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+  scrollYRef.current = window.scrollY;
+
+  // Lock both html & body for iOS consistency
+  docEl.style.overflow = "hidden";
+  docEl.style.height = "100%";
+  body.style.overflow = "hidden";
+  body.style.position = "fixed";
+  body.style.top = `-${scrollYRef.current}px`;
+  body.style.left = "0";
+  body.style.right = "0";
+  body.style.width = "100%";
+}
+
+function unlockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+
+  // Restore styles first
+  docEl.style.overflow = "";
+  docEl.style.height = "";
+  body.style.overflow = "";
+  body.style.position = "";
+  const top = body.style.top; // read before clear
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+  body.style.width = "";
+
+  // Return to exact place after paint
+  const y = top ? -parseInt(top || "0", 10) : 0;
+  window.scrollTo(0, y || scrollYRef.current || 0);
+}
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -94,6 +132,62 @@ export default function Home() {
       setPressing(false);
     }, delay);
   };
+// ---- Swipe-to-close (vertical) ----
+const swipe = useRef({
+  active: false,
+  startY: 0,
+  lastY: 0,
+  moved: false,
+});
+
+function startSwipe(e: React.TouchEvent) {
+  if (!menuOpen) return;
+  const t = e.touches[0];
+  swipe.current.active = true;
+  swipe.current.startY = t.clientY;
+  swipe.current.lastY = t.clientY;
+  swipe.current.moved = false;
+}
+
+function moveSwipe(e: React.TouchEvent) {
+  if (!menuOpen || !swipe.current.active) return;
+  const t = e.touches[0];
+  const dy = t.clientY - swipe.current.startY;
+  swipe.current.lastY = t.clientY;
+
+  // only handle downward drags
+  if (dy > 0) {
+    e.preventDefault(); // stop page scroll while swiping the panel
+    swipe.current.moved = true;
+    const panel = document.getElementById("curtain-panel");
+    if (panel) {
+      // Dampening for rubber band feel (drag 1px -> move ~0.6px)
+      const translate = Math.min(dy * 0.6, window.innerHeight);
+      panel.style.transition = "none";
+      panel.style.transform = `translateY(${translate}px)`;
+    }
+  }
+}
+
+function endSwipe(_e: React.TouchEvent) {
+  if (!menuOpen || !swipe.current.active) return;
+  const dy = swipe.current.lastY - swipe.current.startY;
+  swipe.current.active = false;
+
+  const panel = document.getElementById("curtain-panel");
+  if (!panel) return;
+
+  // Threshold to close: 25% of viewport height or fast pull
+  const shouldClose = dy > Math.min(window.innerHeight * 0.25, 220);
+
+  panel.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
+  panel.style.transform = shouldClose ? "translateY(100%)" : "translateY(0%)";
+
+  if (shouldClose) {
+    // Wait for the slide-out then close
+    setTimeout(() => setMenuOpen(false), 380);
+  }
+}
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -163,50 +257,17 @@ export default function Home() {
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
-  // Lock page scroll when mobile menu is open (robust iOS-safe)
-  useEffect(() => {
-    let scrollYBefore = 0;
+// Lock page scroll when mobile menu is open (no jump, iOS-safe)
+useEffect(() => {
+  if (menuOpen) lockScroll();
+  else unlockScroll();
 
-    if (menuOpen) {
-      scrollYBefore = window.scrollY;
-      const body = document.body;
-      body.style.position = "fixed";
-      body.style.top = `-${scrollYBefore}px`;
-      body.style.left = "0";
-      body.style.right = "0";
-      body.style.width = "100%";
-      body.style.overflow = "hidden";
-      const html = document.documentElement;
-      html.style.overscrollBehaviorY = "none";
-    } else {
-      const body = document.body;
-      const top = body.style.top;
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      body.style.overflow = "";
-      const html = document.documentElement;
-      html.style.overscrollBehaviorY = "";
-      if (top) {
-        const y = -parseInt(top, 10) || 0;
-        window.scrollTo(0, y);
-      }
-    }
+  return () => {
+    // safety on unmount
+    unlockScroll();
+  };
+}, [menuOpen]);
 
-    return () => {
-      const body = document.body;
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      body.style.overflow = "";
-      const html = document.documentElement;
-      html.style.overscrollBehaviorY = "";
-    };
-  }, [menuOpen]);
 
   // Edge-swipe to open/close mobile menu (touch only)
   useEffect(() => {
@@ -595,75 +656,75 @@ export default function Home() {
         : <SiteHeader capPx={capPx} />}
 
       {/* ===== Mobile curtain (portal) ===== */}
-      {mounted && typeof document !== "undefined" && menuOpen &&
-        createPortal(
-          <div id="mobile-menu" role="dialog" aria-modal="true" className="lg:hidden">
-            {/* Backdrop – full screen, single layer */}
-            <div
-              className="fixed inset-0 z-[1000]"
-              style={{
-                backgroundColor: "rgba(0,70,66,0.70)",
-                WebkitBackdropFilter: "blur(20px) saturate(1.3)",
-                backdropFilter: "blur(20px) saturate(1.3)",
-                opacity: 1,
-                transform: "translateZ(0)",
-                cursor: "auto"
-              }}
-              onClick={() => setMenuOpen(false)}
-            />
+      {mounted && typeof document !== "undefined" && createPortal(
+  <div
+    id="mobile-menu"
+    role="dialog"
+    aria-modal="true"
+    data-open={menuOpen ? "true" : "false"}
+    // ensure it's above the header (z 12000+)
+    className="lg:hidden fixed inset-0 z-[12000] pointer-events-none"
+  >
+    {/* Backdrop */}
+    <div
+      className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md pointer-events-auto"
+      style={{
+        transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
+        opacity: menuOpen ? 1 : 0,
+      }}
+      onClick={() => setMenuOpen(false)}
+    />
 
-            {/* Menu content */}
-            <div
-              className="fixed inset-0 z-[1001] flex flex-col text-white"
-              style={{
-                paddingTop: "env(safe-area-inset-top)",
-                paddingBottom: "env(safe-area-inset-bottom)"
-              }}
-            >
-              {/* top row */}
-              <div
-                className="flex items-center justify-between h-[64px] px-5 shrink-0"
-                style={{ animation: "menuSlideIn 420ms cubic-bezier(.22,1,.36,1) both" }}
-              >
-                <span className="font-semibold text-white/95">Menu</span>
-                <button
-                  className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-                  aria-label="Close menu"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+    {/* Sliding panel */}
+    <div
+      id="curtain-panel"
+      className="absolute inset-0 z-[12001] flex flex-col text-white pointer-events-auto"
+      style={{
+        transform: menuOpen ? "translateY(0%)" : "translateY(-100%)",
+        transition: "transform 460ms cubic-bezier(.22,1,.36,1)",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        // GPU
+        willChange: "transform",
+        transformOrigin: "top center",
+        backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
+      }}
+      // swipe-to-close (vertical)
+      onTouchStart={(e) => startSwipe(e)}
+      onTouchMove={(e) => moveSwipe(e)}
+      onTouchEnd={(e) => endSwipe(e)}
+    >
+      {/* Top row */}
+      <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+        <span className="font-semibold text-white/95">Menu</span>
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          onClick={() => setMenuOpen(false)}
+          // make sure it wins any stacking fights
+          style={{ position: "relative", zIndex: 1 }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 6L6 18M6 6l12 12" strokeWidth="2.2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
 
-              {/* links */}
-              <nav
-                className="grow grid place-items-center"
-                style={{ animation: "menuSlideIn 520ms cubic-bezier(.22,1,.36,1) both" }}
-              >
-                <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-                  <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
-                  <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
-                  <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
-                  <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
-                </ul>
-              </nav>
-            </div>
-
-            <style
-              dangerouslySetInnerHTML={{
-                __html: `
-@keyframes menuSlideIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-              `,
-              }}
-            />
-          </div>,
-          document.body
-        )}
+      {/* Links */}
+      <nav className="grow grid place-items-center">
+        <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+          <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+          <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+          <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+          <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>,
+  document.body
+)}
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
