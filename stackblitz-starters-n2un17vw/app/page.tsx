@@ -81,7 +81,17 @@ export default function Home() {
   const hlsRef = useRef<any>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
-
+ // Detect touch device (runtime, safe)
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(hover: none), (pointer: coarse)");
+    const detect = () =>
+      !!(mq?.matches || "ontouchstart" in window || navigator.maxTouchPoints > 0);
+    setIsTouchDevice(detect());
+    const onChange = () => setIsTouchDevice(detect());
+    mq?.addEventListener?.("change", onChange);
+    return () => mq?.removeEventListener?.("change", onChange);
+  }, []);
   // For header portal
   const [hdrReady, setHdrReady] = useState(false);
   useEffect(() => setHdrReady(true), []);
@@ -99,17 +109,7 @@ export default function Home() {
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Detect touch device (runtime, safe)
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia?.("(hover: none), (pointer: coarse)");
-    const detect = () =>
-      !!(mq?.matches || "ontouchstart" in window || navigator.maxTouchPoints > 0);
-    setIsTouchDevice(detect());
-    const onChange = () => setIsTouchDevice(detect());
-    mq?.addEventListener?.("change", onChange);
-    return () => mq?.removeEventListener?.("change", onChange);
-  }, []);
+ 
 
   // CSS var init for morph
   const ctaVarsInit = useRef(false);
