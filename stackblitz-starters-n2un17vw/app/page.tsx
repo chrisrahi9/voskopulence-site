@@ -7,15 +7,15 @@ import { createPortal } from "react-dom";
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-const CAP_PX = 5; // adjust per device taste
-const PROG_DISTANCE = 120; // px of scroll to reach full header state
-const EASE = 0.12;         // smoothing factor for lerp
+const CAP_PX = 5;            // iOS cap
+const PROG_DISTANCE = 120;   // px of scroll to reach full header state
+const EASE = 0.12;           // smoothing factor for lerp
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
-// ---- Tiny fixed top sentinel to pin iOS compositor ----
+/* ---------- Tiny fixed top sentinel to help iOS compositor ---------- */
 function TopSentinel() {
   useEffect(() => {
     const s = document.createElement("div");
@@ -39,7 +39,8 @@ function TopSentinel() {
   }, []);
   return null;
 }
-// ---- Robust scroll lock (no jump) ----
+
+/* ---------- Robust scroll lock (no jump) ---------- */
 const scrollYRef = { current: 0 };
 
 function lockScroll() {
@@ -47,7 +48,6 @@ function lockScroll() {
   const body = document.body;
   scrollYRef.current = window.scrollY;
 
-  // Lock both html & body for iOS consistency
   docEl.style.overflow = "hidden";
   docEl.style.height = "100%";
   body.style.overflow = "hidden";
@@ -62,20 +62,23 @@ function unlockScroll() {
   const docEl = document.documentElement;
   const body = document.body;
 
-  // Restore styles first
+  const top = body.style.top;                // read before clear
+  const y = top ? -parseInt(top || "0", 10) : 0;
+
+  // clear styles first
   docEl.style.overflow = "";
   docEl.style.height = "";
   body.style.overflow = "";
   body.style.position = "";
-  const top = body.style.top; // read before clear
   body.style.top = "";
   body.style.left = "";
   body.style.right = "";
   body.style.width = "";
 
-  // Return to exact place after paint
-  const y = top ? -parseInt(top || "0", 10) : 0;
-  window.scrollTo(0, y || scrollYRef.current || 0);
+  // restore scroll on next frame for stability on iOS/Safari
+  requestAnimationFrame(() => {
+    window.scrollTo(0, y || scrollYRef.current || 0);
+  });
 }
 
 export default function Home() {
@@ -132,73 +135,16 @@ export default function Home() {
       setPressing(false);
     }, delay);
   };
-// ---- Swipe-to-close (vertical) ----
-const swipe = useRef({
-  active: false,
-  startY: 0,
-  lastY: 0,
-  moved: false,
-});
-
-function startSwipe(e: React.TouchEvent) {
-  if (!menuOpen) return;
-  const t = e.touches[0];
-  swipe.current.active = true;
-  swipe.current.startY = t.clientY;
-  swipe.current.lastY = t.clientY;
-  swipe.current.moved = false;
-}
-
-function moveSwipe(e: React.TouchEvent) {
-  if (!menuOpen || !swipe.current.active) return;
-  const t = e.touches[0];
-  const dy = t.clientY - swipe.current.startY;
-  swipe.current.lastY = t.clientY;
-
-  // only handle downward drags
-  if (dy > 0) {
-    e.preventDefault(); // stop page scroll while swiping the panel
-    swipe.current.moved = true;
-    const panel = document.getElementById("curtain-panel");
-    if (panel) {
-      // Dampening for rubber band feel (drag 1px -> move ~0.6px)
-      const translate = Math.min(dy * 0.6, window.innerHeight);
-      panel.style.transition = "none";
-      panel.style.transform = `translateY(${translate}px)`;
-    }
-  }
-}
-
-function endSwipe(_e: React.TouchEvent) {
-  if (!menuOpen || !swipe.current.active) return;
-  const dy = swipe.current.lastY - swipe.current.startY;
-  swipe.current.active = false;
-
-  const panel = document.getElementById("curtain-panel");
-  if (!panel) return;
-
-  // Threshold to close: 25% of viewport height or fast pull
-  const shouldClose = dy > Math.min(window.innerHeight * 0.25, 220);
-
-  panel.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
-  panel.style.transform = shouldClose ? "translateY(100%)" : "translateY(0%)";
-
-  if (shouldClose) {
-    // Wait for the slide-out then close
-    setTimeout(() => setMenuOpen(false), 380);
-  }
-}
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
-  // === Ultra-smooth header progress (no stutter) ===
-  // We compute a continuous progress 0..1 with rAF + easing and expose via CSS variable --hdrProg.
+  // === Ultra-smooth header progress ===
   useEffect(() => {
     const root = document.documentElement;
-    let target = 0;  // target progress based on scroll
-    let prog = 0;    // eased progress we actually render
+    let target = 0;
+    let prog = 0;
     let raf: number | null = null;
 
     const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
@@ -209,11 +155,9 @@ function endSwipe(_e: React.TouchEvent) {
     };
 
     const tick = () => {
-      // smooth approach to target
       prog += (target - prog) * EASE;
       if (Math.abs(target - prog) < 0.001) prog = target;
       root.style.setProperty("--hdrProg", prog.toFixed(4));
-      // keep ticking while there’s motion
       if (prog !== target) raf = requestAnimationFrame(tick);
       else raf = null;
     };
@@ -223,7 +167,6 @@ function endSwipe(_e: React.TouchEvent) {
       if (raf == null) raf = requestAnimationFrame(tick);
     };
 
-    // init
     read();
     root.style.setProperty("--hdrProg", "0");
     onScroll();
@@ -257,61 +200,12 @@ function endSwipe(_e: React.TouchEvent) {
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
 
-// Lock page scroll when mobile menu is open (no jump, iOS-safe)
-useEffect(() => {
-  if (menuOpen) lockScroll();
-  else unlockScroll();
-
-  return () => {
-    // safety on unmount
-    unlockScroll();
-  };
-}, [menuOpen]);
-
-
-  // Edge-swipe to open/close mobile menu (touch only)
+  /* ---------- Lock page scroll when curtain is open ---------- */
   useEffect(() => {
-    if (!isTouch) return;
-    let startX = 0, startY = 0, tracking = false, openedFromEdge = false;
-
-    const onStart = (e: TouchEvent) => {
-      const t = e.touches[0];
-      startX = t.clientX; startY = t.clientY;
-      openedFromEdge = !menuOpen && startX <= 50;
-      tracking = openedFromEdge || menuOpen;
-    };
-
-    const onMove = (e: TouchEvent) => {
-      if (!tracking) return;
-      const t = e.touches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if (Math.abs(dy) > Math.abs(dx) + 10) { tracking = false; return; }
-      if (openedFromEdge && Math.abs(dx) > 10 && Math.abs(dy) < 40) e.preventDefault();
-    };
-
-    const onEnd = (e: TouchEvent) => {
-      if (!tracking) return;
-      const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
-      if (!t) { tracking = false; return; }
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      const horizontalEnough = Math.abs(dx) >= 45 && Math.abs(dy) <= 50;
-      if (!menuOpen && openedFromEdge && horizontalEnough && dx > 0) setMenuOpen(true);
-      else if (menuOpen && horizontalEnough && dx < 0) setMenuOpen(false);
-      tracking = false;
-    };
-
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchmove", onMove as unknown as EventListener, { passive: false });
-    window.addEventListener("touchend", onEnd, { passive: true });
-
-    return () => {
-      window.removeEventListener("touchstart", onStart);
-      window.removeEventListener("touchmove", onMove as unknown as EventListener);
-      window.removeEventListener("touchend", onEnd);
-    };
-  }, [menuOpen, isTouch]);
+    if (menuOpen) lockScroll();
+    else unlockScroll();
+    return () => unlockScroll();
+  }, [menuOpen]);
 
   // fixes seams by giving us 1 physical pixel to overlap with
   useEffect(() => {
@@ -548,11 +442,10 @@ useEffect(() => {
     };
   }, []);
 
-  // ---- SiteHeader (reads CSS vars for buttery transitions) ----
+  /* ---------- SiteHeader (reads CSS vars for buttery transitions) ---------- */
   function SiteHeader({ capPx }: { capPx: number }) {
     const hasCap = (capPx ?? 0) > 0;
 
-    // CSS var --hdrProg is 0..1; derive visuals from it inside styles
     return (
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
@@ -569,7 +462,6 @@ useEffect(() => {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            // blur and tint scale with progress; no JS re-renders on scroll
             backdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
             WebkitBackdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
             background: hasCap
@@ -606,6 +498,7 @@ useEffect(() => {
               className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               aria-label="Open menu"
               aria-controls="mobile-menu"
+              aria-expanded={menuOpen}
               onClick={() => setMenuOpen(true)}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -619,7 +512,7 @@ useEffect(() => {
             className="absolute left-1/2 top-1/2 pointer-events-none"
             style={{
               transform: "translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
-              transition: "transform 60ms linear", // tiny smoothing if rAF frames drop
+              transition: "transform 60ms linear",
               contain: "paint",
               textShadow: "0 1px 6px rgba(0,0,0,0.35)",
             }}
@@ -646,6 +539,57 @@ useEffect(() => {
     );
   }
 
+  /* ---------- Curtain: LEFT → RIGHT, smooth, no jump ---------- */
+
+  // Horizontal swipe handlers
+  const swipe = useRef({
+    active: false,
+    startX: 0,
+    lastX: 0,
+  });
+
+  function startSwipeX(e: React.TouchEvent) {
+    if (!menuOpen) return;
+    const t = e.touches[0];
+    swipe.current.active = true;
+    swipe.current.startX = t.clientX;
+    swipe.current.lastX = t.clientX;
+  }
+
+  function moveSwipeX(e: React.TouchEvent) {
+    if (!menuOpen || !swipe.current.active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - swipe.current.startX;
+    swipe.current.lastX = t.clientX;
+
+    // Only handle rightward drags (closing)
+    if (dx > 0) {
+      e.preventDefault();
+      const panel = document.getElementById("curtain-panel");
+      if (panel) {
+        const translate = Math.min(dx * 0.6, window.innerWidth);
+        panel.style.transition = "none";
+        panel.style.transform = `translateX(${translate}px)`;
+      }
+    }
+  }
+
+  function endSwipeX() {
+    if (!menuOpen || !swipe.current.active) return;
+    const dx = swipe.current.lastX - swipe.current.startX;
+    swipe.current.active = false;
+
+    const panel = document.getElementById("curtain-panel");
+    if (!panel) return;
+
+    const shouldClose = dx > Math.min(window.innerWidth * 0.25, 200);
+
+    panel.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
+    panel.style.transform = shouldClose ? "translateX(100%)" : "translateX(0%)";
+
+    if (shouldClose) setTimeout(() => setMenuOpen(false), 360);
+  }
+
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       <TopSentinel />
@@ -655,76 +599,72 @@ useEffect(() => {
         ? createPortal(<SiteHeader capPx={capPx} />, document.body)
         : <SiteHeader capPx={capPx} />}
 
-      {/* ===== Mobile curtain (portal) ===== */}
-      {mounted && typeof document !== "undefined" && createPortal(
-  <div
-    id="mobile-menu"
-    role="dialog"
-    aria-modal="true"
-    data-open={menuOpen ? "true" : "false"}
-    // ensure it's above the header (z 12000+)
-    className="lg:hidden fixed inset-0 z-[12000] pointer-events-none"
-  >
-    {/* Backdrop */}
-    <div
-      className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md pointer-events-auto"
-      style={{
-        transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
-        opacity: menuOpen ? 1 : 0,
-      }}
-      onClick={() => setMenuOpen(false)}
-    />
-
-    {/* Sliding panel */}
-    <div
-      id="curtain-panel"
-      className="absolute inset-0 z-[12001] flex flex-col text-white pointer-events-auto"
-      style={{
-        transform: menuOpen ? "translateY(0%)" : "translateY(-100%)",
-        transition: "transform 460ms cubic-bezier(.22,1,.36,1)",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        // GPU
-        willChange: "transform",
-        transformOrigin: "top center",
-        backfaceVisibility: "hidden",
-        WebkitBackfaceVisibility: "hidden",
-      }}
-      // swipe-to-close (vertical)
-      onTouchStart={(e) => startSwipe(e)}
-      onTouchMove={(e) => moveSwipe(e)}
-      onTouchEnd={(e) => endSwipe(e)}
-    >
-      {/* Top row */}
-      <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-        <span className="font-semibold text-white/95">Menu</span>
-        <button
-          type="button"
-          aria-label="Close menu"
-          className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-          onClick={() => setMenuOpen(false)}
-          // make sure it wins any stacking fights
-          style={{ position: "relative", zIndex: 1 }}
+      {/* ===== Mobile curtain (portal) — mounted ONLY when open ===== */}
+      {mounted && typeof document !== "undefined" && menuOpen && createPortal(
+        <div
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          className="lg:hidden fixed inset-0 z-[12000]"
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M18 6L6 18M6 6l12 12" strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
+          {/* Backdrop */}
+          <button
+            aria-label="Close menu"
+            className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+            style={{
+              opacity: 1,
+              transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
+            }}
+            onClick={() => setMenuOpen(false)}
+          />
 
-      {/* Links */}
-      <nav className="grow grid place-items-center">
-        <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-          <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
-          <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
-          <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
-          <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
-        </ul>
-      </nav>
-    </div>
-  </div>,
-  document.body
-)}
+          {/* Sliding panel from LEFT */}
+          <div
+            id="curtain-panel"
+            className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
+            style={{
+              transform: "translateX(0%)",
+              transition: "transform 460ms cubic-bezier(.22,1,.36,1)",
+              paddingTop: "env(safe-area-inset-top)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+              willChange: "transform",
+              transformOrigin: "left center",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+            }}
+            onTouchStart={(e) => startSwipeX(e)}
+            onTouchMove={(e) => moveSwipeX(e)}
+            onTouchEnd={() => endSwipeX()}
+          >
+            {/* Top row */}
+            <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+              <span className="font-semibold text-white/95">Menu</span>
+              <button
+                type="button"
+                aria-label="Close menu"
+                className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                onClick={() => setMenuOpen(false)}
+                style={{ position: "relative", zIndex: 1 }}
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M18 6L6 18M6 6l12 12" strokeWidth="2.2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Links */}
+            <nav className="grow grid place-items-center">
+              <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+                <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
+                <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
+                <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
+                <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
@@ -774,7 +714,7 @@ useEffect(() => {
                 Welcome to Voskopulence
               </h1>
               <p className="mt-6 text-white/95 md:drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.5)] text-sans text-base lg:text-lg">
-                Solid shampoo &amp; conditioner bars crafted to COSOS standards
+                Solid shampoo &amp; conditioner bars crafted to COSMOS standards
                 with botanicals inspired by sunlit coasts — rosemary, lemon,
                 cedar &amp; fig.
               </p>
@@ -956,9 +896,10 @@ useEffect(() => {
           </p>
         </div>
       </section>
-<style
-  dangerouslySetInnerHTML={{
-    __html: `
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
 @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
 @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
 
@@ -972,9 +913,8 @@ useEffect(() => {
   #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
 }
         `,
-  }}
-/>
-
+        }}
+      />
     </div>
   );
 }
