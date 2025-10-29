@@ -119,7 +119,7 @@ const ctaAnim = useRef<CtaAnim>({
 });
 
 const CTA_DRIFT_MAX = 18;   // px drift
-const CTA_SQUISH_MAX = 0.25; // up to 1.25x along drag axis
+const CTA_SQUISH_MAX = 1.25; // up to 1.25x along drag axis
 const CTA_EASE = 0.18;      // smoothing (lower = smoother)
 const CTA_RETURN_EASE = 0.14;
 
