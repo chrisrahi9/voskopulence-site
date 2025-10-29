@@ -104,37 +104,134 @@ export default function Home() {
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
-  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (e.pointerType === "mouse") return;
-    startPos.current = { x: e.clientX, y: e.clientY };
-    setPressing(true);
-    setShowArrow(true);
-    const LONG_MS = 700;
-    longTimer.current = window.setTimeout(() => {
-      setIsLongPress(true);
-      try { if (canVibrate) navigator.vibrate(18); } catch {}
-    }, LONG_MS);
-  };
+  // --- CTA morph+drift animation (smooth & springy) ---
+type CtaAnim = {
+  // live values (what we render)
+  x: number; y: number; sx: number; sy: number;
+  // targets (where we want to go)
+  tx: number; ty: number; tsx: number; tsy: number;
+  raf: number | null; pressing: boolean;
+};
+const ctaAnim = useRef<CtaAnim>({
+  x: 0, y: 0, sx: 1, sy: 1,
+  tx: 0, ty: 0, tsx: 1, tsy: 1,
+  raf: null, pressing: false,
+});
 
-  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!startPos.current) return;
-    const dx = e.clientX - startPos.current.x;
-    const dy = e.clientY - startPos.current.y;
-    if (Math.hypot(dx, dy) > 24) {
-      if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+const CTA_DRIFT_MAX = 18;   // px drift
+const CTA_SQUISH_MAX = 0.25; // up to 1.25x along drag axis
+const CTA_EASE = 0.18;      // smoothing (lower = smoother)
+const CTA_RETURN_EASE = 0.14;
+
+const startCtaRaf = () => {
+  if (ctaAnim.current.raf != null) return;
+  const tick = () => {
+    const a = ctaAnim.current;
+    const ease = a.pressing ? CTA_EASE : CTA_RETURN_EASE;
+    a.x += (a.tx - a.x) * ease;
+    a.y += (a.ty - a.y) * ease;
+    a.sx += (a.tsx - a.sx) * ease;
+    a.sy += (a.tsy - a.sy) * ease;
+
+    // paint to element using CSS vars (no layout thrash)
+    const btn = ctaRef.current;
+    if (btn) {
+      btn.style.setProperty("--cta-x", `${a.x.toFixed(2)}px`);
+      btn.style.setProperty("--cta-y", `${a.y.toFixed(2)}px`);
+      btn.style.setProperty("--cta-sx", a.sx.toFixed(3));
+      btn.style.setProperty("--cta-sy", a.sy.toFixed(3));
+    }
+
+    // keep animating while moving
+    if (
+      Math.abs(a.tx - a.x) > 0.05 ||
+      Math.abs(a.ty - a.y) > 0.05 ||
+      Math.abs(a.tsx - a.sx) > 0.005 ||
+      Math.abs(a.tsy - a.sy) > 0.005
+    ) {
+      a.raf = requestAnimationFrame(tick);
+    } else {
+      a.raf = null;
     }
   };
+  ctaAnim.current.raf = requestAnimationFrame(tick);
+};
 
-  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
-    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-    const delay = isLongPress ? 120 : 0;
-    window.setTimeout(() => {
-      if (!isLongPress) scrollDown();
-      setIsLongPress(false);
-      setShowArrow(false);
-      setPressing(false);
-    }, delay);
-  };
+const setCtaTarget = (tx: number, ty: number, tsx: number, tsy: number) => {
+  const a = ctaAnim.current;
+  a.tx = tx; a.ty = ty; a.tsx = tsx; a.tsy = tsy;
+  startCtaRaf();
+};
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+/** Map pointer delta to drift + oval squish */
+const updateCtaFromDelta = (dx: number, dy: number) => {
+  // clamp drift
+  const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
+  const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
+
+  // compute stretch along dominant axis
+  const ax = Math.abs(ddx);
+  const ay = Math.abs(ddy);
+  const alongX = ax >= ay;
+
+  const ratio = clamp((alongX ? ax : ay) / CTA_DRIFT_MAX, 0, 1);
+  const boost = 1 + CTA_SQUISH_MAX * ratio;      // up to 1.25
+  const shrink = 1 - CTA_SQUISH_MAX * 0.5 * ratio; // slight squish on the other axis
+
+  const sx = alongX ? boost : shrink;
+  const sy = alongX ? shrink : boost;
+
+  setCtaTarget(ddx, ddy, sx, sy);
+};
+
+const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (e.pointerType === "mouse") return; // keep as touch-only
+  startPos.current = { x: e.clientX, y: e.clientY };
+  setPressing(true);
+  setShowArrow(true);
+  ctaAnim.current.pressing = true;
+  // tiny “engage” squish
+  setCtaTarget(0, 0, 1.06, 0.94);
+
+  const LONG_MS = 700;
+  longTimer.current = window.setTimeout(() => {
+    setIsLongPress(true);
+    try { if (canVibrate) navigator.vibrate(18); } catch {}
+  }, LONG_MS);
+};
+
+const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!startPos.current) return;
+  const dx = e.clientX - startPos.current.x;
+  const dy = e.clientY - startPos.current.y;
+
+  // cancel long press if user moves a lot
+  if (Math.hypot(dx, dy) > 24 && longTimer.current) {
+    clearTimeout(longTimer.current);
+    longTimer.current = null;
+  }
+
+  // update drift + squish while pressing
+  if (pressing) updateCtaFromDelta(dx, dy);
+};
+
+const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+
+  // release: spring back to center & circle
+  ctaAnim.current.pressing = false;
+  setCtaTarget(0, 0, 1, 1);
+
+  const delay = isLongPress ? 120 : 0;
+  window.setTimeout(() => {
+    if (!isLongPress) scrollDown();
+    setIsLongPress(false);
+    setShowArrow(false);
+    setPressing(false);
+  }, delay);
+};
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -719,62 +816,70 @@ export default function Home() {
                 cedar &amp; fig.
               </p>
 
-              <button
-                ref={ctaRef}
-                onClick={scrollDown}
-                {...(isTouch
-                  ? {
-                      onPointerDown: handlePointerDown,
-                      onPointerUp: handlePointerEnd,
-                      onPointerMove: handlePointerMove,
-                      onPointerCancel: handlePointerEnd,
-                    }
-                  : {})}
-                aria-label="Scroll to next section"
-                data-show-arrow={showArrow ? "true" : undefined}
-                data-long={isLongPress ? "true" : undefined}
-                style={{
-                  WebkitTouchCallout: "none",
-                  WebkitUserSelect: "none",
-                  userSelect: "none",
-                  touchAction: "none",
-                  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
-                }}
-                onContextMenu={(e) => e.preventDefault()}
-                className={`group relative mt-10 inline-flex items-center justify-center
-                  h-14 w-14 rounded-full
-                  ring-1 ring-white/30 hover:ring-white/60
-                  bg-white/10 hover:bg-white/10
-                  backdrop-blur-[3px]
-                  transition-transform duration-[900ms] ease-[cubic-bezier(.19,1,.22,1)]
-                  will-change-transform
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-                  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-                  ${isLongPress ? "ring-2 ring-white/60" : ""}
-                  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-                `}
-              >
-                {/* Soft glowing dot */}
-                <div
-                  className={`
-                    relative h-2.5 w-2.5 rounded-full bg-white/95
-                    shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                    transition-opacity duration-300
-                    ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
-                    group-hover:opacity-0
-                  `}
-                  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
-                />
-                {/* Chevron */}
-                <svg
-                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-                  className={`absolute z-10 transition-all duration-500
-                    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    group-hover:opacity-100 group-hover:translate-y-[2px]`}
-                >
-                  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+<button
+  ref={ctaRef}
+  onClick={scrollDown}
+  {...(isTouch
+    ? {
+        onPointerDown: handlePointerDown,
+        onPointerUp: handlePointerEnd,
+        onPointerMove: handlePointerMove,
+        onPointerCancel: handlePointerEnd,
+      }
+    : {})}
+  aria-label="Scroll to next section"
+  data-show-arrow={showArrow ? "true" : undefined}
+  data-long={isLongPress ? "true" : undefined}
+  style={{
+    WebkitTouchCallout: "none",
+    WebkitUserSelect: "none",
+    userSelect: "none",
+    touchAction: "none",
+    ...(pressing
+      ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
+      : {}),
+    // 🔽 new: live morph + drift driven by CSS vars set in JS
+    transform: `
+      translate3d(var(--cta-x,0), var(--cta-y,0), 0)
+      scale(var(--cta-sx,1), var(--cta-sy,1))
+    `,
+    willChange: "transform",
+  }}
+  onContextMenu={(e) => e.preventDefault()}
+  className={`group relative mt-10 inline-flex items-center justify-center
+    h-14 w-14 rounded-full
+    ring-1 ring-white/30 hover:ring-white/60
+    bg-white/10 hover:bg-white/10
+    backdrop-blur-[3px]
+    /* smoother because rAF drives motion; keep tiny fallback transition */
+    transition-[transform] duration-[120ms] ease-linear
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+    before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+    ${isLongPress ? "ring-2 ring-white/60" : ""}
+    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+  `}
+>
+  {/* Soft glowing dot */}
+  <div
+    className={`
+      relative h-2.5 w-2.5 rounded-full bg-white/95
+      shadow-[0_0_8px_rgba(255,255,255,0.6)]
+      transition-opacity duration-300
+      ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
+      group-hover:opacity-0
+    `}
+    style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+  />
+  {/* Chevron */}
+  <svg
+    width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+    className={`absolute z-10 transition-all duration-500
+      ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
+      group-hover:opacity-100 group-hover:translate-y-[2px]`}
+  >
+    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+</button>
             </div>
           </div>
 
