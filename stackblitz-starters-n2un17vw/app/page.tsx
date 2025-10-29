@@ -831,7 +831,6 @@ export default function Home() {
                   WebkitUserSelect: "none",
                   userSelect: "none",
                   touchAction: "none",
-                  WebkitUserDrag: "none",
                   // morph & drift (noop on desktop)
                   transform: `
                     translate3d(var(--cta-x,0), var(--cta-y,0), 0)
