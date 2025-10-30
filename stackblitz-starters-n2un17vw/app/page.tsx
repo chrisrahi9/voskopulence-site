@@ -161,6 +161,7 @@ const resetCTA = () => {
 
 const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouchDevice || e.pointerType === "mouse") return; // mobile only
+  e.preventDefault();
   startPos.current = { x: e.clientX, y: e.clientY };
   setPressing(true);
   setShowArrow(true);
@@ -707,7 +708,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
           {/* Backdrop */}
           <button
             aria-label="Close menu"
-            className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+            className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
             style={{
               opacity: 1,
               transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
@@ -1008,6 +1009,13 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 /* Reduce tap highlight + improve feel on curtain */
 #mobile-menu, #curtain-panel, #curtain-panel * {
   -webkit-tap-highlight-color: transparent;
+  /* Block iOS long-press loupe & selection around the CTA */
+.cta-pressguard, .cta-pressguard * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 }
 
 /* Extra smooth motion */
