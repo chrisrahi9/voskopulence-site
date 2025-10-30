@@ -707,14 +707,11 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
         >
           {/* Backdrop */}
           <button
-            aria-label="Close menu"
-            className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
-            style={{
-              opacity: 1,
-              transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
-            }}
-            onClick={() => setMenuOpen(false)}
-          />
+  aria-label="Close menu"
+  className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md cta-pressguard"
+  style={{ opacity: 1, transition: "opacity 420ms cubic-bezier(.22,1,.36,1)" }}
+  onClick={() => setMenuOpen(false)}
+/>
 
           {/* Sliding panel from LEFT */}
           <div
@@ -822,29 +819,41 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   onClick={scrollDown}
   {...(isTouchDevice
     ? {
-        onPointerDown: handlePointerDown,
+        onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handlePointerDown(e);
+        },
         onPointerMove: handlePointerMove,
         onPointerUp: handlePointerEnd,
         onPointerCancel: handlePointerEnd,
         onPointerLeave: handlePointerEnd,
+
+        // touch fallbacks (some Androids)
+        onTouchStart: (e: React.TouchEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onTouchStartCTA(e);
+        },
+        onTouchMove: onTouchMoveCTA,
+        onTouchEnd: onTouchEndCTA,
       }
     : {})}
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
- style={{
-  userSelect: "none",
-  touchAction: "none",
-  transform: `
-    translate3d(var(--cta-x,0), var(--cta-y,0), 0)
-    scale(var(--cta-sx,1), var(--cta-sy,1))
-  `,
-  willChange: "transform",
-  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
-}}
-
   onContextMenu={(e) => e.preventDefault()}
-  className={`group relative mt-10 inline-flex items-center justify-center
+  style={{
+    userSelect: "none",
+    touchAction: "none",
+    transform: `
+      translate3d(var(--cta-x,0), var(--cta-y,0), 0)
+      scale(var(--cta-sx,1), var(--cta-sy,1))
+    `,
+    willChange: "transform",
+    ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
+  }}
+  className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
     h-14 w-14 rounded-full
     ring-1 ring-white/30 hover:ring-white/60
     bg-white/10 hover:bg-white/10
@@ -856,6 +865,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
   `}
 >
+
   {/* Dot */}
   <div
     className={`
