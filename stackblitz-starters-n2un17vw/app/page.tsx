@@ -123,43 +123,84 @@ const initCtaVars = () => {
 };
 useEffect(() => { initCtaVars(); }, []);
 
+// --- CTA deformation (centered ellipse, no drifting) ---
 const CTA_SQUISH_MAX = 0.28;   // how elliptical it can get
-const CTA_RADIUS_PX  = 36;     // distance of finger travel to reach max effect
+const CTA_RADIUS_PX  = 36;     // finger travel to reach max effect
+const CTA_EASE       = 0.22;   // smoothing (0..1)
+
+const ctaAnim = useRef({
+  raf: 0 as number | 0,
+  // target
+  r: 0, ax: 0, ay: 0,
+  // current
+  sx: 1, sy: 1,
+});
+
+const applyCTA = () => {
+  const el = ctaRef.current;
+  if (!el) return;
+  el.style.setProperty("--cta-sx", String(ctaAnim.current.sx));
+  el.style.setProperty("--cta-sy", String(ctaAnim.current.sy));
+};
+
+const tickCTA = () => {
+  const a = ctaAnim.current;
+  // desired squish based on axis dominance
+  const alongX = a.ax >= a.ay;
+  const ratio  = Math.min(1, a.r / CTA_RADIUS_PX);
+  const boost  = 1 + CTA_SQUISH_MAX * ratio;
+  const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
+  const tx = alongX ? boost : shrink;
+  const ty = alongX ? shrink : boost;
+
+  // smooth towards target
+  a.sx += (tx - a.sx) * CTA_EASE;
+  a.sy += (ty - a.sy) * CTA_EASE;
+
+  applyCTA();
+  a.raf = requestAnimationFrame(tickCTA);
+};
+
+const startCTAAnim = () => {
+  if (!ctaAnim.current.raf) ctaAnim.current.raf = requestAnimationFrame(tickCTA);
+};
+const stopCTAAnim = () => {
+  if (ctaAnim.current.raf) cancelAnimationFrame(ctaAnim.current.raf as number);
+  ctaAnim.current.raf = 0;
+};
 
 const updateCTA = (dx: number, dy: number) => {
   if (!isTouchDevice) return;
-  initCtaVars();
-  const el = ctaRef.current; if (!el) return;
-
-  // how far finger moved from press point (0..1)
-  const dist = Math.min(Math.hypot(dx, dy) / CTA_RADIUS_PX, 1);
-
-  // ellipse factors (boost along finger direction, squash perpendicular)
-  const boost  = 1 + CTA_SQUISH_MAX * dist;        // major axis
-  const squash = 1 - (CTA_SQUISH_MAX * 0.6) * dist;// minor axis
-  const angle  = Math.atan2(dy, dx);               // orientation in radians
-
-  el.style.setProperty("--cta-sx", boost.toFixed(3));
-  el.style.setProperty("--cta-sy", squash.toFixed(3));
-  el.style.setProperty("--cta-rot", `${(angle * 180 / Math.PI).toFixed(2)}deg`);
+  const a = ctaAnim.current;
+  a.r  = Math.hypot(dx, dy);
+  a.ax = Math.abs(dx);
+  a.ay = Math.abs(dy);
+  startCTAAnim();
 };
 
 const resetCTA = () => {
-  if (!isTouchDevice) return;
-  const el = ctaRef.current; if (!el) return;
-  el.style.setProperty("--cta-sx", "1");
-  el.style.setProperty("--cta-sy", "1");
-  el.style.setProperty("--cta-rot", "0deg");
+  const a = ctaAnim.current;
+  a.r = a.ax = a.ay = 0;
+  // relax back
+  const relax = () => {
+    a.sx += (1 - a.sx) * 0.25;
+    a.sy += (1 - a.sy) * 0.25;
+    applyCTA();
+    if (Math.abs(a.sx - 1) > 0.002 || Math.abs(a.sy - 1) > 0.002) {
+      requestAnimationFrame(relax);
+    }
+  };
+  relax();
+  stopCTAAnim();
 };
 
 const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouchDevice || e.pointerType === "mouse") return; // mobile only
+  if (!isTouchDevice || e.pointerType === "mouse") return;
   e.preventDefault();
   startPos.current = { x: e.clientX, y: e.clientY };
   setPressing(true);
   setShowArrow(true);
-  initCtaVars();
-  updateCTA(0, 0);
+  updateCTA(0, 0); // kicks the first frame
 
   const LONG_MS = 700;
   longTimer.current = window.setTimeout(() => {
@@ -173,7 +214,6 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!startPos.current) return;
   const dx = e.clientX - startPos.current.x;
   const dy = e.clientY - startPos.current.y;
-
   if (Math.hypot(dx, dy) > 24 && longTimer.current) {
     clearTimeout(longTimer.current);
     longTimer.current = null;
@@ -184,9 +224,8 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   if (!isTouchDevice) return;
   if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-  setShowArrow(false);  // prevent “stuck arrow”
-  resetCTA();           // ease back
-
+  setShowArrow(false);
+  resetCTA();  // smoothly back to circle
   const delay = isLongPress ? 120 : 0;
   window.setTimeout(() => {
     if (!isLongPress) scrollDown();
@@ -194,6 +233,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     setPressing(false);
   }, delay);
 };
+
 
   // Touch fallbacks (some Android browsers fire touch* without useful pointerType)
   const onTouchStartCTA = (e: React.TouchEvent) => {
@@ -807,56 +847,49 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
                 cedar &amp; fig.
               </p>
 
-            <button
+          <button
   ref={ctaRef}
   onClick={scrollDown}
-  {...(isTouchDevice
-    ? {
-        onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
-          e.preventDefault(); e.stopPropagation();
-          handlePointerDown(e);
-        },
-        onPointerMove: handlePointerMove,
-        onPointerUp: handlePointerEnd,
-        onPointerCancel: handlePointerEnd,
-        onPointerLeave: handlePointerEnd,
-
-        // touch fallbacks for iOS/Android that still fire touch*
-        onTouchStart: (e: React.TouchEvent) => {
-          e.preventDefault(); e.stopPropagation();
-          onTouchStartCTA(e);
-        },
-        onTouchMove: onTouchMoveCTA,
-        onTouchEnd: onTouchEndCTA,
-      }
-    : {})}
+  {...(isTouchDevice ? {
+    onPointerDown: handlePointerDown,
+    onPointerMove: handlePointerMove,
+    onPointerUp: handlePointerEnd,
+    onPointerCancel: handlePointerEnd,
+    onPointerLeave: handlePointerEnd,
+    onTouchStart: onTouchStartCTA,
+    onTouchMove: onTouchMoveCTA,
+    onTouchEnd: onTouchEndCTA,
+  } : {})}
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
   onContextMenu={(e) => e.preventDefault()}
-style={{
-  userSelect: "none",
-  touchAction: "none",
-  // center stays fixed; we only rotate + squish
-  transform: `
-    rotate(var(--cta-rot, 0deg))
-    scale(var(--cta-sx, 1), var(--cta-sy, 1))
-  `,
-  willChange: "transform",
-  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
-}}
-className={`cta-pressguard cta-btn group relative mt-10 inline-flex items-center justify-center
-  h-14 w-14 rounded-full
-  ring-1 ring-white/30 hover:ring-white/60
-  bg-white/10 hover:bg-white/10
-  backdrop-blur-[3px]
-  transition-[transform] duration-100 ease-linear
-  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-  ${isLongPress ? "ring-2 ring-white/60" : ""}
-  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-`}
+  className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
+    h-14 w-14 rounded-full
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+    ${isLongPress ? "" : ""}
+    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+  `}
+  style={{
+    userSelect: "none",
+    touchAction: "none",
+  }}
 >
+  {/* Deforming ring/background (single shape) */}
+  <svg
+    className="absolute inset-0"
+    viewBox="0 0 56 56"
+    aria-hidden="true"
+    style={{
+      transform: "translateZ(0) scale(var(--cta-sx,1), var(--cta-sy,1))",
+      transformOrigin: "50% 50%",
+      willChange: "transform",
+    }}
+  >
+    <circle cx="28" cy="28" r="26" fill="rgba(255,255,255,0.10)" />
+    <circle cx="28" cy="28" r="26" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+  </svg>
+
   {/* Dot */}
   <div
     className={`
@@ -868,17 +901,19 @@ className={`cta-pressguard cta-btn group relative mt-10 inline-flex items-center
     `}
     style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
   />
-  {/* Chevron */}
+
+  {/* Chevron (stays perfectly centered; ring deforms around it) */}
   <svg
     width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
     className={`absolute z-10 transition-all duration-500
       ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
       group-hover:opacity-100 group-hover:translate-y-[2px]`}
   >
-    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M6 9.5 L12 15.5 L18 9.5"
+      fill="none" stroke="white" strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 </button>
-
             </div>
           </div>
 
