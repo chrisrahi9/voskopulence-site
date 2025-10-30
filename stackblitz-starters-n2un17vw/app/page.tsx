@@ -123,40 +123,33 @@ const initCtaVars = () => {
 };
 useEffect(() => { initCtaVars(); }, []);
 
-const CTA_DRIFT_MAX = 18;     // px the button may drift while pressed
-const CTA_SQUISH_MAX = 0.25;  // up to 1.25x stretch on the main axis
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const CTA_SQUISH_MAX = 0.28;   // how elliptical it can get
+const CTA_RADIUS_PX  = 36;     // distance of finger travel to reach max effect
 
 const updateCTA = (dx: number, dy: number) => {
-  if (!isTouchDevice) return;              // mobile only
+  if (!isTouchDevice) return;
   initCtaVars();
   const el = ctaRef.current; if (!el) return;
 
-  const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
-  const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
-  const ax = Math.abs(ddx), ay = Math.abs(ddy);
-  const alongX = ax >= ay;
-  const ratio = clamp((alongX ? ax : ay) / CTA_DRIFT_MAX, 0, 1);
+  // how far finger moved from press point (0..1)
+  const dist = Math.min(Math.hypot(dx, dy) / CTA_RADIUS_PX, 1);
 
-  // squish/stretch composition
-  const boost = 1 + CTA_SQUISH_MAX * ratio;
-  const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
-  const sx = alongX ? boost : shrink;
-  const sy = alongX ? shrink : boost;
+  // ellipse factors (boost along finger direction, squash perpendicular)
+  const boost  = 1 + CTA_SQUISH_MAX * dist;        // major axis
+  const squash = 1 - (CTA_SQUISH_MAX * 0.6) * dist;// minor axis
+  const angle  = Math.atan2(dy, dx);               // orientation in radians
 
-  el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
-  el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
-  el.style.setProperty("--cta-sx", sx.toFixed(3));
-  el.style.setProperty("--cta-sy", sy.toFixed(3));
+  el.style.setProperty("--cta-sx", boost.toFixed(3));
+  el.style.setProperty("--cta-sy", squash.toFixed(3));
+  el.style.setProperty("--cta-rot", `${(angle * 180 / Math.PI).toFixed(2)}deg`);
 };
 
 const resetCTA = () => {
   if (!isTouchDevice) return;
   const el = ctaRef.current; if (!el) return;
-  el.style.setProperty("--cta-x", "0px");
-  el.style.setProperty("--cta-y", "0px");
   el.style.setProperty("--cta-sx", "1");
   el.style.setProperty("--cta-sy", "1");
+  el.style.setProperty("--cta-rot", "0deg");
 };
 
 const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
@@ -841,29 +834,28 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
   onContextMenu={(e) => e.preventDefault()}
-  style={{
-    userSelect: "none",
-    touchAction: "none",
-    transform: `
-      translate3d(var(--cta-x,0), var(--cta-y,0), 0)
-      scale(var(--cta-sx,1), var(--cta-sy,1))
-    `,
-    willChange: "transform",
-    ...(pressing
-      ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" }
-      : {}),
-  }}
-  className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
-    h-14 w-14 rounded-full
-    ring-1 ring-white/30 hover:ring-white/60
-    bg-white/10 hover:bg-white/10
-    backdrop-blur-[3px]
-    transition-[transform] duration-100 ease-linear
-    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-    before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-    ${isLongPress ? "ring-2 ring-white/60" : ""}
-    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-  `}
+style={{
+  userSelect: "none",
+  touchAction: "none",
+  // center stays fixed; we only rotate + squish
+  transform: `
+    rotate(var(--cta-rot, 0deg))
+    scale(var(--cta-sx, 1), var(--cta-sy, 1))
+  `,
+  willChange: "transform",
+  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
+}}
+className={`cta-pressguard cta-btn group relative mt-10 inline-flex items-center justify-center
+  h-14 w-14 rounded-full
+  ring-1 ring-white/30 hover:ring-white/60
+  bg-white/10 hover:bg-white/10
+  backdrop-blur-[3px]
+  transition-[transform] duration-100 ease-linear
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+  ${isLongPress ? "ring-2 ring-white/60" : ""}
+  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+`}
 >
   {/* Dot */}
   <div
@@ -1031,6 +1023,22 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+/* Elastic ring that follows the squish */
+.cta-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(255,255,255,0.55);
+  box-shadow: 0 0 10px rgba(255,255,255,0.35);
+  transform: rotate(var(--cta-rot,0deg)) scale(var(--cta-sx,1), var(--cta-sy,1));
+  transition: transform 80ms linear, opacity 120ms ease;
+  pointer-events: none;
+}
+.cta-btn[data-long="true"]::after,
+.cta-btn:active::after {
+  opacity: 1;
 }
 
 /* Extra smooth motion */
