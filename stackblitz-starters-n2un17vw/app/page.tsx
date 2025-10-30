@@ -231,7 +231,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     if (pressing) updateCTA(dx, dy);
   };
 
-  const onTouchEndCTA = () => onPointerEndCTA({} as any);
+  const onTouchEndCTA = () => handlePointerEnd({} as any);
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -831,19 +831,17 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
-  style={{
-    WebkitTouchCallout: "none",
-    WebkitUserSelect: "none",
-    userSelect: "none",
-    touchAction: "none",
-    // morph + drift on mobile (no-op on desktop)
-    transform: `
-      translate3d(var(--cta-x,0), var(--cta-y,0), 0)
-      scale(var(--cta-sx,1), var(--cta-sy,1))
-    `,
-    willChange: "transform",
-    ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
-  }}
+ style={{
+  userSelect: "none",
+  touchAction: "none",
+  transform: `
+    translate3d(var(--cta-x,0), var(--cta-y,0), 0)
+    scale(var(--cta-sx,1), var(--cta-sy,1))
+  `,
+  willChange: "transform",
+  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
+}}
+
   onContextMenu={(e) => e.preventDefault()}
   className={`group relative mt-10 inline-flex items-center justify-center
     h-14 w-14 rounded-full
