@@ -1000,31 +1000,33 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
         </div>
       </section>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+<style
+  dangerouslySetInnerHTML={{
+    __html: `
 @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
 @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
 
 /* Reduce tap highlight + improve feel on curtain */
 #mobile-menu, #curtain-panel, #curtain-panel * {
   -webkit-tap-highlight-color: transparent;
-  /* Block iOS long-press loupe & selection around the CTA */
+}
+
+/* Block iOS long-press loupe & selection around the CTA */
 .cta-pressguard, .cta-pressguard * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-}
 
 /* Extra smooth motion */
 @media (prefers-reduced-motion: no-preference) {
   #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
 }
-        `,
-        }}
-      />
+    `,
+  }}
+/>
+
     </div>
   );
 }
