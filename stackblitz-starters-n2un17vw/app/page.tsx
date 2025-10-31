@@ -122,10 +122,10 @@ export default function Home() {
   useEffect(() => { initCtaVars(); }, []);
 
   // --- CTA deformation engine (grow first, then squish) ---
-  const CTA_BASE_GROW  = 1.15; // size when long-pressed
+  const CTA_BASE_GROW  = 1.3; // size when long-pressed
   const CTA_SQUISH_MAX = 0.28; // ellipse intensity
   const CTA_RADIUS_PX  = 36;   // finger travel for full effect
-  const CTA_EASE       = 0.22; // smoothing (0..1 low=gooey)
+  const CTA_EASE       = 0.5; // smoothing (0..1 low=gooey)
 
   const ctaAnim = useRef({
     raf: 0 as number | 0,
