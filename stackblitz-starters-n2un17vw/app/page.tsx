@@ -60,7 +60,6 @@ function unlockScroll() {
   const top = body.style.top;                // read before clear
   const y = top ? -parseInt(top || "0", 10) : 0;
 
-  // clear styles first
   docEl.style.overflow = "";
   docEl.style.height = "";
   body.style.overflow = "";
@@ -70,7 +69,6 @@ function unlockScroll() {
   body.style.right = "";
   body.style.width = "";
 
-  // restore scroll on next frame for stability on iOS/Safari
   requestAnimationFrame(() => {
     window.scrollTo(0, y || scrollYRef.current || 0);
   });
@@ -81,17 +79,18 @@ export default function Home() {
   const hlsRef = useRef<any>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
- // RUNTIME touch detection (works after mount) — inside Home()
-const [isTouchDevice, setIsTouchDevice] = useState(false);
-useEffect(() => {
-  const mq = window.matchMedia?.("(hover: none), (pointer: coarse)");
-  const detect = () =>
-    !!(mq?.matches || "ontouchstart" in window || navigator.maxTouchPoints > 0);
-  setIsTouchDevice(detect());
-  const onChange = () => setIsTouchDevice(detect());
-  mq?.addEventListener?.("change", onChange);
-  return () => mq?.removeEventListener?.("change", onChange);
-}, []);
+
+  // Touch detection (runtime)
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(hover: none), (pointer: coarse)");
+    const detect = () =>
+      !!(mq?.matches || "ontouchstart" in window || navigator.maxTouchPoints > 0);
+    setIsTouchDevice(detect());
+    const onChange = () => setIsTouchDevice(detect());
+    mq?.addEventListener?.("change", onChange);
+    return () => mq?.removeEventListener?.("change", onChange);
+  }, []);
 
   // For header portal
   const [hdrReady, setHdrReady] = useState(false);
@@ -101,148 +100,162 @@ useEffect(() => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-// --- Pulsing CTA (touch behavior) ---
-const ctaRef = useRef<HTMLButtonElement | null>(null);
-const [showArrow, setShowArrow] = useState(false);
-const [isLongPress, setIsLongPress] = useState(false);
-const [pressing, setPressing] = useState(false);
-const longTimer = useRef<number | null>(null);
-const startPos = useRef<{ x: number; y: number } | null>(null);
-const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
+  // --- Pulsing CTA (touch behavior) ---
+  const ctaRef = useRef<HTMLButtonElement | null>(null);
+  const [showArrow, setShowArrow] = useState(false);
+  const [isLongPress, setIsLongPress] = useState(false);
+  const [pressing, setPressing] = useState(false);
+  const longTimer = useRef<number | null>(null);
+  const startPos = useRef<{ x: number; y: number } | null>(null);
+  const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
 
-// CSS var init (once)
-const ctaVarsInit = useRef(false);
-const initCtaVars = () => {
-  const el = ctaRef.current;
-  if (!el || ctaVarsInit.current) return;
-  el.style.setProperty("--cta-x", "0px");
-  el.style.setProperty("--cta-y", "0px");
-  el.style.setProperty("--cta-sx", "1");
-  el.style.setProperty("--cta-sy", "1");
-  ctaVarsInit.current = true;
-};
-useEffect(() => { initCtaVars(); }, []);
-
-// --- CTA deformation (centered ellipse, no drifting) ---
-const CTA_SQUISH_MAX = 0.28;   // how elliptical it can get
-const CTA_RADIUS_PX  = 36;     // finger travel to reach max effect
-const CTA_EASE       = 0.22;   // smoothing (0..1)
-
-const ctaAnim = useRef({
-  raf: 0 as number | 0,
-  // target
-  r: 0, ax: 0, ay: 0,
-  // current
-  sx: 1, sy: 1,
-});
-
-const applyCTA = () => {
-  const el = ctaRef.current;
-  if (!el) return;
-  el.style.setProperty("--cta-sx", String(ctaAnim.current.sx));
-  el.style.setProperty("--cta-sy", String(ctaAnim.current.sy));
-};
-
-const tickCTA = () => {
-  const a = ctaAnim.current;
-  // desired squish based on axis dominance
-  const alongX = a.ax >= a.ay;
-  const ratio  = Math.min(1, a.r / CTA_RADIUS_PX);
-  const boost  = 1 + CTA_SQUISH_MAX * ratio;
-  const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
-  const tx = alongX ? boost : shrink;
-  const ty = alongX ? shrink : boost;
-
-  // smooth towards target
-  a.sx += (tx - a.sx) * CTA_EASE;
-  a.sy += (ty - a.sy) * CTA_EASE;
-
-  applyCTA();
-  a.raf = requestAnimationFrame(tickCTA);
-};
-
-const startCTAAnim = () => {
-  if (!ctaAnim.current.raf) ctaAnim.current.raf = requestAnimationFrame(tickCTA);
-};
-const stopCTAAnim = () => {
-  if (ctaAnim.current.raf) cancelAnimationFrame(ctaAnim.current.raf as number);
-  ctaAnim.current.raf = 0;
-};
-
-const updateCTA = (dx: number, dy: number) => {
-  if (!isTouchDevice) return;
-  const a = ctaAnim.current;
-  a.r  = Math.hypot(dx, dy);
-  a.ax = Math.abs(dx);
-  a.ay = Math.abs(dy);
-  startCTAAnim();
-};
-
-const resetCTA = () => {
-  const a = ctaAnim.current;
-  a.r = a.ax = a.ay = 0;
-  // relax back
-  const relax = () => {
-    a.sx += (1 - a.sx) * 0.25;
-    a.sy += (1 - a.sy) * 0.25;
-    applyCTA();
-    if (Math.abs(a.sx - 1) > 0.002 || Math.abs(a.sy - 1) > 0.002) {
-      requestAnimationFrame(relax);
-    }
+  // CSS var init (once)
+  const ctaVarsInit = useRef(false);
+  const initCtaVars = () => {
+    const el = ctaRef.current;
+    if (!el || ctaVarsInit.current) return;
+    el.style.setProperty("--cta-base", "1");
+    el.style.setProperty("--cta-sx", "1");
+    el.style.setProperty("--cta-sy", "1");
+    ctaVarsInit.current = true;
   };
-  relax();
-  stopCTAAnim();
-};
+  useEffect(() => { initCtaVars(); }, []);
 
-const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouchDevice || e.pointerType === "mouse") return;
-  e.preventDefault();
-  startPos.current = { x: e.clientX, y: e.clientY };
-  setPressing(true);
-  setShowArrow(true);
-  updateCTA(0, 0); // kicks the first frame
+  // --- CTA deformation engine (grow first, then squish) ---
+  const CTA_BASE_GROW  = 1.15; // size when long-pressed
+  const CTA_SQUISH_MAX = 0.28; // ellipse intensity
+  const CTA_RADIUS_PX  = 36;   // finger travel for full effect
+  const CTA_EASE       = 0.22; // smoothing (0..1 low=gooey)
 
-  const LONG_MS = 700;
-  longTimer.current = window.setTimeout(() => {
-    setIsLongPress(true);
-    try { if (canVibrate) navigator.vibrate(18); } catch {}
-  }, LONG_MS);
-};
+  const ctaAnim = useRef({
+    raf: 0 as number | 0,
 
-const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouchDevice || e.pointerType === "mouse") return;
-  if (!startPos.current) return;
-  const dx = e.clientX - startPos.current.x;
-  const dy = e.clientY - startPos.current.y;
-  if (Math.hypot(dx, dy) > 24 && longTimer.current) {
-    clearTimeout(longTimer.current);
-    longTimer.current = null;
-  }
-  if (pressing) updateCTA(dx, dy);
-};
+    // targets
+    tBase: 1, // uniform scale target
+    r: 0, ax: 0, ay: 0,
 
-const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
-  if (!isTouchDevice) return;
-  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-  setShowArrow(false);
-  resetCTA();  // smoothly back to circle
-  const delay = isLongPress ? 120 : 0;
-  window.setTimeout(() => {
-    if (!isLongPress) scrollDown();
-    setIsLongPress(false);
-    setPressing(false);
-  }, delay);
-};
+    // currents
+    base: 1,
+    sx: 1, sy: 1,
+  });
 
+  const applyCTA = () => {
+    const el = ctaRef.current;
+    if (!el) return;
+    el.style.setProperty("--cta-base", String(ctaAnim.current.base));
+    el.style.setProperty("--cta-sx", String(ctaAnim.current.sx));
+    el.style.setProperty("--cta-sy", String(ctaAnim.current.sy));
+  };
 
-  // Touch fallbacks (some Android browsers fire touch* without useful pointerType)
+  const tickCTA = () => {
+    const a = ctaAnim.current;
+
+    // ease uniform base scale
+    a.base += (a.tBase - a.base) * CTA_EASE;
+
+    // squish target from movement
+    const alongX = a.ax >= a.ay;
+    const ratio  = Math.min(1, a.r / CTA_RADIUS_PX);
+    const boost  = 1 + CTA_SQUISH_MAX * ratio;
+    const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
+    const tx = alongX ? boost : shrink;
+    const ty = alongX ? shrink : boost;
+
+    a.sx += (tx - a.sx) * CTA_EASE;
+    a.sy += (ty - a.sy) * CTA_EASE;
+
+    applyCTA();
+    a.raf = requestAnimationFrame(tickCTA);
+  };
+
+  const startCTAAnim = () => {
+    if (!ctaAnim.current.raf) ctaAnim.current.raf = requestAnimationFrame(tickCTA);
+  };
+  const stopCTAAnim = () => {
+    if (ctaAnim.current.raf) cancelAnimationFrame(ctaAnim.current.raf as number);
+    ctaAnim.current.raf = 0;
+  };
+
+  const updateCTA = (dx: number, dy: number) => {
+    if (!isTouchDevice) return;
+    const a = ctaAnim.current;
+    a.r  = Math.hypot(dx, dy);
+    a.ax = Math.abs(dx);
+    a.ay = Math.abs(dy);
+    startCTAAnim();
+  };
+
+  const resetCTA = () => {
+    const a = ctaAnim.current;
+    a.tBase = 1;
+    a.r = a.ax = a.ay = 0;
+
+    const relax = () => {
+      a.base += (1 - a.base) * 0.25;
+      a.sx   += (1 - a.sx)   * 0.25;
+      a.sy   += (1 - a.sy)   * 0.25;
+      applyCTA();
+      if (Math.abs(a.base - 1) > 0.003 || Math.abs(a.sx - 1) > 0.003 || Math.abs(a.sy - 1) > 0.003) {
+        requestAnimationFrame(relax);
+      }
+    };
+    relax();
+    stopCTAAnim();
+  };
+
+  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouchDevice || e.pointerType === "mouse") return;
+    e.preventDefault();
+    startPos.current = { x: e.clientX, y: e.clientY };
+    setPressing(true);
+    setShowArrow(true);
+
+    // start uniform grow target (becomes visible once it turns to long press)
+    ctaAnim.current.tBase = CTA_BASE_GROW;
+    updateCTA(0, 0);
+
+    const LONG_MS = 700;
+    longTimer.current = window.setTimeout(() => {
+      setIsLongPress(true);
+      try { if (canVibrate) navigator.vibrate(18); } catch {}
+    }, LONG_MS);
+  };
+
+  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouchDevice || e.pointerType === "mouse") return;
+    if (!startPos.current) return;
+    const dx = e.clientX - startPos.current.x;
+    const dy = e.clientY - startPos.current.y;
+
+    if (Math.hypot(dx, dy) > 24 && longTimer.current) {
+      clearTimeout(longTimer.current);
+      longTimer.current = null;
+    }
+    if (pressing) updateCTA(dx, dy);
+  };
+
+  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+    if (!isTouchDevice) return;
+    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+    setShowArrow(false);
+    resetCTA();
+
+    const delay = isLongPress ? 120 : 0;
+    window.setTimeout(() => {
+      if (!isLongPress) scrollDown(); // tap -> scroll (reliable every time)
+      setIsLongPress(false);
+      setPressing(false);
+    }, delay);
+  };
+
+  // Touch fallbacks (some Android browsers)
   const onTouchStartCTA = (e: React.TouchEvent) => {
     if (!isTouchDevice) return;
     const t = e.touches[0];
     startPos.current = { x: t.clientX, y: t.clientY };
     setPressing(true);
     setShowArrow(true);
-    initCtaVars();
+    ctaAnim.current.tBase = CTA_BASE_GROW;
     updateCTA(0, 0);
 
     const LONG_MS = 700;
@@ -267,7 +280,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 
   const onTouchEndCTA = () => handlePointerEnd({} as any);
 
-  // keep a ref of menuOpen for observers/listeners (avoid stale closure)
+  // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
@@ -740,11 +753,11 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
         >
           {/* Backdrop */}
           <button
-  aria-label="Close menu"
-  className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md cta-pressguard"
-  style={{ opacity: 1, transition: "opacity 420ms cubic-bezier(.22,1,.36,1)" }}
-  onClick={() => setMenuOpen(false)}
-/>
+            aria-label="Close menu"
+            className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md cta-pressguard"
+            style={{ opacity: 1, transition: "opacity 420ms cubic-bezier(.22,1,.36,1)" }}
+            onClick={() => setMenuOpen(false)}
+          />
 
           {/* Sliding panel from LEFT */}
           <div
@@ -847,73 +860,70 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
                 cedar &amp; fig.
               </p>
 
-          <button
-  ref={ctaRef}
-  onClick={scrollDown}
-  {...(isTouchDevice ? {
-    onPointerDown: handlePointerDown,
-    onPointerMove: handlePointerMove,
-    onPointerUp: handlePointerEnd,
-    onPointerCancel: handlePointerEnd,
-    onPointerLeave: handlePointerEnd,
-    onTouchStart: onTouchStartCTA,
-    onTouchMove: onTouchMoveCTA,
-    onTouchEnd: onTouchEndCTA,
-  } : {})}
-  aria-label="Scroll to next section"
-  data-show-arrow={showArrow ? "true" : undefined}
-  data-long={isLongPress ? "true" : undefined}
-  onContextMenu={(e) => e.preventDefault()}
-  className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
-    h-14 w-14 rounded-full
-    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-    ${isLongPress ? "" : ""}
-    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-  `}
-  style={{
-    userSelect: "none",
-    touchAction: "none",
-  }}
->
-  {/* Deforming ring/background (single shape) */}
-  <svg
-    className="absolute inset-0"
-    viewBox="0 0 56 56"
-    aria-hidden="true"
-    style={{
-      transform: "translateZ(0) scale(var(--cta-sx,1), var(--cta-sy,1))",
-      transformOrigin: "50% 50%",
-      willChange: "transform",
-    }}
-  >
-    <circle cx="28" cy="28" r="26" fill="rgba(255,255,255,0.10)" />
-    <circle cx="28" cy="28" r="26" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
-  </svg>
+              <button
+                ref={ctaRef}
+                onClick={!isTouchDevice ? scrollDown : undefined} // desktop click; touch handled by pointer/touch
+                {...(isTouchDevice ? {
+                  onPointerDown: handlePointerDown,
+                  onPointerMove: handlePointerMove,
+                  onPointerUp: handlePointerEnd,
+                  onPointerCancel: handlePointerEnd,
+                  onPointerLeave: handlePointerEnd,
+                  onTouchStart: onTouchStartCTA,
+                  onTouchMove: onTouchMoveCTA,
+                  onTouchEnd: onTouchEndCTA,
+                } : {})}
+                aria-label="Scroll to next section"
+                data-show-arrow={showArrow ? "true" : undefined}
+                data-long={isLongPress ? "true" : undefined}
+                onContextMenu={(e) => e.preventDefault()}
+                className={`cta-pressguard group relative mt-10 inline-flex items-center justify-center
+                  h-14 w-14 rounded-full
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+                  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+                `}
+                style={{ userSelect: "none", touchAction: "none" }}
+              >
+                {/* Single deforming shape (background + ring) */}
+                <svg
+                  className="absolute inset-0"
+                  viewBox="0 0 56 56"
+                  aria-hidden="true"
+                  style={{
+                    transform:
+                      "translateZ(0) scale(var(--cta-base,1)) scale(var(--cta-sx,1), var(--cta-sy,1))",
+                    transformOrigin: "50% 50%",
+                    willChange: "transform",
+                  }}
+                >
+                  <circle cx="28" cy="28" r="26" fill="rgba(255,255,255,0.10)" />
+                  <circle cx="28" cy="28" r="26" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+                </svg>
 
-  {/* Dot */}
-  <div
-    className={`
-      relative h-2.5 w-2.5 rounded-full bg-white/95
-      shadow-[0_0_8px_rgba(255,255,255,0.6)]
-      transition-opacity duration-300
-      ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
-      group-hover:opacity-0
-    `}
-    style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
-  />
+                {/* Dot */}
+                <div
+                  className={`
+                    relative h-2.5 w-2.5 rounded-full bg-white/95
+                    shadow-[0_0_8px_rgba(255,255,255,0.6)]
+                    transition-opacity duration-300
+                    ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
+                    group-hover:opacity-0
+                  `}
+                  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+                />
 
-  {/* Chevron (stays perfectly centered; ring deforms around it) */}
-  <svg
-    width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-    className={`absolute z-10 transition-all duration-500
-      ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-      group-hover:opacity-100 group-hover:translate-y-[2px]`}
-  >
-    <path d="M6 9.5 L12 15.5 L18 9.5"
-      fill="none" stroke="white" strokeWidth="1.6"
-      strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-</button>
+                {/* Chevron */}
+                <svg
+                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+                  className={`absolute z-10 transition-all duration-500
+                    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
+                    group-hover:opacity-100 group-hover:translate-y-[2px]`}
+                >
+                  <path d="M6 9.5 L12 15.5 L18 9.5"
+                        fill="none" stroke="white" strokeWidth="1.6"
+                        strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -1036,10 +1046,9 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
         </div>
       </section>
 
-<style
-  dangerouslySetInnerHTML={{
-    __html: `
-@keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
 @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
 @keyframes pulse-smooth {
   0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); transform: scale(1);   }
@@ -1059,31 +1068,14 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-/* Elastic ring that follows the squish */
-.cta-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  border: 2px solid rgba(255,255,255,0.55);
-  box-shadow: 0 0 10px rgba(255,255,255,0.35);
-  transform: rotate(var(--cta-rot,0deg)) scale(var(--cta-sx,1), var(--cta-sy,1));
-  transition: transform 80ms linear, opacity 120ms ease;
-  pointer-events: none;
-}
-.cta-btn[data-long="true"]::after,
-.cta-btn:active::after {
-  opacity: 1;
-}
 
 /* Extra smooth motion */
 @media (prefers-reduced-motion: no-preference) {
   #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
 }
-    `,
-  }}
-/>
-
+          `,
+        }}
+      />
     </div>
   );
 }
