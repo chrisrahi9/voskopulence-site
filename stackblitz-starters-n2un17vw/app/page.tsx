@@ -780,7 +780,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 
 <button
   ref={ctaRef}
-  onClick={scrollDown}
+  onClick={!isTouch ? scrollDown : undefined}   // desktop click only
   {...(isTouch
     ? {
         onPointerDown: handlePointerDown,
@@ -793,12 +793,20 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
+  onContextMenu={(e) => e.preventDefault()}
+  className={`cta-btn relative mt-10 inline-flex items-center justify-center
+    h-14 w-14 rounded-full
+    ring-1 ring-white/30
+    bg-white/10
+    backdrop-blur-[3px]
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+  `}
   style={{
     WebkitTouchCallout: "none",
     WebkitUserSelect: "none",
     userSelect: "none",
     touchAction: "none",
-    // harmless on desktop; active on touch
     transform: `
       translate3d(var(--cta-x,0), var(--cta-y,0), 0)
       scale(var(--cta-sx,1), var(--cta-sy,1))
@@ -806,38 +814,25 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     willChange: "transform",
     ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
   }}
-  onContextMenu={(e) => e.preventDefault()}
-  className={`group relative mt-10 inline-flex items-center justify-center
-    h-14 w-14 rounded-full
-    ring-1 ring-white/30 hover:ring-white/60
-    bg-white/10 hover:bg-white/10
-    backdrop-blur-[3px]
-    transition-[transform] duration-100 ease-linear
-    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-    before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-    ${isLongPress ? "ring-2 ring-white/60" : ""}
-    ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-  `}
 >
   {/* dot */}
   <div
-    className={`
-      relative h-2.5 w-2.5 rounded-full bg-white/95
-      shadow-[0_0_8px_rgba(255,255,255,0.6)]
-      transition-opacity duration-300
-      ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
-      group-hover:opacity-0
-    `}
+    className={`dot relative h-2.5 w-2.5 rounded-full bg-white/95
+                shadow-[0_0_8px_rgba(255,255,255,0.6)]
+                transition-opacity duration-300
+                ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}`}
     style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
   />
+
   {/* arrow */}
   <svg
     width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-    className={`absolute z-10 transition-all duration-500
-      ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-      group-hover:opacity-100 group-hover:translate-y-[2px]`}
+    className={`chev absolute z-10 transition-all duration-500
+                ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
   >
-    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M6 9.5 L12 15.5 L18 9.5"
+          fill="none" stroke="white" strokeWidth="1.6"
+          strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 </button>
 
@@ -968,6 +963,12 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
           __html: `
 @keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
 @keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
+/* Only desktops/laptops with real hover should flip dot↔arrow on hover */
+@media (hover: hover) {
+  .cta-btn:hover .dot  { opacity: 0; }
+  .cta-btn:hover .chev { opacity: 1; transform: translateY(2px); }
+}
+
 
 /* Reduce tap highlight + improve feel on curtain */
 #mobile-menu, #curtain-panel, #curtain-panel * {
