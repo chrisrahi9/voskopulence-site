@@ -181,19 +181,33 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (pressing) updateCTA(dx, dy);
 };
 
-const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch) return;
-  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-  setShowArrow(false);          // avoid â€œstuck arrowâ€
-  resetCTA();                   // ease back to rest
 
+  // stop native click/long-press ghost taps on iOS
+  e.preventDefault();
+
+  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+
+  // 1) stop the “pressing” animation first (so keyframes don’t fight CSS transitions)
+  setPressing(false);
+
+  // 2) flip the arrow back on the next frame (prevents a 1-frame race)
+  requestAnimationFrame(() => {
+    setShowArrow(false);
+  });
+
+  // 3) smoothly reset shape
+  resetCTA();
+
+  // 4) scroll only for short press; clear long-press state last
   const delay = isLongPress ? 120 : 0;
   window.setTimeout(() => {
     if (!isLongPress) scrollDown();
     setIsLongPress(false);
-    setPressing(false);
   }, delay);
 };
+
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -780,25 +794,27 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 
 <button
   ref={ctaRef}
-  onClick={!isTouch ? scrollDown : undefined}
-  {...(isTouch
-    ? {
-        onPointerDown: handlePointerDown,
-        onPointerUp: handlePointerEnd,
-        onPointerMove: handlePointerMove,
-        onPointerCancel: handlePointerEnd,
-        onPointerLeave: handlePointerEnd,
-      }
-    : {})}
+  onClick={scrollDown}
+  {...(isTouch ? {
+    onPointerDown: handlePointerDown,
+    onPointerUp: handlePointerEnd,
+    onPointerMove: handlePointerMove,
+    onPointerCancel: handlePointerEnd,
+    onPointerLeave: handlePointerEnd,
+  } : {})}
   aria-label="Scroll to next section"
   data-show-arrow={showArrow ? "true" : undefined}
   data-long={isLongPress ? "true" : undefined}
   onContextMenu={(e) => e.preventDefault()}
-  className={`cta-btn relative mt-10 inline-flex items-center justify-center
+  className={`cta-btn group relative mt-10 inline-flex items-center justify-center
     h-14 w-14 rounded-full
-    ring-1 ring-white/30
-    bg-white/10 backdrop-blur-[3px]
+    ring-1 ring-white/30 hover:ring-white/60
+    bg-white/10 hover:bg-white/10
+    backdrop-blur-[3px]
+    transition-[transform] duration-100 ease-linear
     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+    before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+    ${isLongPress ? "ring-2 ring-white/60" : ""}
     ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
   `}
   style={{
@@ -816,24 +832,22 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 >
   {/* dot */}
   <div
-    className={`relative h-2.5 w-2.5 rounded-full bg-white/95
+    className={`dot cta-icon relative h-2.5 w-2.5 rounded-full bg-white/95
                 shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                transition-opacity duration-300
-                ${showArrow ? "opacity-0" : "opacity-100"}`}
+                ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}`}
     style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
   />
-
   {/* arrow */}
   <svg
+    className={`chev cta-icon absolute z-10
+                ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
     width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-    className={`absolute z-10 transition-all duration-500
-                ${showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
   >
-    <path d="M6 9.5 L12 15.5 L18 9.5"
-          fill="none" stroke="white" strokeWidth="1.6"
-          strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
+          strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 </button>
+
             </div>
           </div>
 
@@ -998,6 +1012,19 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 @media (hover:hover){
   .cta-btn:hover .dot{ opacity:0; }
   .cta-btn:hover svg{ opacity:1; transform:translateY(2px); }
+}
+/* Smooth icon transitions + avoid hover conflicts on touch */
+.cta-icon {
+  transition: opacity 220ms cubic-bezier(.22,1,.36,1),
+              transform 220ms cubic-bezier(.22,1,.36,1);
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+/* Only apply hover swaps on non-touch to avoid flicker */
+@media (hover: hover) and (pointer: fine) {
+  .cta-btn:hover .dot { opacity: 0; }
+  .cta-btn:hover .chev { opacity: 1; transform: translateY(2px); }
 }
 
         `,
