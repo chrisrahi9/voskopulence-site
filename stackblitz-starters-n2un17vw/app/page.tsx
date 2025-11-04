@@ -780,7 +780,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 
 <button
   ref={ctaRef}
-  onClick={!isTouch ? scrollDown : undefined}   // desktop click only
+  onClick={!isTouch ? scrollDown : undefined}
   {...(isTouch
     ? {
         onPointerDown: handlePointerDown,
@@ -797,8 +797,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   className={`cta-btn relative mt-10 inline-flex items-center justify-center
     h-14 w-14 rounded-full
     ring-1 ring-white/30
-    bg-white/10
-    backdrop-blur-[3px]
+    bg-white/10 backdrop-blur-[3px]
     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
     ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
   `}
@@ -817,25 +816,24 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 >
   {/* dot */}
   <div
-    className={`dot relative h-2.5 w-2.5 rounded-full bg-white/95
+    className={`relative h-2.5 w-2.5 rounded-full bg-white/95
                 shadow-[0_0_8px_rgba(255,255,255,0.6)]
                 transition-opacity duration-300
-                ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}`}
+                ${showArrow ? "opacity-0" : "opacity-100"}`}
     style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
   />
 
   {/* arrow */}
   <svg
     width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-    className={`chev absolute z-10 transition-all duration-500
-                ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
+    className={`absolute z-10 transition-all duration-500
+                ${showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
   >
     <path d="M6 9.5 L12 15.5 L18 9.5"
           fill="none" stroke="white" strokeWidth="1.6"
           strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 </button>
-
             </div>
           </div>
 
@@ -979,6 +977,29 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 @media (prefers-reduced-motion: no-preference) {
   #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
 }
+/* Strong ring that appears on long-press and while pressing */
+.cta-btn::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:9999px;
+  border:2px solid rgba(255,255,255,0.45);
+  box-shadow:0 0 10px rgba(255,255,255,0.3);
+  opacity:.6;
+  transition:opacity 160ms ease, box-shadow 160ms ease, transform 120ms linear;
+  pointer-events:none;
+}
+.cta-btn[data-long="true"]::after{
+  opacity:1;
+  box-shadow:0 0 18px rgba(255,255,255,0.55), 0 0 32px rgba(255,255,255,0.25);
+  transform:scale(1.06);
+}
+
+/* Keep hover-only behavior to desktops (no sticky hover on iOS) */
+@media (hover:hover){
+  .cta-btn:hover .dot{ opacity:0; }
+  .cta-btn:hover svg{ opacity:1; transform:translateY(2px); }
+}
+
         `,
         }}
       />
