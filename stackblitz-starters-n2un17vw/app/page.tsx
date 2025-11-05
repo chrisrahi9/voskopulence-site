@@ -163,7 +163,7 @@ const cancelRelax = () => {
 };
 
 // replace your old resetCTA() with this smooth version
-const smoothBack = (duration = 240) => {
+const smoothBack = (duration = 240, onDone?: () => void) => {
   cancelRelax();
   const start = { ...ctaState.current };
   const end   = { x: 0, y: 0, sx: 1, sy: 1 };
@@ -187,6 +187,7 @@ const smoothBack = (duration = 240) => {
       relaxRaf.current = requestAnimationFrame(tick);
     } else {
       relaxRaf.current = null;
++     onDone?.();
     }
   };
 
@@ -235,23 +236,14 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   // stop the grow keyframe immediately to avoid fighting with relax
   if (ctaRef.current) ctaRef.current.style.animation = "none";
 
-  // start smooth relax
-  smoothBack(260);
-
-  // hide arrow after release (but keep it visible during a long press)
-  setShowArrow(false);
-
-  // important: mark not pressing before we flip icons, prevents a visual snap
-  setPressing(false);
-
-  // only short press should scroll
+ // start smooth relax and only then re-enable pulse (pressing=false)
   const doScroll = !isLongPress;
-
-  // clear long-press state after a tiny tick so arrow doesn’t briefly flicker
-  setTimeout(() => {
-    if (doScroll) scrollDown();
+  setShowArrow(false);
+  smoothBack(260, () => {
+    setPressing(false);          // pulse comes back AFTER relax, so no jitter
+    if (doScroll) scrollDown();  // keeps short-press behavior
     setIsLongPress(false);
-  }, 30);
+  });
 };
 
 
