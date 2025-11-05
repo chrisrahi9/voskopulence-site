@@ -187,7 +187,7 @@ const smoothBack = (duration = 240, onDone?: () => void) => {
       relaxRaf.current = requestAnimationFrame(tick);
     } else {
       relaxRaf.current = null;
-+     onDone?.();
+    onDone?.();
     }
   };
 
