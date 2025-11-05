@@ -183,30 +183,29 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 
 const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch) return;
-
-  // stop native click/long-press ghost taps on iOS
   e.preventDefault();
 
   if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-  // 1) stop the “pressing” animation first (so keyframes don’t fight CSS transitions)
+  // 1) stop growth animation immediately
   setPressing(false);
 
-  // 2) flip the arrow back on the next frame (prevents a 1-frame race)
+  // 2) flip icons on next frame to avoid race
   requestAnimationFrame(() => {
     setShowArrow(false);
   });
 
-  // 3) smoothly reset shape
+  // 3) reset squish/drift smoothly
   resetCTA();
 
-  // 4) scroll only for short press; clear long-press state last
+  // 4) short press scrolls; long press does not. Clear long state last.
   const delay = isLongPress ? 120 : 0;
   window.setTimeout(() => {
     if (!isLongPress) scrollDown();
     setIsLongPress(false);
   }, delay);
 };
+
 
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
@@ -811,7 +810,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     ring-1 ring-white/30 hover:ring-white/60
     bg-white/10 hover:bg-white/10
     backdrop-blur-[3px]
-    transition-[transform] duration-100 ease-linear
+    transition-[transform] duration-220 ease-[cubic-bezier(.22,1,.36,1)]
     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
     before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
     ${isLongPress ? "ring-2 ring-white/60" : ""}
@@ -830,22 +829,23 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
   }}
 >
-  {/* dot */}
-  <div
-    className={`dot cta-icon relative h-2.5 w-2.5 rounded-full bg-white/95
-                shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}`}
-    style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
-  />
-  {/* arrow */}
-  <svg
-    className={`chev cta-icon absolute z-10
-                ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
-    width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-  >
-    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
-          strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
+{/* dot — hidden when arrow should show */}
+<div
+  className={`dot cta-icon relative h-2.5 w-2.5 rounded-full bg-white/95
+              shadow-[0_0_8px_rgba(255,255,255,0.6)]
+              ${(showArrow || isLongPress) ? "opacity-0" : "opacity-100"}`}
+  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+/>
+
+{/* arrow — visible on short press OR while long-pressing */}
+<svg
+  className={`chev cta-icon absolute z-10
+              ${(showArrow || isLongPress) ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
+  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+>
+  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
+        strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
 </button>
 
             </div>
@@ -1025,6 +1025,19 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 @media (hover: hover) and (pointer: fine) {
   .cta-btn:hover .dot { opacity: 0; }
   .cta-btn:hover .chev { opacity: 1; transform: translateY(2px); }
+}
+/* Smooth icon transitions + pointer isolation */
+.cta-icon {
+  transition: opacity 240ms cubic-bezier(.22,1,.36,1),
+              transform 240ms cubic-bezier(.22,1,.36,1);
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+/* Desktop-only hover behavior — force dot hide, arrow show */
+@media (hover: hover) and (pointer: fine) {
+  .cta-btn:hover .dot { opacity: 0 !important; }
+  .cta-btn:hover .chev { opacity: 1 !important; transform: translateY(2px) !important; }
 }
 
         `,
