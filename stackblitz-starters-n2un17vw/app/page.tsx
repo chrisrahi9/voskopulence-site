@@ -127,6 +127,7 @@ const updateCTA = (dx:number, dy:number) => {
   if (!isTouch) return;
   initCtaVars();
   const el = ctaRef.current; if (!el) return;
+
   const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
   const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
   const ax = Math.abs(ddx), ay = Math.abs(ddy);
@@ -137,24 +138,67 @@ const updateCTA = (dx:number, dy:number) => {
   const sx = alongX ? boost : shrink;
   const sy = alongX ? shrink : boost;
 
-  el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
-  el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
-  el.style.setProperty("--cta-sx", sx.toFixed(3));
-  el.style.setProperty("--cta-sy", sy.toFixed(3));
+  setCtaVars(ddx, ddy, sx, sy); // <- central setter keeps refs + CSS vars aligned
 };
 
-const resetCTA = () => {
-  if (!isTouch) return;
+
+// Keep a live copy of the current vars so we can animate back smoothly
+const ctaState = useRef({ x: 0, y: 0, sx: 1, sy: 1 });
+const relaxRaf = useRef<number | null>(null);
+
+const setCtaVars = (x:number, y:number, sx:number, sy:number) => {
   const el = ctaRef.current; if (!el) return;
-  el.style.setProperty("--cta-x", "0px");
-  el.style.setProperty("--cta-y", "0px");
-  el.style.setProperty("--cta-sx", "1");
-  el.style.setProperty("--cta-sy", "1");
+  el.style.setProperty("--cta-x", `${x.toFixed(1)}px`);
+  el.style.setProperty("--cta-y", `${y.toFixed(1)}px`);
+  el.style.setProperty("--cta-sx", sx.toFixed(3));
+  el.style.setProperty("--cta-sy", sy.toFixed(3));
+  ctaState.current = { x, y, sx, sy };
+};
+
+const cancelRelax = () => {
+  if (relaxRaf.current != null) {
+    cancelAnimationFrame(relaxRaf.current);
+    relaxRaf.current = null;
+  }
+};
+
+// replace your old resetCTA() with this smooth version
+const smoothBack = (duration = 240) => {
+  cancelRelax();
+  const start = { ...ctaState.current };
+  const end   = { x: 0, y: 0, sx: 1, sy: 1 };
+  let t0: number | null = null;
+
+  const easeOutCubic = (p:number) => 1 - Math.pow(1 - p, 3);
+
+  const tick = (now: number) => {
+    if (t0 === null) t0 = now;
+    const p = Math.min(1, (now - t0) / duration);
+    const e = easeOutCubic(p);
+
+    const x  = start.x  + (end.x  - start.x)  * e;
+    const y  = start.y  + (end.y  - start.y)  * e;
+    const sx = start.sx + (end.sx - start.sx) * e;
+    const sy = start.sy + (end.sy - start.sy) * e;
+
+    setCtaVars(x, y, sx, sy);
+
+    if (p < 1) {
+      relaxRaf.current = requestAnimationFrame(tick);
+    } else {
+      relaxRaf.current = null;
+    }
+  };
+
+  relaxRaf.current = requestAnimationFrame(tick);
 };
 
 
 const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch || e.pointerType !== "touch") return; // mobile only
+  if (!isTouch || e.pointerType !== "touch") return;
+  cancelRelax();
+  if (ctaRef.current) ctaRef.current.style.animation = "none";
+
   startPos.current = { x: e.clientX, y: e.clientY };
   setPressing(true);
   setShowArrow(true);
@@ -167,6 +211,7 @@ const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     try { if (canVibrate) navigator.vibrate(18); } catch {}
   }, LONG_MS);
 };
+
 
 const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch || e.pointerType !== "touch") return;
@@ -183,28 +228,32 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 
 const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch) return;
-  e.preventDefault();
 
+  // stop long-press timer
   if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-  // 1) stop growth animation immediately
+  // stop the grow keyframe immediately to avoid fighting with relax
+  if (ctaRef.current) ctaRef.current.style.animation = "none";
+
+  // start smooth relax
+  smoothBack(260);
+
+  // hide arrow after release (but keep it visible during a long press)
+  setShowArrow(false);
+
+  // important: mark not pressing before we flip icons, prevents a visual snap
   setPressing(false);
 
-  // 2) flip icons on next frame to avoid race
-  requestAnimationFrame(() => {
-    setShowArrow(false);
-  });
+  // only short press should scroll
+  const doScroll = !isLongPress;
 
-  // 3) reset squish/drift smoothly
-  resetCTA();
-
-  // 4) short press scrolls; long press does not. Clear long state last.
-  const delay = isLongPress ? 120 : 0;
-  window.setTimeout(() => {
-    if (!isLongPress) scrollDown();
+  // clear long-press state after a tiny tick so arrow doesn’t briefly flicker
+  setTimeout(() => {
+    if (doScroll) scrollDown();
     setIsLongPress(false);
-  }, delay);
+  }, 30);
 };
+
 
 
 
@@ -793,7 +842,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 
 <button
   ref={ctaRef}
-  onClick={scrollDown}
+  onClick={!isTouch ? scrollDown : undefined}
   {...(isTouch ? {
     onPointerDown: handlePointerDown,
     onPointerUp: handlePointerEnd,
@@ -1038,6 +1087,11 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
 @media (hover: hover) and (pointer: fine) {
   .cta-btn:hover .dot { opacity: 0 !important; }
   .cta-btn:hover .chev { opacity: 1 !important; transform: translateY(2px) !important; }
+}
+.cta-icon {
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
         `,
