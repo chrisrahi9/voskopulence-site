@@ -230,11 +230,13 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   const el = ctaRef.current;
   if (el) {
     el.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
-    el.style.transform = "translate3d(0,0,0) scale(1,1)";
+    el.style.transform = `
+      translate3d(0,0,0)
+      scale(1,1)
+    `;
   }
 
-  setShowArrowUI(false); // or setShowArrow(false) if using Option A
-
+  setShowArrow(false);
   const delay = isLongPress ? 120 : 0;
   window.setTimeout(() => {
     if (!isLongPress) scrollDown();
@@ -242,7 +244,6 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     setPressing(false);
   }, delay);
 };
-
 
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
