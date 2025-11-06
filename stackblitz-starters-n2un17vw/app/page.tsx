@@ -223,21 +223,26 @@ export default function Home() {
     if (pressing) updateCTA(dx, dy);
   };
 
- const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
   if (!isTouch) return;
   if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-  if (ctaRef.current) ctaRef.current.style.animation = "none";
 
-  const doScroll = !isLongPress;
-  setShowArrowUI(false);     // icons fade now (in parallel)
-  setRelaxing(true);         // freeze all other transitions
+  const el = ctaRef.current;
+  if (el) {
+    el.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
+    el.style.transform = `
+      translate3d(0,0,0)
+      scale(1,1)
+    `;
+  }
 
-  smoothBack(260, () => {
-    setPressing(false);      // pulse back only after relax
+  setShowArrow(false);
+  const delay = isLongPress ? 120 : 0;
+  window.setTimeout(() => {
+    if (!isLongPress) scrollDown();
     setIsLongPress(false);
-    setRelaxing(false);      // re-enable transitions
-    if (doScroll) scrollDown();
-  });
+    setPressing(false);
+  }, delay);
 };
 
 
@@ -859,20 +864,29 @@ export default function Home() {
     `,
     // IMPORTANT: no keyframes / no Tailwind transform-transition here
     willChange: "transform",
+    transition: "transform 420ms cubic-bezier(.22,1,.36,1)",
     transformOrigin: "center center",
   }}
 >
-  {/* dot */}
-  <div
-    className={`dot cta-icon relative h-2.5 w-2.5 rounded-full bg-white/95 shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                ${showArrowUI ? "opacity-0" : "opacity-100"}`}
-  />
+ {/* dot */}
+<div
+  className={`
+    relative h-2.5 w-2.5 rounded-full bg-white/95
+    shadow-[0_0_8px_rgba(255,255,255,0.6)]
+    transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
+    ${!isLongPress && showArrow ? "opacity-0 scale-75" : "opacity-100 scale-100"}
+    group-hover:opacity-0
+  `}
+  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+/>
 
-  {/* arrow */}
-  <svg
-    className={`chev cta-icon absolute z-10 ${showArrowUI ? "opacity-100 translate-y-[2px]" : "opacity-0"}`}
-    width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-  >
+{/* arrow */}
+<svg
+  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+  className={`absolute z-10 transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
+    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0 -translate-y-[2px]"}
+    group-hover:opacity-100 group-hover:translate-y-[2px]`}
+>
     <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
           strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
