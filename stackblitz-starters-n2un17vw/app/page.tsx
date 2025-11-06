@@ -99,7 +99,7 @@ export default function Home() {
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
   // UI-only visibility state (dot vs arrow)
-  const [showArrow, setShowArrow] = useState(false);
+  const [showArrowUI, setShowArrowUI] = useState(false);
   // Behavior flags
   const [isLongPress, setIsLongPress] = useState(false);
   const [pressing, setPressing] = useState(false);
@@ -873,7 +873,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
     relative h-2.5 w-2.5 rounded-full bg-white/95
     shadow-[0_0_8px_rgba(255,255,255,0.6)]
     transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
-    ${!isLongPress && showArrow ? "opacity-0 scale-75" : "opacity-100 scale-100"}
+    ${!isLongPress && showArrowUI ? "opacity-0 scale-75" : "opacity-100 scale-100"}
     group-hover:opacity-0
   `}
   style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
@@ -883,7 +883,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
 <svg
   width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
   className={`absolute z-10 transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
-    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0 -translate-y-[2px]"}
+    ${!isLongPress && showArrowUI ? "opacity-100 translate-y-[2px]" : "opacity-0 -translate-y-[2px]"}
     group-hover:opacity-100 group-hover:translate-y-[2px]`}
 >
     <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
