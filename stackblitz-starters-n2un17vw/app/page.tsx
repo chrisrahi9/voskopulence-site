@@ -10,7 +10,6 @@ const asset = (p: string) => `${ASSETS}${p}`;
 const CAP_PX = 5;            // iOS cap
 const PROG_DISTANCE = 120;   // px of scroll to reach full header state
 const EASE = 0.12;           // smoothing factor for lerp
-const [relaxing, setRelaxing] = useState(false);
 
 // Gate touch-only handlers (desktop uses simple click)
 const isTouch =
@@ -83,6 +82,7 @@ function unlockScroll() {
 }
 
 export default function Home() {
+  const [relaxing, setRelaxing] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
