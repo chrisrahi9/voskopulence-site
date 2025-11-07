@@ -82,7 +82,6 @@ function unlockScroll() {
 }
 
 export default function Home() {
-  const [relaxing, setRelaxing] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
@@ -98,9 +97,7 @@ export default function Home() {
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
-  // UI-only visibility state (dot vs arrow)
-  const [showArrowUI, setShowArrowUI] = useState(false);
-  // Behavior flags
+  const [showArrow, setShowArrow] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
   const [pressing, setPressing] = useState(false);
   const longTimer = useRef<number | null>(null);
@@ -126,18 +123,10 @@ export default function Home() {
   const CTA_SQUISH_MAX = 0.25;  // up to 1.25x on main axis
   const clamp = (v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 
-  const setCtaVars = (x:number, y:number, sx:number, sy:number) => {
-    const el = ctaRef.current; if (!el) return;
-    el.style.setProperty("--cta-x", `${x.toFixed(1)}px`);
-    el.style.setProperty("--cta-y", `${y.toFixed(1)}px`);
-    el.style.setProperty("--cta-sx", sx.toFixed(3));
-    el.style.setProperty("--cta-sy", sy.toFixed(3));
-    ctaState.current = { x, y, sx, sy };
-  };
-
   const updateCTA = (dx:number, dy:number) => {
     if (!isTouch) return;
     initCtaVars();
+    const el = ctaRef.current; if (!el) return;
     const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
     const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
     const ax = Math.abs(ddx), ay = Math.abs(ddy);
@@ -147,65 +136,57 @@ export default function Home() {
     const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
     const sx = alongX ? boost : shrink;
     const sy = alongX ? shrink : boost;
-    setCtaVars(ddx, ddy, sx, sy);
+
+    el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
+    el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
+    el.style.setProperty("--cta-sx", sx.toFixed(3));
+    el.style.setProperty("--cta-sy", sy.toFixed(3));
   };
 
-  // Keep a live copy for smooth relax
-  const ctaState = useRef({ x: 0, y: 0, sx: 1, sy: 1 });
-  const relaxRaf = useRef<number | null>(null);
-  const cancelRelax = () => {
-    if (relaxRaf.current != null) {
-      cancelAnimationFrame(relaxRaf.current);
-      relaxRaf.current = null;
-    }
-  };
+  const relaxToRest = (duration = 260) => {
+    const el = ctaRef.current; if (!el) return;
 
-  const smoothBack = (duration = 240, onDone?: () => void) => {
-    cancelRelax();
-    const start = { ...ctaState.current };
-    const end   = { x: 0, y: 0, sx: 1, sy: 1 };
-    let t0: number | null = null;
+    // kill any ongoing keyframes so they don't snap at end
+    el.style.animation = "none";
+    const dot = el.querySelector(".cta-dot") as HTMLElement | null;
+    if (dot) dot.style.animation = "none";
 
-    const easeOutCubic = (p:number) => 1 - Math.pow(1 - p, 3);
+    // apply unified transition just for the relax
+    el.classList.add("cta-relax");
+    // force reflow so transition is applied before changing vars
+    void el.offsetWidth;
 
-    const tick = (now: number) => {
-      if (t0 === null) t0 = now;
-      const p = Math.min(1, (now - t0) / duration);
-      const e = easeOutCubic(p);
+    // reset vars (these will animate smoothly now)
+    el.style.setProperty("--cta-x", "0px");
+    el.style.setProperty("--cta-y", "0px");
+    el.style.setProperty("--cta-sx", "1");
+    el.style.setProperty("--cta-sy", "1");
 
-      const x  = start.x  + (end.x  - start.x)  * e;
-      const y  = start.y  + (end.y  - start.y)  * e;
-      const sx = start.sx + (end.sx - start.sx) * e;
-      const sy = start.sy + (end.sy - start.sy) * e;
-
-      setCtaVars(x, y, sx, sy);
-
-      if (p < 1) {
-        relaxRaf.current = requestAnimationFrame(tick);
-      } else {
-        relaxRaf.current = null;
-        if (onDone) onDone();
-      }
-    };
-
-    relaxRaf.current = requestAnimationFrame(tick);
+    // cleanup
+    window.setTimeout(() => {
+      el.classList.remove("cta-relax");
+    }, duration + 40);
   };
 
   const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch || e.pointerType !== "touch") return;
-    cancelRelax();
-    if (ctaRef.current) ctaRef.current.style.animation = "none";
-
+    if (!isTouch || e.pointerType !== "touch") return; // mobile only
     startPos.current = { x: e.clientX, y: e.clientY };
     setPressing(true);
-    setShowArrowUI(true);  // show arrow immediately on press
+    setShowArrow(true);
+
+    // stop leftover animations from prior interaction
+    if (ctaRef.current) {
+      ctaRef.current.style.animation = "none";
+      const dot = ctaRef.current.querySelector(".cta-dot") as HTMLElement | null;
+      if (dot) dot.style.animation = "none";
+    }
+
     initCtaVars();
-    setRelaxing(false);
     updateCTA(0, 0);
 
     const LONG_MS = 700;
     longTimer.current = window.setTimeout(() => {
-      setIsLongPress(true); // behavior only
+      setIsLongPress(true);
       try { if (canVibrate) navigator.vibrate(18); } catch {}
     }, LONG_MS);
   };
@@ -223,28 +204,22 @@ export default function Home() {
     if (pressing) updateCTA(dx, dy);
   };
 
-const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
-  if (!isTouch) return;
-  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
+    if (!isTouch) return;
+    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-  const el = ctaRef.current;
-  if (el) {
-    el.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
-    el.style.transform = `
-      translate3d(0,0,0)
-      scale(1,1)
-    `;
-  }
+    // start icon fade + geometry relax simultaneously
+    setShowArrow(false);
+    relaxToRest(260);
 
-  setShowArrow(false);
-  const delay = isLongPress ? 120 : 0;
-  window.setTimeout(() => {
-    if (!isLongPress) scrollDown();
-    setIsLongPress(false);
-    setPressing(false);
-  }, delay);
-};
-
+    // finish state after relax to avoid pulse restarting mid-way
+    const delay = isLongPress ? 120 : 260;
+    window.setTimeout(() => {
+      if (!isLongPress) scrollDown();
+      setIsLongPress(false);
+      setPressing(false);
+    }, delay);
+  };
 
   // keep a ref of menuOpen for observers/listeners (avoid stale closure)
   const menuOpenRef = useRef(menuOpen);
@@ -829,68 +804,69 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
                 cedar &amp; fig.
               </p>
 
-            <button
-  ref={ctaRef}
-  onClick={!isTouch ? scrollDown : undefined}
-  {...(isTouch ? {
-    onPointerDown: handlePointerDown,
-    onPointerUp: handlePointerEnd,
-    onPointerMove: handlePointerMove,
-    onPointerCancel: handlePointerEnd,
-    onPointerLeave: handlePointerEnd,
-  } : {})}
-  aria-label="Scroll to next section"
-  data-long={isLongPress ? "true" : undefined}
-  data-relaxing={relaxing ? "true" : undefined}
-  onContextMenu={(e) => e.preventDefault()}
-  className={`cta-btn group relative mt-10 inline-flex items-center justify-center
-    h-14 w-14 rounded-full
-    ring-1 ring-white/30 hover:ring-white/60
-    bg-white/10 hover:bg-white/10
-    backdrop-blur-[3px]
-    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-    before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
-    ${isLongPress ? "ring-2 ring-white/60" : ""}
-    ${(!pressing && !relaxing) ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
-  `}
-  style={{
-    WebkitTouchCallout: "none",
-    WebkitUserSelect: "none",
-    userSelect: "none",
-    touchAction: "none",
-    transform: `
-      translate3d(var(--cta-x,0), var(--cta-y,0), 0)
-      scale(var(--cta-sx,1), var(--cta-sy,1))
-    `,
-    // IMPORTANT: no keyframes / no Tailwind transform-transition here
-    willChange: "transform",
-    transition: "transform 420ms cubic-bezier(.22,1,.36,1)",
-    transformOrigin: "center center",
-  }}
->
- {/* dot */}
-<div
-  className={`
-    relative h-2.5 w-2.5 rounded-full bg-white/95
-    shadow-[0_0_8px_rgba(255,255,255,0.6)]
-    transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
-    ${!isLongPress && showArrowUI ? "opacity-0 scale-75" : "opacity-100 scale-100"}
-    group-hover:opacity-0
-  `}
-  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
-/>
-
-{/* arrow */}
-<svg
-  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-  className={`absolute z-10 transition-all duration-[380ms] ease-[cubic-bezier(.22,1,.36,1)]
-    ${!isLongPress && showArrowUI ? "opacity-100 translate-y-[2px]" : "opacity-0 -translate-y-[2px]"}
-    group-hover:opacity-100 group-hover:translate-y-[2px]`}
->
-    <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6"
-          strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-</button>
+              <button
+                ref={ctaRef}
+                onClick={scrollDown}
+                {...(isTouch
+                  ? {
+                      onPointerDown: handlePointerDown,
+                      onPointerUp: handlePointerEnd,
+                      onPointerMove: handlePointerMove,
+                      onPointerCancel: handlePointerEnd,
+                      onPointerLeave: handlePointerEnd,
+                    }
+                  : {})}
+                aria-label="Scroll to next section"
+                data-show-arrow={showArrow ? "true" : undefined}
+                data-long={isLongPress ? "true" : undefined}
+                style={{
+                  WebkitTouchCallout: "none",
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  touchAction: "none",
+                  // harmless on desktop; active on touch
+                  transform: `
+                    translate3d(var(--cta-x,0), var(--cta-y,0), 0)
+                    scale(var(--cta-sx,1), var(--cta-sy,1))
+                  `,
+                  willChange: "transform",
+                  ...(pressing ? { animation: "pressGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}),
+                }}
+                onContextMenu={(e) => e.preventDefault()}
+                className={`group relative mt-10 inline-flex items-center justify-center
+                  h-14 w-14 rounded-full
+                  ring-1 ring-white/30 hover:ring-white/60
+                  bg-white/10 hover:bg-white/10
+                  backdrop-blur-[3px]
+                  transition-[transform] duration-100 ease-linear
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+                  before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
+                  ${isLongPress ? "ring-2 ring-white/60" : ""}
+                  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+                `}
+              >
+                {/* dot */}
+                <div
+                  className={`
+                    cta-dot
+                    relative h-2.5 w-2.5 rounded-full bg-white/95
+                    shadow-[0_0_8px_rgba(255,255,255,0.6)]
+                    transition-opacity duration-300
+                    ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
+                    group-hover:opacity-0
+                  `}
+                  style={pressing ? { animation: "dotGrow 1600ms cubic-bezier(.22,1,.36,1) forwards" } : {}}
+                />
+                {/* arrow */}
+                <svg
+                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+                  className={`cta-arrow absolute z-10 transition-all duration-500
+                    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
+                    group-hover:opacity-100 group-hover:translate-y-[2px]`}
+                >
+                  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
 
             </div>
           </div>
@@ -1017,49 +993,29 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = () => {
       <style
         dangerouslySetInnerHTML={{
           __html: `
+@keyframes pressGrow { from { transform: scale(1); } to { transform: scale(1.4); } }
+@keyframes dotGrow   { from { transform: scale(1); } to { transform: scale(1.6); } }
+
 /* Reduce tap highlight + improve feel on curtain */
 #mobile-menu, #curtain-panel, #curtain-panel * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Strong ring (no transform scaling to avoid second snap) */
-.cta-btn::after{
-  content:"";
-  position:absolute; inset:0;
-  border-radius:9999px;
-  border:2px solid rgba(255,255,255,0.45);
-  box-shadow:0 0 10px rgba(255,255,255,0.3);
-  opacity:.6;
-  transition:opacity 160ms ease, box-shadow 160ms ease;
-  pointer-events:none;
+/* One-shot smooth return to rest (no visual change, just timing alignment) */
+.cta-relax {
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), box-shadow 260ms cubic-bezier(.22,1,.36,1);
+  will-change: transform;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
 }
-.cta-btn[data-long="true"]::after{
-  opacity:1;
-  box-shadow:0 0 18px rgba(255,255,255,0.55), 0 0 32px rgba(255,255,255,0.25);
-}
-
-/* Icons fade/slide only (no button transform transitions) */
-.cta-icon {
-  transition: opacity 240ms cubic-bezier(.22,1,.36,1),
-              transform 240ms cubic-bezier(.22,1,.36,1);
+.cta-relax .cta-dot,
+.cta-relax .cta-arrow {
+  transition: opacity 260ms cubic-bezier(.22,1,.36,1), transform 260ms cubic-bezier(.22,1,.36,1);
   will-change: opacity, transform;
-  pointer-events: none;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
-/* While relaxing back, disable ALL transitions on the button & ring to avoid double-ease */
-.cta-btn[data-relaxing="true"] {
-  transition: none !important;
-}
-.cta-btn[data-relaxing="true"]::after {
-  transition: none !important;
-}
-
-/* Desktop-only hover behavior — force dot hide, arrow show */
-@media (hover: hover) and (pointer: fine) {
-  .cta-btn:hover .dot { opacity: 0 !important; }
-  .cta-btn:hover .chev { opacity: 1 !important; transform: translateY(2px) !important; }
+/* Extra smooth motion */
+@media (prefers-reduced-motion: no-preference) {
+  #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
 }
         `,
         }}
