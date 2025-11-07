@@ -7,11 +7,11 @@ import { createPortal } from "react-dom";
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-const CAP_PX = 5;            // iOS cap
-const PROG_DISTANCE = 120;   // px of scroll to reach full header state
-const EASE = 0.12;           // smoothing factor for lerp
+const CAP_PX = 5;
+const PROG_DISTANCE = 120;
+const EASE = 0.12;
 
-// Gate touch-only handlers (desktop uses simple click)
+// Gate touch-only handlers (desktop uses mouse)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
@@ -62,10 +62,9 @@ function unlockScroll() {
   const docEl = document.documentElement;
   const body = document.body;
 
-  const top = body.style.top;                // read before clear
+  const top = body.style.top;
   const y = top ? -parseInt(top || "0", 10) : 0;
 
-  // clear styles first
   docEl.style.overflow = "";
   docEl.style.height = "";
   body.style.overflow = "";
@@ -75,7 +74,6 @@ function unlockScroll() {
   body.style.right = "";
   body.style.width = "";
 
-  // restore scroll on next frame for stability on iOS/Safari
   requestAnimationFrame(() => {
     window.scrollTo(0, y || scrollYRef.current || 0);
   });
@@ -103,8 +101,6 @@ export default function Home() {
   const longTimer = useRef<number | null>(null);
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
-
-  // track last move for distance on pointerup
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
   // === CTA morph vars + helpers (touch-only) ===
@@ -117,14 +113,14 @@ export default function Home() {
     el.style.setProperty("--cta-y", "0px");
     el.style.setProperty("--cta-sx", "1");
     el.style.setProperty("--cta-sy", "1");
-    el.style.setProperty("--press", "1");        // unified press scale
+    el.style.setProperty("--press", "1"); // unified press scale
     ctaVarsInit.current = true;
   };
 
-  useEffect(() => { initCtaVars(); }, []); // safe no-op on desktop
+  useEffect(() => { initCtaVars(); }, []);
 
-  const CTA_DRIFT_MAX = 18;     // px
-  const CTA_SQUISH_MAX = 0.25;  // up to 1.25x on main axis
+  const CTA_DRIFT_MAX = 18;
+  const CTA_SQUISH_MAX = 0.25;
   const clamp = (v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 
   const updateCTA = (dx:number, dy:number) => {
@@ -147,37 +143,19 @@ export default function Home() {
     el.style.setProperty("--cta-sy", sy.toFixed(3));
   };
 
-  // smooth relax with a single transition; no keyframes = no snap
-  const relaxToRest = (duration = 240) => {
-    const el = ctaRef.current; if (!el) return;
-    // ensure we have transitions for both button + children
-    el.classList.add("cta-relax");
-    // force reflow so transition applies
-    void el.offsetWidth;
-    // reset vars
-    el.style.setProperty("--cta-x", "0px");
-    el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--cta-sx", "1");
-    el.style.setProperty("--cta-sy", "1");
-    el.style.setProperty("--press", "1");
-    window.setTimeout(() => el.classList.remove("cta-relax"), duration + 40);
-  };
-
   const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch || e.pointerType !== "touch") return; // mobile only
+    if (!isTouch || e.pointerType !== "touch") return;
+    e.preventDefault(); // kill any click delay
     startPos.current = { x: e.clientX, y: e.clientY };
     lastPos.current = { x: e.clientX, y: e.clientY };
     setPressing(true);
     setShowArrow(true);
-
     initCtaVars();
 
-    // one transition: grow to press scale immediately
+    // single transition: grow to press scale
     const el = ctaRef.current;
     if (el) {
-      el.classList.add("cta-relax");        // reuse same easing
-      void el.offsetWidth;
-      el.style.setProperty("--press", "1.4"); // same visual as before
+      el.style.setProperty("--press", "1.4");
     }
 
     const LONG_MS = 700;
@@ -191,7 +169,6 @@ export default function Home() {
     if (!isTouch || e.pointerType !== "touch") return;
     if (!startPos.current) return;
     lastPos.current = { x: e.clientX, y: e.clientY };
-
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
 
@@ -204,31 +181,36 @@ export default function Home() {
 
   const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (!isTouch) return;
+    e.preventDefault(); // no synthetic click
     if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-    // start icon fade + geometry relax simultaneously (no waiting)
-    setShowArrow(false);
-    relaxToRest(240);
-
-    // IMMEDIATE scroll on short press (tiny move) — premium feel
+    // IMMEDIATE scroll on short press BEFORE any other state work
     const lp = lastPos.current || startPos.current;
     const moved =
-      startPos.current && lp
-        ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y)
-        : 0;
-
+      startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
     if (!isLongPress && moved < 16) {
-      scrollDown(); // no delay
+      scrollDown(); // truly instant
     }
 
-    // cleanup states soon after
-    window.setTimeout(() => {
+    // begin relax in the same frame (single transition back to 1)
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--cta-x", "0px");
+      el.style.setProperty("--cta-y", "0px");
+      el.style.setProperty("--cta-sx", "1");
+      el.style.setProperty("--cta-sy", "1");
+      el.style.setProperty("--press", "1");
+    }
+    setShowArrow(false);
+
+    // cleanup
+    setTimeout(() => {
       setIsLongPress(false);
       setPressing(false);
-    }, 120);
+    }, 60);
   };
 
-  // keep a ref of menuOpen for observers/listeners (avoid stale closure)
+  // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
 
@@ -493,7 +475,7 @@ export default function Home() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Stronger Safari fixed-header nudge (kept)
+  // Stronger Safari fixed-header nudge
   useEffect(() => {
     const header = document.querySelector("header") as HTMLElement | null;
     if (!header) return;
@@ -654,7 +636,6 @@ export default function Home() {
     const dx = t.clientX - swipe.current.startX;
     swipe.current.lastX = t.clientX;
 
-    // Only handle rightward drags (closing)
     if (dx > 0) {
       e.preventDefault();
       const panel = document.getElementById("curtain-panel");
@@ -813,7 +794,8 @@ export default function Home() {
 
               <button
                 ref={ctaRef}
-                onClick={scrollDown}
+                // Desktop: fast mouseUp
+                {...(!isTouch ? { onMouseUp: () => scrollDown() } : {})}
                 {...(isTouch
                   ? {
                       onPointerDown: handlePointerDown,
@@ -830,12 +812,17 @@ export default function Home() {
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: "none",
+                  // Use 'manipulation' to hint no delay for clicks; keep transforms buttery
+                  touchAction: isTouch ? "none" : "manipulation",
                   transform: `
                     translate3d(var(--cta-x,0), var(--cta-y,0), 0)
                     scale(calc(var(--cta-sx,1) * var(--press,1)), calc(var(--cta-sy,1) * var(--press,1)))
                   `,
+                  // SINGLE transition that covers both grow and relax (prevents two-step jitter)
+                  transition: "transform 220ms cubic-bezier(.22,1,.36,1)",
                   willChange: "transform",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                 }}
                 onContextMenu={(e) => e.preventDefault()}
                 className={`group relative mt-10 inline-flex items-center justify-center
@@ -852,20 +839,22 @@ export default function Home() {
                 {/* dot */}
                 <div
                   className={`
-                    cta-dot
                     relative h-2.5 w-2.5 rounded-full bg-white/95
                     shadow-[0_0_8px_rgba(255,255,255,0.6)]
-                    transition-opacity duration-300
+                    transition-[opacity,transform] duration-220 ease-[cubic-bezier(.22,1,.36,1)]
                     ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
                     group-hover:opacity-0
+                    will-change-[opacity,transform]
+                    [backface-visibility:hidden] [transform:translateZ(0)]
                   `}
                 />
                 {/* arrow */}
                 <svg
                   width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
-                  className={`cta-arrow absolute z-10 transition-all duration-500
+                  className={`absolute z-10 transition-all duration-220 ease-[cubic-bezier(.22,1,.36,1)]
                     ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    group-hover:opacity-100 group-hover:translate-y-[2px]`}
+                    group-hover:opacity-100 group-hover:translate-y-[2px]
+                    [backface-visibility:hidden] [transform:translateZ(0)]`}
                 >
                   <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -993,33 +982,7 @@ export default function Home() {
         </div>
       </section>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-/* unified easing for press/relax (button + inner icons) */
-.cta-relax {
-  transition: transform 240ms cubic-bezier(.22,1,.36,1), box-shadow 240ms cubic-bezier(.22,1,.36,1);
-  will-change: transform;
-  backface-visibility: hidden; -webkit-backface-visibility: hidden;
-}
-.cta-relax .cta-dot,
-.cta-relax .cta-arrow {
-  transition: opacity 240ms cubic-bezier(.22,1,.36,1), transform 240ms cubic-bezier(.22,1,.36,1);
-  will-change: opacity, transform;
-}
-
-/* Reduce tap highlight + improve feel on curtain */
-#mobile-menu, #curtain-panel, #curtain-panel * {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Extra smooth motion */
-@media (prefers-reduced-motion: no-preference) {
-  #curtain-panel { transition-timing-function: cubic-bezier(.22,1,.36,1); }
-}
-        `,
-        }}
-      />
+      {/* No extra global CSS needed beyond transitions above */}
     </div>
   );
 }
