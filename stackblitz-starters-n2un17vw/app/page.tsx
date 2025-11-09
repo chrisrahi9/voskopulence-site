@@ -534,6 +534,24 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
           backfaceVisibility: "hidden",
         }}
       >
+        {/* Fixed cap to pin the top safe-area color on iOS (prevents under-slide) */}
+<div
+  aria-hidden="true"
+  style={{
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "calc(env(safe-area-inset-top, 0px) + var(--hairline,1px))",
+    background: "rgba(0,70,66,0.94)",
+    zIndex: 10000,
+    pointerEvents: "none",
+    transform: "translateZ(0)",
+    WebkitBackfaceVisibility: "hidden",
+    backfaceVisibility: "hidden",
+  }}
+/>
+
         {/* Background layer driven by --hdrProg */}
         <div
           className="absolute inset-0 pointer-events-none"
