@@ -165,10 +165,10 @@ export default function Home() {
     }, LONG_MS);
   };
 
-  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch || e.pointerType !== "touch") return;
-    if (!startPos.current) return;
-    lastPos.current = { x: e.clientX, y: e.clientY };
+const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch || e.pointerType !== "touch") return;
+  if (!startPos.current || isLongPress || !pressing) return; // <— stop deforming when long-press active
+  lastPos.current = { x: e.clientX, y: e.clientY };
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
 
@@ -197,6 +197,8 @@ export default function Home() {
     if (el) {
       el.style.setProperty("--cta-x", "0px");
       el.style.setProperty("--cta-y", "0px");
+      el.style.setProperty("--cta-sx", "1");
+      el.style.setProperty("--cta-sy", "1");
       el.style.setProperty("--cta-sx", "1");
       el.style.setProperty("--cta-sy", "1");
       el.style.setProperty("--press", "1");
