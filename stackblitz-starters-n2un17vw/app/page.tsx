@@ -103,7 +103,7 @@ export default function Home() {
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
-  // === CTA morph vars + helpers (touch-only) ===
+  // === CTA vars (touch-only) — NO squish, only translate + uniform scale ===
   const ctaVarsInit = useRef(false);
   const initCtaVars = () => {
     if (!isTouch) return;
@@ -111,8 +111,6 @@ export default function Home() {
     if (!el || ctaVarsInit.current) return;
     el.style.setProperty("--cta-x", "0px");
     el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--cta-sx", "1");
-    el.style.setProperty("--cta-sy", "1");
     el.style.setProperty("--press", "1"); // unified press scale
     ctaVarsInit.current = true;
   };
@@ -120,27 +118,20 @@ export default function Home() {
   useEffect(() => { initCtaVars(); }, []);
 
   const CTA_DRIFT_MAX = 18;
-  const CTA_SQUISH_MAX = 0.25;
   const clamp = (v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 
+  // Only translate (no anisotropic scale => no ellipse)
   const updateCTA = (dx:number, dy:number) => {
     if (!isTouch) return;
     initCtaVars();
     const el = ctaRef.current; if (!el) return;
     const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
     const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
-    const ax = Math.abs(ddx), ay = Math.abs(ddy);
-    const alongX = ax >= ay;
-    const ratio = clamp((alongX ? ax : ay) / CTA_DRIFT_MAX, 0, 1);
-    const boost = 1 + CTA_SQUISH_MAX * ratio;
-    const shrink = 1 - (CTA_SQUISH_MAX * 0.5) * ratio;
-    const sx = alongX ? boost : shrink;
-    const sy = alongX ? shrink : boost;
-
-    el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
-    el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
-    el.style.setProperty("--cta-sx", sx.toFixed(3));
-    el.style.setProperty("--cta-sy", sy.toFixed(3));
+    // single rAF to avoid two-step style commits
+    requestAnimationFrame(() => {
+      el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
+      el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
+    });
   };
 
   const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
@@ -152,11 +143,8 @@ export default function Home() {
     setShowArrow(true);
     initCtaVars();
 
-    // single transition: grow to press scale
     const el = ctaRef.current;
-    if (el) {
-      el.style.setProperty("--press", "1.4");
-    }
+    if (el) el.style.setProperty("--press", "1.4"); // same look, uniform scale
 
     const LONG_MS = 700;
     longTimer.current = window.setTimeout(() => {
@@ -184,30 +172,30 @@ export default function Home() {
     e.preventDefault(); // no synthetic click
     if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-    // IMMEDIATE scroll on short press BEFORE any other state work
+    // IMMEDIATE scroll on short press BEFORE any visual relax
     const lp = lastPos.current || startPos.current;
     const moved =
       startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
     if (!isLongPress && moved < 16) {
-      scrollDown(); // truly instant
+      scrollDown(); // instant
     }
 
-    // begin relax in the same frame (single transition back to 1)
+    // single relax (no two-step)
     const el = ctaRef.current;
     if (el) {
-      el.style.setProperty("--cta-x", "0px");
-      el.style.setProperty("--cta-y", "0px");
-      el.style.setProperty("--cta-sx", "1");
-      el.style.setProperty("--cta-sy", "1");
-      el.style.setProperty("--press", "1");
+      requestAnimationFrame(() => {
+        el.style.setProperty("--cta-x", "0px");
+        el.style.setProperty("--cta-y", "0px");
+        el.style.setProperty("--press", "1");
+      });
     }
     setShowArrow(false);
 
-    // cleanup
+    // cleanup quickly, but after styles are committed
     setTimeout(() => {
       setIsLongPress(false);
       setPressing(false);
-    }, 60);
+    }, 40);
   };
 
   // keep a ref of menuOpen for observers/listeners
@@ -475,7 +463,7 @@ export default function Home() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Stronger Safari fixed-header nudge
+  // Stronger Safari fixed-header nudge + stick to visual viewport
   useEffect(() => {
     const header = document.querySelector("header") as HTMLElement | null;
     if (!header) return;
@@ -496,23 +484,30 @@ export default function Home() {
     };
     const onVis = () => { if (document.visibilityState === "visible") nudge(); };
     const onOri = () => nudge();
+
+    // Pin header to visual viewport on iOS so it never tucks under
     const vv = (window as any).visualViewport;
-    const onVV = () => nudge();
+    const align = () => {
+      if (!vv) return;
+      const y = vv.offsetTop || 0;
+      header.style.transform = `translate3d(0, ${y}px, 0)`; // keeps your design; just follows bars
+    };
+    align();
+    vv?.addEventListener?.("resize", align);
+    vv?.addEventListener?.("scroll", align);
 
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("orientationchange", onOri);
-    vv?.addEventListener?.("resize", onVV);
-    vv?.addEventListener?.("scroll", onVV);
 
     setTimeout(nudge, 0);
 
     return () => {
+      vv?.removeEventListener?.("resize", align);
+      vv?.removeEventListener?.("scroll", align);
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("orientationchange", onOri);
-      vv?.removeEventListener?.("resize", onVV);
-      vv?.removeEventListener?.("scroll", onVV);
     };
   }, []);
 
@@ -524,6 +519,8 @@ export default function Home() {
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
+          isolation: "isolate",           // Safari blur/compositor stability
+          contain: "paint",
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
           paddingTop: "calc(var(--cap) + env(safe-area-inset-top, 0px))",
@@ -812,14 +809,12 @@ export default function Home() {
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  // Use 'manipulation' to hint no delay for clicks; keep transforms buttery
                   touchAction: isTouch ? "none" : "manipulation",
                   transform: `
                     translate3d(var(--cta-x,0), var(--cta-y,0), 0)
-                    scale(calc(var(--cta-sx,1) * var(--press,1)), calc(var(--cta-sy,1) * var(--press,1)))
+                    scale(var(--press,1))
                   `,
-                  // SINGLE transition that covers both grow and relax (prevents two-step jitter)
-                  transition: "transform 220ms cubic-bezier(.22,1,.36,1)",
+                  transition: "transform 220ms cubic-bezier(.22,1,.36,1)", // one transition only
                   willChange: "transform",
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
