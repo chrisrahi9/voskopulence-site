@@ -165,10 +165,10 @@ export default function Home() {
     }, LONG_MS);
   };
 
-const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch || e.pointerType !== "touch") return;
-  if (!startPos.current || isLongPress || !pressing) return; // <— stop deforming when long-press active
-  lastPos.current = { x: e.clientX, y: e.clientY };
+  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch || e.pointerType !== "touch") return;
+    if (!startPos.current) return;
+    lastPos.current = { x: e.clientX, y: e.clientY };
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
 
@@ -197,8 +197,6 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (el) {
       el.style.setProperty("--cta-x", "0px");
       el.style.setProperty("--cta-y", "0px");
-      el.style.setProperty("--cta-sx", "1");
-      el.style.setProperty("--cta-sy", "1");
       el.style.setProperty("--cta-sx", "1");
       el.style.setProperty("--cta-sy", "1");
       el.style.setProperty("--press", "1");
@@ -534,24 +532,6 @@ const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
           backfaceVisibility: "hidden",
         }}
       >
-        {/* Fixed cap to pin the top safe-area color on iOS (prevents under-slide) */}
-<div
-  aria-hidden="true"
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "calc(env(safe-area-inset-top, 0px) + var(--hairline,1px))",
-    background: "rgba(0,70,66,0.94)",
-    zIndex: 10000,
-    pointerEvents: "none",
-    transform: "translateZ(0)",
-    WebkitBackfaceVisibility: "hidden",
-    backfaceVisibility: "hidden",
-  }}
-/>
-
         {/* Background layer driven by --hdrProg */}
         <div
           className="absolute inset-0 pointer-events-none"
