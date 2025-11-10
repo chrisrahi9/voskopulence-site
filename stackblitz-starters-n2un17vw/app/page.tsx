@@ -39,6 +39,34 @@ function TopSentinel() {
   }, []);
   return null;
 }
+/* ---------- Solid top cap for iOS (prevents header tucking) ---------- */
+function IOSCap() {
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    const isiOS =
+      /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
+    if (!isiOS) return;
+
+    const cap = document.createElement("div");
+    Object.assign(cap.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      right: "0",
+      height: "env(safe-area-inset-top, 0px)",
+      background: "rgba(0,70,66,0.94)", // same tone as header
+      pointerEvents: "none",
+      zIndex: "2147483647",
+      transform: "translateZ(0)",
+      WebkitBackfaceVisibility: "hidden",
+      backfaceVisibility: "hidden",
+      contain: "strict",
+    });
+    document.body.appendChild(cap);
+    return () => { try { document.body.removeChild(cap); } catch {} };
+  }, []);
+  return null;
+}
 
 /* ---------- Robust scroll lock (no jump) ---------- */
 const scrollYRef = { current: 0 };
@@ -154,18 +182,24 @@ export default function Home() {
   };
 
   const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch || e.pointerType !== "touch") return;
-    if (!startPos.current) return;
-    lastPos.current = { x: e.clientX, y: e.clientY };
-    const dx = e.clientX - startPos.current.x;
-    const dy = e.clientY - startPos.current.y;
+  if (!isTouch || e.pointerType !== "touch") return;
+  if (!startPos.current) return;
 
-    if (Math.hypot(dx, dy) > 24 && longTimer.current) {
-      clearTimeout(longTimer.current);
-      longTimer.current = null;
-    }
-    if (pressing) updateCTA(dx, dy);
-  };
+  // While long-pressing, lock the button at rest (no translation/squish).
+  if (isLongPress) { 
+    updateCTA(0, 0);
+    return;
+  }
+
+  const dx = e.clientX - startPos.current.x;
+  const dy = e.clientY - startPos.current.y;
+
+  if (Math.hypot(dx, dy) > 24 && longTimer.current) {
+    clearTimeout(longTimer.current);
+    longTimer.current = null;
+  }
+  if (pressing) updateCTA(dx, dy);
+};
 
   const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
     if (!isTouch) return;
@@ -663,7 +697,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col scroll-smooth">
       <TopSentinel />
-
+      <IOSCap />
       {/* === Header Portal === */}
       {hdrReady
         ? createPortal(<SiteHeader capPx={capPx} />, document.body)
