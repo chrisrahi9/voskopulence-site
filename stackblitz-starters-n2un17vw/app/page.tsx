@@ -130,6 +130,7 @@ export default function Home() {
   const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const canceledTapRef = useRef(false);
 
   // === CTA vars (touch-only) — NO squish, only translate + uniform scale ===
   const ctaVarsInit = useRef(false);
@@ -162,75 +163,103 @@ export default function Home() {
     });
   };
 
-  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch || e.pointerType !== "touch") return;
-    e.preventDefault(); // kill any click delay
-    startPos.current = { x: e.clientX, y: e.clientY };
-    lastPos.current = { x: e.clientX, y: e.clientY };
-    setPressing(true);
-    setShowArrow(true);
-    initCtaVars();
+ const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch || e.pointerType !== "touch") return;
+  e.preventDefault();
 
-    const el = ctaRef.current;
-    if (el) el.style.setProperty("--press", "1.4"); // same look, uniform scale
+  canceledTapRef.current = false;
+  startPos.current = { x: e.clientX, y: e.clientY };
+  lastPos.current  = { x: e.clientX, y: e.clientY };
+  setPressing(true);
+  setShowArrow(true);
+  initCtaVars();
 
-    const LONG_MS = 700;
-    longTimer.current = window.setTimeout(() => {
-      setIsLongPress(true);
-      try { if (canVibrate) navigator.vibrate(18); } catch {}
-    }, LONG_MS);
-  };
+  // Slow, smooth press grow (no ellipse)
+  const el = ctaRef.current;
+  if (el) {
+    // ensure we animate the press scale a bit slower
+    el.style.transition = "transform 320ms cubic-bezier(.22,1,.36,1)";
+    el.style.setProperty("--press", "1.32");
+  }
 
-  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  // Capture pointer so a swipe doesn’t scroll the page or move the button
+  try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+
+  const LONG_MS = 700;
+  longTimer.current = window.setTimeout(() => {
+    setIsLongPress(true);
+    try { if (canVibrate) navigator.vibrate(18); } catch {}
+  }, LONG_MS);
+};
+
+const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch || e.pointerType !== "touch") return;
   if (!startPos.current) return;
 
-  // While long-pressing, lock the button at rest (no translation/squish).
-  if (isLongPress) { 
-    updateCTA(0, 0);
-    return;
-  }
+  // keep the page from scrolling while finger is down
+  e.preventDefault();
 
+  lastPos.current = { x: e.clientX, y: e.clientY };
   const dx = e.clientX - startPos.current.x;
   const dy = e.clientY - startPos.current.y;
 
-  if (Math.hypot(dx, dy) > 24 && longTimer.current) {
-    clearTimeout(longTimer.current);
-    longTimer.current = null;
-  }
-  if (pressing) updateCTA(dx, dy);
-};
-
-  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch) return;
-    e.preventDefault(); // no synthetic click
+  // If the user swipes (e.g., down), cancel the tap entirely and freeze the CTA.
+  if (Math.hypot(dx, dy) > 12) {
+    canceledTapRef.current = true;
     if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+  }
 
-    // IMMEDIATE scroll on short press BEFORE any visual relax
-    const lp = lastPos.current || startPos.current;
-    const moved =
-      startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
-    if (!isLongPress && moved < 16) {
-      scrollDown(); // instant
-    }
-
-    // single relax (no two-step)
+  // While long-pressing OR after cancel, keep the CTA perfectly still (no drift/ellipse)
+  if (isLongPress || canceledTapRef.current) {
     const el = ctaRef.current;
     if (el) {
-      requestAnimationFrame(() => {
-        el.style.setProperty("--cta-x", "0px");
-        el.style.setProperty("--cta-y", "0px");
-        el.style.setProperty("--press", "1");
-      });
+      el.style.setProperty("--cta-x", "0px");
+      el.style.setProperty("--cta-y", "0px");
+      el.style.setProperty("--cta-sx", "1");
+      el.style.setProperty("--cta-sy", "1");
     }
-    setShowArrow(false);
+    return;
+  }
 
-    // cleanup quickly, but after styles are committed
-    setTimeout(() => {
-      setIsLongPress(false);
-      setPressing(false);
-    }, 40);
-  };
+  // No deformation at all during move (keeps premium feel)
+  // (intentionally do nothing here)
+};
+
+const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch) return;
+  e.preventDefault();
+  try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch {}
+
+  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+
+  const lp = lastPos.current || startPos.current;
+  const moved = startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
+
+  // Short press = no long press, not canceled, minimal movement
+  if (!isLongPress && !canceledTapRef.current && moved < 12) {
+    // Instant: no delay, no jitter
+    scrollDown();
+  }
+
+  // Smoothly relax back
+  const el = ctaRef.current;
+  if (el) {
+    el.style.transition = "transform 320ms cubic-bezier(.22,1,.36,1)";
+    el.style.setProperty("--cta-x", "0px");
+    el.style.setProperty("--cta-y", "0px");
+    el.style.setProperty("--cta-sx", "1");
+    el.style.setProperty("--cta-sy", "1");
+    el.style.setProperty("--press", "1");
+  }
+  setShowArrow(false);
+
+  // cleanup
+  setTimeout(() => {
+    setIsLongPress(false);
+    setPressing(false);
+  }, 60);
+};
+
 
   // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
@@ -848,7 +877,7 @@ export default function Home() {
                     translate3d(var(--cta-x,0), var(--cta-y,0), 0)
                     scale(var(--press,1))
                   `,
-                  transition: "transform 220ms cubic-bezier(.22,1,.36,1)", // one transition only
+                  transition: "transform 320ms cubic-bezier(.22,1,.36,1)", // one transition only
                   willChange: "transform",
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
