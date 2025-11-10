@@ -10,6 +10,8 @@ const asset = (p: string) => `${ASSETS}${p}`;
 const CAP_PX = 5;
 const PROG_DISTANCE = 120;
 const EASE = 0.12;
+const PRESS_SCALE = "1.32";
+const PRESS_MS = 340; // a hair slower & smoother
 
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
@@ -163,7 +165,7 @@ export default function Home() {
     });
   };
 
- const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch || e.pointerType !== "touch") return;
   e.preventDefault();
 
@@ -174,15 +176,13 @@ export default function Home() {
   setShowArrow(true);
   initCtaVars();
 
-  // Slow, smooth press grow (no ellipse)
   const el = ctaRef.current;
   if (el) {
-    // ensure we animate the press scale a bit slower
-    el.style.transition = "transform 320ms cubic-bezier(.22,1,.36,1)";
-    el.style.setProperty("--press", "1.32");
+    el.style.transition = `transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)`;
+    el.style.setProperty("--press", PRESS_SCALE);
   }
 
-  // Capture pointer so a swipe doesn’t scroll the page or move the button
+  // keep all subsequent events on the button even if finger moves away
   try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
 
   const LONG_MS = 700;
@@ -195,34 +195,26 @@ export default function Home() {
 const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   if (!isTouch || e.pointerType !== "touch") return;
   if (!startPos.current) return;
-
-  // keep the page from scrolling while finger is down
   e.preventDefault();
 
   lastPos.current = { x: e.clientX, y: e.clientY };
   const dx = e.clientX - startPos.current.x;
   const dy = e.clientY - startPos.current.y;
 
-  // If the user swipes (e.g., down), cancel the tap entirely and freeze the CTA.
   if (Math.hypot(dx, dy) > 12) {
     canceledTapRef.current = true;
     if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
   }
 
-  // While long-pressing OR after cancel, keep the CTA perfectly still (no drift/ellipse)
-  if (isLongPress || canceledTapRef.current) {
-    const el = ctaRef.current;
-    if (el) {
-      el.style.setProperty("--cta-x", "0px");
-      el.style.setProperty("--cta-y", "0px");
-      el.style.setProperty("--cta-sx", "1");
-      el.style.setProperty("--cta-sy", "1");
-    }
-    return;
+  // While finger is down (long-press or canceled tap), KEEP big press scale.
+  const el = ctaRef.current;
+  if (el) {
+    el.style.setProperty("--press", PRESS_SCALE);
+    el.style.setProperty("--cta-x", "0px");
+    el.style.setProperty("--cta-y", "0px");
+    el.style.setProperty("--cta-sx", "1");
+    el.style.setProperty("--cta-sy", "1");
   }
-
-  // No deformation at all during move (keeps premium feel)
-  // (intentionally do nothing here)
 };
 
 const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
@@ -235,16 +227,13 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   const lp = lastPos.current || startPos.current;
   const moved = startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
 
-  // Short press = no long press, not canceled, minimal movement
   if (!isLongPress && !canceledTapRef.current && moved < 12) {
-    // Instant: no delay, no jitter
-    scrollDown();
+    scrollDown(); // instant
   }
 
-  // Smoothly relax back
   const el = ctaRef.current;
   if (el) {
-    el.style.transition = "transform 320ms cubic-bezier(.22,1,.36,1)";
+    el.style.transition = `transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)`;
     el.style.setProperty("--cta-x", "0px");
     el.style.setProperty("--cta-y", "0px");
     el.style.setProperty("--cta-sx", "1");
@@ -253,13 +242,24 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
   }
   setShowArrow(false);
 
-  // cleanup
   setTimeout(() => {
     setIsLongPress(false);
     setPressing(false);
   }, 60);
 };
 
+// IMPORTANT: don't end on leave; keep big form while finger is down.
+const handlePointerLeave: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  if (!isTouch) return;
+  e.preventDefault();
+  const el = ctaRef.current;
+  if (el) el.style.setProperty("--press", PRESS_SCALE);
+};
+
+// If the OS cancels (e.g., incoming call), then we end safely.
+const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  handlePointerEnd(e as any);
+};
 
   // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
@@ -859,10 +859,10 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
                 {...(isTouch
                   ? {
                       onPointerDown: handlePointerDown,
-                      onPointerUp: handlePointerEnd,
                       onPointerMove: handlePointerMove,
-                      onPointerCancel: handlePointerEnd,
-                      onPointerLeave: handlePointerEnd,
+                      onPointerUp: handlePointerEnd,
+                      onPointerLeave: handlePointerLeave,   // ← no-op that keeps it big
+                      onPointerCancel: handlePointerCancel, // ← safe end only if OS cancels
                     }
                   : {})}
                 aria-label="Scroll to next section"
@@ -877,7 +877,7 @@ const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
                     translate3d(var(--cta-x,0), var(--cta-y,0), 0)
                     scale(var(--press,1))
                   `,
-                  transition: "transform 320ms cubic-bezier(.22,1,.36,1)", // one transition only
+                  transition: "transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)", // one transition only
                   willChange: "transform",
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
