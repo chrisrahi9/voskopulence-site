@@ -41,6 +41,7 @@ function TopSentinel() {
   }, []);
   return null;
 }
+
 /* ---------- Solid top cap for iOS (prevents header tucking) ---------- */
 function IOSCap() {
   useEffect(() => {
@@ -133,133 +134,133 @@ export default function Home() {
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const canceledTapRef = useRef(false);
+  const activePointerId = useRef<number | null>(null);
 
-  // === CTA vars (touch-only) — NO squish, only translate + uniform scale ===
+  // === CTA vars (touch-only) — NO movement, only uniform scale ===
   const ctaVarsInit = useRef(false);
   const initCtaVars = () => {
     if (!isTouch) return;
     const el = ctaRef.current;
     if (!el || ctaVarsInit.current) return;
-    el.style.setProperty("--cta-x", "0px");
-    el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--press", "1"); // unified press scale
+    el.style.setProperty("--press", "1");
     ctaVarsInit.current = true;
   };
 
   useEffect(() => { initCtaVars(); }, []);
 
-  const CTA_DRIFT_MAX = 18;
-  const clamp = (v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
+  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch || e.pointerType !== "touch") return;
+    e.preventDefault();
 
-  // Only translate (no anisotropic scale => no ellipse)
-  const updateCTA = (dx:number, dy:number) => {
-    if (!isTouch) return;
+    canceledTapRef.current = false;
+    startPos.current = { x: e.clientX, y: e.clientY };
+    lastPos.current  = { x: e.clientX, y: e.clientY };
+    setPressing(true);
+    setShowArrow(true);
     initCtaVars();
-    const el = ctaRef.current; if (!el) return;
-    const ddx = clamp(dx, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
-    const ddy = clamp(dy, -CTA_DRIFT_MAX, CTA_DRIFT_MAX);
-    // single rAF to avoid two-step style commits
-    requestAnimationFrame(() => {
-      el.style.setProperty("--cta-x", `${ddx.toFixed(1)}px`);
-      el.style.setProperty("--cta-y", `${ddy.toFixed(1)}px`);
-    });
+
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--press", PRESS_SCALE);
+    }
+
+    // keep events captured to this button even if finger moves away
+    try {
+      (e.currentTarget as any).setPointerCapture?.(e.pointerId);
+      activePointerId.current = e.pointerId;
+    } catch {}
+
+    const LONG_MS = 700;
+    longTimer.current = window.setTimeout(() => {
+      setIsLongPress(true);
+      try { if (canVibrate) navigator.vibrate(18); } catch {}
+    }, LONG_MS);
   };
 
-const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch || e.pointerType !== "touch") return;
-  e.preventDefault();
+  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch || e.pointerType !== "touch") return;
+    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    if (!startPos.current) return;
+    e.preventDefault();
 
-  canceledTapRef.current = false;
-  startPos.current = { x: e.clientX, y: e.clientY };
-  lastPos.current  = { x: e.clientX, y: e.clientY };
-  setPressing(true);
-  setShowArrow(true);
-  initCtaVars();
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    const dx = e.clientX - startPos.current.x;
+    const dy = e.clientY - startPos.current.y;
 
-  const el = ctaRef.current;
-  if (el) {
-    el.style.transition = `transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)`;
-    el.style.setProperty("--press", PRESS_SCALE);
-  }
+    if (Math.hypot(dx, dy) > 12) {
+      canceledTapRef.current = true;
+      if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+    }
 
-  // keep all subsequent events on the button even if finger moves away
-  try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+    // While finger is down, always keep the big press scale.
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--press", PRESS_SCALE);
+    }
+  };
 
-  const LONG_MS = 700;
-  longTimer.current = window.setTimeout(() => {
-    setIsLongPress(true);
-    try { if (canVibrate) navigator.vibrate(18); } catch {}
-  }, LONG_MS);
-};
+  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch) return;
+    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    e.preventDefault();
 
-const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch || e.pointerType !== "touch") return;
-  if (!startPos.current) return;
-  e.preventDefault();
+    try {
+      (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
+    } catch {}
+    activePointerId.current = null;
 
-  lastPos.current = { x: e.clientX, y: e.clientY };
-  const dx = e.clientX - startPos.current.x;
-  const dy = e.clientY - startPos.current.y;
-
-  if (Math.hypot(dx, dy) > 12) {
-    canceledTapRef.current = true;
     if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
-  }
 
-  // While finger is down (long-press or canceled tap), KEEP big press scale.
-  const el = ctaRef.current;
-  if (el) {
-    el.style.setProperty("--press", PRESS_SCALE);
-    el.style.setProperty("--cta-x", "0px");
-    el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--cta-sx", "1");
-    el.style.setProperty("--cta-sy", "1");
-  }
-};
+    const lp = lastPos.current || startPos.current;
+    const moved =
+      startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
 
-const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch) return;
-  e.preventDefault();
-  try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch {}
+    // True short tap: small movement, not cancelled, not long-press => instant scroll
+    if (!isLongPress && !canceledTapRef.current && moved < 12) {
+      scrollDown();
+    }
 
-  if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--press", "1");
+    }
+    setShowArrow(false);
 
-  const lp = lastPos.current || startPos.current;
-  const moved = startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
+    setTimeout(() => {
+      setIsLongPress(false);
+      setPressing(false);
+    }, 60);
+  };
 
-  if (!isLongPress && !canceledTapRef.current && moved < 12) {
-    scrollDown(); // instant
-  }
+  // IMPORTANT: don't shrink on leave; keep big while finger is down.
+  const handlePointerLeave: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch) return;
+    e.preventDefault();
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--press", PRESS_SCALE);
+    }
+  };
 
-  const el = ctaRef.current;
-  if (el) {
-    el.style.transition = `transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)`;
-    el.style.setProperty("--cta-x", "0px");
-    el.style.setProperty("--cta-y", "0px");
-    el.style.setProperty("--cta-sx", "1");
-    el.style.setProperty("--cta-sy", "1");
-    el.style.setProperty("--press", "1");
-  }
-  setShowArrow(false);
+  // If the OS cancels (e.g., incoming call), then we end safely (no scroll).
+  const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+    if (!isTouch) return;
+    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    e.preventDefault();
+    try {
+      (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
+    } catch {}
+    activePointerId.current = null;
+    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
 
-  setTimeout(() => {
+    const el = ctaRef.current;
+    if (el) {
+      el.style.setProperty("--press", "1");
+    }
+    setShowArrow(false);
     setIsLongPress(false);
     setPressing(false);
-  }, 60);
-};
-
-// IMPORTANT: don't end on leave; keep big form while finger is down.
-const handlePointerLeave: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  if (!isTouch) return;
-  e.preventDefault();
-  const el = ctaRef.current;
-  if (el) el.style.setProperty("--press", PRESS_SCALE);
-};
-
-// If the OS cancels (e.g., incoming call), then we end safely.
-const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-  handlePointerEnd(e as any);
-};
+  };
 
   // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
@@ -775,7 +776,7 @@ const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) =>
               <button
                 type="button"
                 aria-label="Close menu"
-                className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="p-2 rounded-md hover:bg:white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 onClick={() => setMenuOpen(false)}
                 style={{ position: "relative", zIndex: 1 }}
               >
@@ -861,8 +862,8 @@ const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) =>
                       onPointerDown: handlePointerDown,
                       onPointerMove: handlePointerMove,
                       onPointerUp: handlePointerEnd,
-                      onPointerLeave: handlePointerLeave,   // ← no-op that keeps it big
-                      onPointerCancel: handlePointerCancel, // ← safe end only if OS cancels
+                      onPointerLeave: handlePointerLeave,
+                      onPointerCancel: handlePointerCancel,
                     }
                   : {})}
                 aria-label="Scroll to next section"
@@ -874,10 +875,10 @@ const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) =>
                   userSelect: "none",
                   touchAction: isTouch ? "none" : "manipulation",
                   transform: `
-                    translate3d(var(--cta-x,0), var(--cta-y,0), 0)
+                    translate3d(0, 0, 0)
                     scale(var(--press,1))
                   `,
-                  transition: "transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)", // one transition only
+                  transition: `transform ${PRESS_MS}ms cubic-bezier(.22,1,.36,1)`,
                   willChange: "transform",
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
