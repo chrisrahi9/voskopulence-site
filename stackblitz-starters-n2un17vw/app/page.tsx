@@ -11,7 +11,7 @@ const CAP_PX = 5;
 const PROG_DISTANCE = 120;
 const EASE = 0.12;
 const PRESS_SCALE = "1.32";
-const PRESS_MS = 340; // a hair slower & smoother
+const PRESS_MS = 420; // a bit slower & smoother
 
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
@@ -37,7 +37,11 @@ function TopSentinel() {
       opacity: "0",
     });
     document.body.appendChild(s);
-    return () => { try { document.body.removeChild(s); } catch {} };
+    return () => {
+      try {
+        document.body.removeChild(s);
+      } catch {}
+    };
   }, []);
   return null;
 }
@@ -47,7 +51,8 @@ function IOSCap() {
   useEffect(() => {
     const ua = navigator.userAgent || "";
     const isiOS =
-      /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
+      /iP(hone|od|ad)/.test(ua) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in window);
     if (!isiOS) return;
 
     const cap = document.createElement("div");
@@ -59,14 +64,18 @@ function IOSCap() {
       height: "env(safe-area-inset-top, 0px)",
       background: "rgba(0,70,66,0.94)", // same tone as header
       pointerEvents: "none",
-      zIndex: "2147483647",
+      zIndex: "9998", // header is above this
       transform: "translateZ(0)",
       WebkitBackfaceVisibility: "hidden",
       backfaceVisibility: "hidden",
       contain: "strict",
     });
     document.body.appendChild(cap);
-    return () => { try { document.body.removeChild(cap); } catch {} };
+    return () => {
+      try {
+        document.body.removeChild(cap);
+      } catch {}
+    };
   }, []);
   return null;
 }
@@ -126,11 +135,12 @@ export default function Home() {
 
   // --- Pulsing CTA (touch behavior) ---
   const ctaRef = useRef<HTMLButtonElement | null>(null);
-  const [showArrow, setShowArrow] = useState(false);
+  const [showArrow, setShowArrow] = useState(false); // used only for long-press state
   const [isLongPress, setIsLongPress] = useState(false);
   const [pressing, setPressing] = useState(false);
   const longTimer = useRef<number | null>(null);
-  const canVibrate = typeof navigator !== "undefined" && "vibrate" in navigator;
+  const canVibrate =
+    typeof navigator !== "undefined" && "vibrate" in navigator;
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const canceledTapRef = useRef(false);
@@ -146,17 +156,22 @@ export default function Home() {
     ctaVarsInit.current = true;
   };
 
-  useEffect(() => { initCtaVars(); }, []);
+  useEffect(() => {
+    initCtaVars();
+  }, []);
 
-  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (
+    e
+  ) => {
     if (!isTouch || e.pointerType !== "touch") return;
     e.preventDefault();
 
     canceledTapRef.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
-    lastPos.current  = { x: e.clientX, y: e.clientY };
+    lastPos.current = { x: e.clientX, y: e.clientY };
     setPressing(true);
-    setShowArrow(true);
+    setIsLongPress(false);
+    setShowArrow(false);
     initCtaVars();
 
     const el = ctaRef.current;
@@ -173,13 +188,22 @@ export default function Home() {
     const LONG_MS = 700;
     longTimer.current = window.setTimeout(() => {
       setIsLongPress(true);
-      try { if (canVibrate) navigator.vibrate(18); } catch {}
+      setShowArrow(true);
+      try {
+        if (canVibrate) navigator.vibrate(18);
+      } catch {}
     }, LONG_MS);
   };
 
-  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const handlePointerMove: React.PointerEventHandler<HTMLButtonElement> = (
+    e
+  ) => {
     if (!isTouch || e.pointerType !== "touch") return;
-    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    if (
+      activePointerId.current !== null &&
+      e.pointerId !== activePointerId.current
+    )
+      return;
     if (!startPos.current) return;
     e.preventDefault();
 
@@ -189,7 +213,10 @@ export default function Home() {
 
     if (Math.hypot(dx, dy) > 12) {
       canceledTapRef.current = true;
-      if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+      if (longTimer.current) {
+        clearTimeout(longTimer.current);
+        longTimer.current = null;
+      }
     }
 
     // While finger is down, always keep the big press scale.
@@ -199,9 +226,15 @@ export default function Home() {
     }
   };
 
-  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const handlePointerEnd: React.PointerEventHandler<HTMLButtonElement> = (
+    e
+  ) => {
     if (!isTouch) return;
-    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    if (
+      activePointerId.current !== null &&
+      e.pointerId !== activePointerId.current
+    )
+      return;
     e.preventDefault();
 
     try {
@@ -209,11 +242,16 @@ export default function Home() {
     } catch {}
     activePointerId.current = null;
 
-    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+    if (longTimer.current) {
+      clearTimeout(longTimer.current);
+      longTimer.current = null;
+    }
 
     const lp = lastPos.current || startPos.current;
     const moved =
-      startPos.current && lp ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y) : 0;
+      startPos.current && lp
+        ? Math.hypot(lp.x - startPos.current.x, lp.y - startPos.current.y)
+        : 0;
 
     // True short tap: small movement, not cancelled, not long-press => instant scroll
     if (!isLongPress && !canceledTapRef.current && moved < 12) {
@@ -224,34 +262,32 @@ export default function Home() {
     if (el) {
       el.style.setProperty("--press", "1");
     }
+
+    // Immediately reset visual + state so arrow → dot right away
     setShowArrow(false);
-
-    setTimeout(() => {
-      setIsLongPress(false);
-      setPressing(false);
-    }, 60);
-  };
-
-  // IMPORTANT: don't shrink on leave; keep big while finger is down.
-  const handlePointerLeave: React.PointerEventHandler<HTMLButtonElement> = (e) => {
-    if (!isTouch) return;
-    e.preventDefault();
-    const el = ctaRef.current;
-    if (el) {
-      el.style.setProperty("--press", PRESS_SCALE);
-    }
+    setIsLongPress(false);
+    setPressing(false);
   };
 
   // If the OS cancels (e.g., incoming call), then we end safely (no scroll).
-  const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const handlePointerCancel: React.PointerEventHandler<HTMLButtonElement> = (
+    e
+  ) => {
     if (!isTouch) return;
-    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    if (
+      activePointerId.current !== null &&
+      e.pointerId !== activePointerId.current
+    )
+      return;
     e.preventDefault();
     try {
       (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
     } catch {}
     activePointerId.current = null;
-    if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; }
+    if (longTimer.current) {
+      clearTimeout(longTimer.current);
+      longTimer.current = null;
+    }
 
     const el = ctaRef.current;
     if (el) {
@@ -264,7 +300,9 @@ export default function Home() {
 
   // keep a ref of menuOpen for observers/listeners
   const menuOpenRef = useRef(menuOpen);
-  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+  }, [menuOpen]);
 
   // === Ultra-smooth header progress ===
   useEffect(() => {
@@ -273,7 +311,7 @@ export default function Home() {
     let prog = 0;
     let raf: number | null = null;
 
-    const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
+    const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
     const read = () => {
       const y = window.scrollY || 0;
@@ -310,20 +348,29 @@ export default function Home() {
   // Smooth scroll to first next section
   const scrollDown = () => {
     const targets = ["spotlight", "about"];
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
       const el = document.getElementById(id);
       if (!el) continue;
       const top = el.getBoundingClientRect().top;
       if (top > 80) {
-        const yOffset = window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
-        const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
+        const yOffset =
+          window.innerWidth < 640
+            ? -window.innerHeight * 0.12
+            : -window.innerHeight * 0.25;
+        const y =
+          el.getBoundingClientRect().top + window.scrollY + yOffset;
         window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
         return;
       }
     }
-    document.getElementById("about")
-      ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    document
+      .getElementById("about")
+      ?.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "start",
+      });
   };
 
   /* ---------- Lock page scroll when curtain is open ---------- */
@@ -336,7 +383,10 @@ export default function Home() {
   // fixes seams by giving us 1 physical pixel to overlap with
   useEffect(() => {
     const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
-    document.documentElement.style.setProperty("--hairline", `${1 / dpr}px`);
+    document.documentElement.style.setProperty(
+      "--hairline",
+      `${1 / dpr}px`
+    );
   }, []);
 
   // Unified helper: quiet attempt to play
@@ -362,7 +412,9 @@ export default function Home() {
 
     v.poster = POSTER;
 
-    const revealPoster = () => { v.style.opacity = "1"; };
+    const revealPoster = () => {
+      v.style.opacity = "1";
+    };
     v.addEventListener("loadeddata", revealPoster, { once: true } as any);
 
     let destroyed = false;
@@ -378,36 +430,50 @@ export default function Home() {
 
       if (isSafariDesktop) {
         v.src = MP4_SRC;
-        try { v.load(); } catch {}
+        try {
+          v.load();
+        } catch {}
         tryPlay(v);
         return;
       }
 
       if (isiOS) {
         let loaded = false;
-        const onLoadedData = () => { loaded = true; };
+        const onLoadedData = () => {
+          loaded = true;
+        };
         const onError = () => {
           if (!loaded) {
             v.removeEventListener("loadeddata", onLoadedData);
             v.src = MP4_SRC;
-            try { v.load(); } catch {}
+            try {
+              v.load();
+            } catch {}
             tryPlay(v);
           }
         };
 
-        v.addEventListener("loadeddata", onLoadedData, { once: true } as any);
+        v.addEventListener("loadeddata", onLoadedData, {
+          once: true,
+        } as any);
         v.addEventListener("error", onError, { once: true } as any);
         v.src = HLS_SRC_IOS_1080;
-        try { v.load(); } catch {}
+        try {
+          v.load();
+        } catch {}
         tryPlay(v);
 
-        setTimeout(() => { if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError(); }, 2000);
+        setTimeout(() => {
+          if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
+        }, 2000);
         return;
       }
 
       if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = HLS_SRC;
-        try { v.load(); } catch {}
+        try {
+          v.load();
+        } catch {}
         tryPlay(v);
         return;
       }
@@ -430,26 +496,39 @@ export default function Home() {
 
           hlsRef.current = hls;
           hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => { if (!destroyed) hls.loadSource(HLS_SRC); });
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+            if (!destroyed) hls.loadSource(HLS_SRC);
+          });
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
               if (hls.levels?.length) {
                 const lvls = hls.levels;
-                let pick = lvls.findIndex((l: any) => (l.height ?? 0) >= 1080);
-                if (pick < 0) pick = lvls.findIndex((l: any) => /1080/i.test(l.name ?? ""));
+                let pick = lvls.findIndex(
+                  (l: any) => (l.height ?? 0) >= 1080
+                );
+                if (pick < 0)
+                  pick = lvls.findIndex((l: any) =>
+                    /1080/i.test(l.name ?? "")
+                  );
                 if (pick < 0) pick = lvls.length - 1;
                 hls.currentLevel = pick;
-                setTimeout(() => { hls.loadLevel = -1; }, 3000);
+                setTimeout(() => {
+                  hls.loadLevel = -1;
+                }, 3000);
               }
             } catch {}
             tryPlay(v);
           });
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
-              try { hls.destroy(); } catch {}
+              try {
+                hls.destroy();
+              } catch {}
               hlsRef.current = null;
               v.src = MP4_SRC;
-              try { v.load(); } catch {}
+              try {
+                v.load();
+              } catch {}
               tryPlay(v);
             }
           });
@@ -458,27 +537,38 @@ export default function Home() {
       } catch {}
 
       v.src = MP4_SRC;
-      try { v.load(); } catch {}
+      try {
+        v.load();
+      } catch {}
       tryPlay(v);
     };
 
     setup();
 
     const onLoaded = () => tryPlay(v);
-    const onCanPlay = () => { if (v.paused) tryPlay(v); };
+    const onCanPlay = () => {
+      if (v.paused) tryPlay(v);
+    };
     v.addEventListener("loadedmetadata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
 
-    const onPlaying = () => { v.style.opacity = "1"; };
+    const onPlaying = () => {
+      v.style.opacity = "1";
+    };
     v.addEventListener("playing", onPlaying);
 
-    const onVis = () => document.visibilityState === "visible" ? tryPlay(v) : v.pause();
+    const onVis = () =>
+      document.visibilityState === "visible" ? tryPlay(v) : v.pause();
     document.addEventListener("visibilitychange", onVis);
 
     const io = new IntersectionObserver(
       ([e]) => {
-        if (menuOpenRef.current) { tryPlay(v); return; }
-        if (e.intersectionRatio > 0.03) tryPlay(v); else v.pause();
+        if (menuOpenRef.current) {
+          tryPlay(v);
+          return;
+        }
+        if (e.intersectionRatio > 0.03) tryPlay(v);
+        else v.pause();
       },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
@@ -491,7 +581,9 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
-        try { hlsRef.current.destroy(); } catch {}
+        try {
+          hlsRef.current.destroy();
+        } catch {}
         hlsRef.current = null;
       }
     };
@@ -508,7 +600,10 @@ export default function Home() {
     const tryOnce = () => v.play().catch(() => {});
     if (v.readyState >= 2) tryOnce();
     else {
-      const onCanPlay = () => { tryOnce(); v.removeEventListener("canplay", onCanPlay); };
+      const onCanPlay = () => {
+        tryOnce();
+        v.removeEventListener("canplay", onCanPlay);
+      };
       v.addEventListener("canplay", onCanPlay);
     }
     const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
@@ -520,14 +615,15 @@ export default function Home() {
   useEffect(() => {
     const ua = navigator.userAgent || "";
     const isIOS =
-      /iP(hone|od|ad)/.test(ua) || (/\bMac\b/.test(ua) && "ontouchend" in window);
+      /iP(hone|od|ad)/.test(ua) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in window);
     setCapPx(isIOS ? 5 : 0);
     const onResize = () => setCapPx(isIOS ? 5 : 0);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Stronger Safari fixed-header nudge + stick to visual viewport
+  // Stronger Safari fixed-header nudge (but WITHOUT visualViewport transforms)
   useEffect(() => {
     const header = document.querySelector("header") as HTMLElement | null;
     if (!header) return;
@@ -546,19 +642,10 @@ export default function Home() {
       // @ts-ignore
       if (e.persisted) nudge();
     };
-    const onVis = () => { if (document.visibilityState === "visible") nudge(); };
-    const onOri = () => nudge();
-
-    // Pin header to visual viewport on iOS so it never tucks under
-    const vv = (window as any).visualViewport;
-    const align = () => {
-      if (!vv) return;
-      const y = vv.offsetTop || 0;
-      header.style.transform = `translate3d(0, ${y}px, 0)`; // keeps your design; just follows bars
+    const onVis = () => {
+      if (document.visibilityState === "visible") nudge();
     };
-    align();
-    vv?.addEventListener?.("resize", align);
-    vv?.addEventListener?.("scroll", align);
+    const onOri = () => nudge();
 
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVis);
@@ -567,8 +654,6 @@ export default function Home() {
     setTimeout(nudge, 0);
 
     return () => {
-      vv?.removeEventListener?.("resize", align);
-      vv?.removeEventListener?.("scroll", align);
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("orientationchange", onOri);
@@ -583,10 +668,13 @@ export default function Home() {
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
-          isolation: "isolate",           // Safari blur/compositor stability
+          isolation: "isolate", // Safari blur/compositor stability
           contain: "paint",
           ["--cap" as any]: `${capPx}px`,
-          ["--bleed" as any]: capPx > 0 ? "calc(var(--cap) + var(--hairline,1px))" : "var(--cap)",
+          ["--bleed" as any]:
+            capPx > 0
+              ? "calc(var(--cap) + var(--hairline,1px))"
+              : "var(--cap)",
           paddingTop: "calc(var(--cap) + env(safe-area-inset-top, 0px))",
           transform: "translateZ(0)",
           WebkitBackfaceVisibility: "hidden",
@@ -597,8 +685,10 @@ export default function Home() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
-            WebkitBackdropFilter: "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
+            backdropFilter:
+              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
+            WebkitBackdropFilter:
+              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
             background: hasCap
               ? `
                 linear-gradient(
@@ -619,7 +709,8 @@ export default function Home() {
                   rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) 0,
                   rgba(0,70,66, calc(var(--hdrProg,0) * 0.94)) 100%
                 )`,
-            transition: "backdrop-filter 120ms linear, -webkit-backdrop-filter 120ms linear",
+            transition:
+              "backdrop-filter 120ms linear, -webkit-backdrop-filter 120ms linear",
             transform: "translateZ(0)",
           }}
           aria-hidden="true"
@@ -636,8 +727,18 @@ export default function Home() {
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen(true)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
               </svg>
             </button>
           </div>
@@ -646,7 +747,8 @@ export default function Home() {
           <div
             className="absolute left-1/2 top-1/2 pointer-events-none"
             style={{
-              transform: "translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
+              transform:
+                "translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
               transition: "transform 60ms linear",
               contain: "paint",
               textShadow: "0 1px 6px rgba(0,0,0,0.35)",
@@ -658,16 +760,28 @@ export default function Home() {
               className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
               loading="eager"
               decoding="async"
-              style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+              style={{
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
             />
           </div>
 
           {/* Right: nav */}
           <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">
-            <a href="/shop" className="hover:text-gray-200">Shop</a>
-            <a href="#about" className="hover:text-gray-200">About</a>
-            <a href="/sustainability" className="hover:text-gray-200">Sustainability</a>
-            <a href="/contact" className="hover:text-gray-200">Contact</a>
+            <a href="/shop" className="hover:text-gray-200">
+              Shop
+            </a>
+            <a href="#about" className="hover:text-gray-200">
+              About
+            </a>
+            <a href="/sustainability" className="hover:text-gray-200">
+              Sustainability
+            </a>
+            <a href="/contact" className="hover:text-gray-200">
+              Contact
+            </a>
           </nav>
         </div>
       </header>
@@ -719,7 +833,9 @@ export default function Home() {
     const shouldClose = dx > Math.min(window.innerWidth * 0.25, 200);
 
     panel.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
-    panel.style.transform = shouldClose ? "translateX(100%)" : "translateX(0%)";
+    panel.style.transform = shouldClose
+      ? "translateX(100%)"
+      : "translateX(0%)";
 
     if (shouldClose) setTimeout(() => setMenuOpen(false), 360);
   }
@@ -734,71 +850,120 @@ export default function Home() {
         : <SiteHeader capPx={capPx} />}
 
       {/* ===== Mobile curtain (portal) — mounted ONLY when open ===== */}
-      {mounted && typeof document !== "undefined" && menuOpen && createPortal(
-        <div
-          id="mobile-menu"
-          role="dialog"
-          aria-modal="true"
-          className="lg:hidden fixed inset-0 z-[12000]"
-        >
-          {/* Backdrop */}
-          <button
-            aria-label="Close menu"
-            className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
-            style={{
-              opacity: 1,
-              transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
-            }}
-            onClick={() => setMenuOpen(false)}
-          />
-
-          {/* Sliding panel from LEFT */}
+      {mounted &&
+        typeof document !== "undefined" &&
+        menuOpen &&
+        createPortal(
           <div
-            id="curtain-panel"
-            className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
-            style={{
-              transform: "translateX(0%)",
-              transition: "transform 460ms cubic-bezier(.22,1,.36,1)",
-              paddingTop: "env(safe-area-inset-top)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-              willChange: "transform",
-              transformOrigin: "left center",
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-            }}
-            onTouchStart={(e) => startSwipeX(e)}
-            onTouchMove={(e) => moveSwipeX(e)}
-            onTouchEnd={() => endSwipeX()}
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            className="lg:hidden fixed inset-0 z-[12000]"
           >
-            {/* Top row */}
-            <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-              <span className="font-semibold text-white/95">Menu</span>
-              <button
-                type="button"
-                aria-label="Close menu"
-                className="p-2 rounded-md hover:bg:white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-                onClick={() => setMenuOpen(false)}
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M18 6L6 18M6 6l12 12" strokeWidth="2.2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
+            {/* Backdrop */}
+            <button
+              aria-label="Close menu"
+              className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+              style={{
+                opacity: 1,
+                transition:
+                  "opacity 420ms cubic-bezier(.22,1,.36,1)",
+              }}
+              onClick={() => setMenuOpen(false)}
+            />
 
-            {/* Links */}
-            <nav className="grow grid place-items-center">
-              <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-                <li><a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Shop</a></li>
-                <li><a href="#about" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">About</a></li>
-                <li><a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Sustainability</a></li>
-                <li><a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">Contact</a></li>
-              </ul>
-            </nav>
-          </div>
-        </div>,
-        document.body
-      )}
+            {/* Sliding panel from LEFT */}
+            <div
+              id="curtain-panel"
+              className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
+              style={{
+                transform: "translateX(0%)",
+                transition:
+                  "transform 460ms cubic-bezier(.22,1,.36,1)",
+                paddingTop: "env(safe-area-inset-top)",
+                paddingBottom: "env(safe-area-inset-bottom)",
+                willChange: "transform",
+                transformOrigin: "left center",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+              onTouchStart={(e) => startSwipeX(e)}
+              onTouchMove={(e) => moveSwipeX(e)}
+              onTouchEnd={() => endSwipeX()}
+            >
+              {/* Top row */}
+              <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+                <span className="font-semibold text-white/95">
+                  Menu
+                </span>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  className="p-2 rounded-md hover:bg:white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                  onClick={() => setMenuOpen(false)}
+                  style={{ position: "relative", zIndex: 1 }}
+                >
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      d="M18 6L6 18M6 6l12 12"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Links */}
+              <nav className="grow grid place-items-center">
+                <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+                  <li>
+                    <a
+                      href="/shop"
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
+                    >
+                      Shop
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#about"
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
+                    >
+                      About
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/sustainability"
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
+                    >
+                      Sustainability
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/contact"
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
+                    >
+                      Contact
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
@@ -808,7 +973,12 @@ export default function Home() {
             {/* instant static background before video loads */}
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${asset("/hero_poster.jpg")})`, filter: "brightness(0.9)" }}
+              style={{
+                backgroundImage: `url(${asset(
+                  "/hero_poster.jpg"
+                )})`,
+                filter: "brightness(0.9)",
+              }}
             />
 
             <video
@@ -823,14 +993,29 @@ export default function Home() {
               aria-hidden="true"
               disablePictureInPicture
               controlsList="nodownload noplaybackrate"
-              onLoadedData={(e) => { e.currentTarget.classList.add("opacity-100"); }}
-              onPlay={(e) => { e.currentTarget.classList.add("opacity-100"); }}
-              onError={() => { videoRef.current?.classList.add("opacity-100"); }}
-              style={{ willChange: "opacity", transform: "translateZ(0)" }}
+              onLoadedData={(e) => {
+                e.currentTarget.classList.add("opacity-100");
+              }}
+              onPlay={(e) => {
+                e.currentTarget.classList.add("opacity-100");
+              }}
+              onError={() => {
+                videoRef.current?.classList.add("opacity-100");
+              }}
+              style={{
+                willChange: "opacity",
+                transform: "translateZ(0)",
+              }}
             >
               {/* WEBM then MP4 (H.264) */}
-              <source src={asset("/hero_web.webm")} type="video/webm" />
-              <source src={asset("/hero_web.mp4")} type="video/mp4; codecs=avc1" />
+              <source
+                src={asset("/hero_web.webm")}
+                type="video/webm"
+              />
+              <source
+                src={asset("/hero_web.mp4")}
+                type="video/mp4; codecs=avc1"
+              />
             </video>
 
             {/* Legibility overlay */}
@@ -843,26 +1028,30 @@ export default function Home() {
             <div className="px-6 lg:px-10 text-center max-w-3xl">
               <h1
                 className="heading-script leading-tight tracking-[0.01em] text-white md:drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
-                style={{ fontSize: "clamp(2.5rem, 2rem + 2.5vw, 4rem)" }}
+                style={{
+                  fontSize:
+                    "clamp(2.5rem, 2rem + 2.5vw, 4rem)",
+                }}
               >
                 Welcome to Voskopulence
               </h1>
               <p className="mt-6 text-white/95 md:drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.5)] text-sans text-base lg:text-lg">
-                Solid shampoo &amp; conditioner bars crafted to COSMOS standards
-                with botanicals inspired by sunlit coasts — rosemary, lemon,
-                cedar &amp; fig.
+                Solid shampoo &amp; conditioner bars crafted to
+                COSMOS standards with botanicals inspired by sunlit
+                coasts — rosemary, lemon, cedar &amp; fig.
               </p>
 
               <button
                 ref={ctaRef}
                 // Desktop: fast mouseUp
-                {...(!isTouch ? { onMouseUp: () => scrollDown() } : {})}
+                {...(!isTouch
+                  ? { onMouseUp: () => scrollDown() }
+                  : {})}
                 {...(isTouch
                   ? {
                       onPointerDown: handlePointerDown,
                       onPointerMove: handlePointerMove,
                       onPointerUp: handlePointerEnd,
-                      onPointerLeave: handlePointerLeave,
                       onPointerCancel: handlePointerCancel,
                     }
                   : {})}
@@ -892,7 +1081,11 @@ export default function Home() {
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
                   before:content-[''] before:absolute before:-inset-4 before:rounded-full before:bg-transparent before:-z-10
                   ${isLongPress ? "ring-2 ring-white/60" : ""}
-                  ${!pressing ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]" : "animate-none"}
+                  ${
+                    !pressing
+                      ? "animate-[pulse-smooth_2.6s_ease-in-out_infinite]"
+                      : "animate-none"
+                  }
                 `}
               >
                 {/* dot */}
@@ -901,24 +1094,31 @@ export default function Home() {
                     relative h-2.5 w-2.5 rounded-full bg-white/95
                     shadow-[0_0_8px_rgba(255,255,255,0.6)]
                     transition-[opacity,transform] duration-220 ease-[cubic-bezier(.22,1,.36,1)]
-                    ${!isLongPress && showArrow ? "opacity-0" : "opacity-100"}
-                    group-hover:opacity-0
+                    ${isLongPress && showArrow ? "opacity-0" : "opacity-100"}
                     will-change-[opacity,transform]
                     [backface-visibility:hidden] [transform:translateZ(0)]
                   `}
                 />
                 {/* arrow */}
                 <svg
-                  width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                   className={`absolute z-10 transition-all duration-220 ease-[cubic-bezier(.22,1,.36,1)]
-                    ${!isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    group-hover:opacity-100 group-hover:translate-y-[2px]
+                    ${isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
                     [backface-visibility:hidden] [transform:translateZ(0)]`}
                 >
-                  <path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path
+                    d="M6 9.5 L12 15.5 L18 9.5"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </button>
-
             </div>
           </div>
 
@@ -941,7 +1141,10 @@ export default function Home() {
       >
         <div className="pointer-events-none absolute inset-0 -z-10 shadow-[0_40px_120px_-40px_rgba(140,154,145,0.35)]" />
         <div className="absolute -top-6 left-0 w-full h-6 pointer-events-none bg-gradient-to-b from-black/20 to-transparent opacity-40" />
-        <div className="absolute inset-0 bg-[#004642]/5" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-[#004642]/5"
+          aria-hidden="true"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/40 to-transparent mix-blend-overlay pointer-events-none" />
 
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
@@ -954,10 +1157,15 @@ export default function Home() {
           </div>
 
           <div className="text-center md:text-left">
-            <p className="uppercase tracking-[0.25em] text-sm text-neutral-600">Spotlight</p>
-            <h3 className="mt-3 heading-script text-3xl sm:text-4xl text-[#004642]">Mediterranean Rosemary Bar</h3>
+            <p className="uppercase tracking-[0.25em] text-sm text-neutral-600">
+              Spotlight
+            </p>
+            <h3 className="mt-3 heading-script text-3xl sm:text-4xl text-[#004642]">
+              Mediterranean Rosemary Bar
+            </h3>
             <p className="mt-4 text-neutral-700 max-w-md mx-auto md:mx-0">
-              Solid shampoo crafted to COSMOS standards with rosemary and mint. Clean, concentrated, travel-ready.
+              Solid shampoo crafted to COSMOS standards with rosemary
+              and mint. Clean, concentrated, travel-ready.
             </p>
 
             <div className="mt-6 flex items-center gap-3 justify-center md:justify-start">
@@ -971,17 +1179,34 @@ export default function Home() {
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/60"
               >
                 <span>Discover the bar</span>
-                <svg width="22" height="22" viewBox="0 0 24 24" className="transition-transform duration-300 group-hover:translate-x-[2.5px]" strokeWidth="2.2">
-                  <path d="M4 12H20M15 7L20 12L15 17" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  className="transition-transform duration-300"
+                  strokeWidth="2.2"
+                >
+                  <path
+                    d="M4 12H20M15 7L20 12L15 17"
+                    stroke="currentColor"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </a>
 
-              <a href="#about" className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4">
+              <a
+                href="#about"
+                className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4"
+              >
                 Learn about the formula
               </a>
             </div>
 
-            <div className="mt-4 text-xs text-neutral-500">COSMOS-standard • Vegan & Cruelty-Free • 40+ washes</div>
+            <div className="mt-4 text-xs text-neutral-500">
+              COSMOS-standard • Vegan & Cruelty-Free • 40+ washes
+            </div>
           </div>
         </div>
 
@@ -1026,17 +1251,23 @@ export default function Home() {
           </h2>
           <p
             className="text-sans max-w-3xl text-lg leading-relaxed md:drop-shadow-[0_-12px_30px_-12px_rgba(140,154,145,0.28)]"
-            style={{ color: "rgba(255,255,255,0.95)", fontWeight: 300 }}
+            style={{
+              color: "rgba(255,255,255,0.95)",
+              fontWeight: 300,
+            }}
           >
-            Founded in 2024, Voskopulence emerged from a deep passion for creating
-            organic, eco-conscious, and luxurious hair care solutions. Our exclusive
-            shampoo and conditioner bars are thoughtfully crafted with naturally-derived
-            ingredients inspired by the rich, natural bounty of the Mediterranean. Each
-            formula is palm-oil-free, vegan, and cruelty-free, bringing you closer to
-            nature while honoring ethical beauty. Each bar echoes the timeless beauty and
-            serenity of the Mediterranean Sea. At Voskopulence, we are committed to
-            offering a sophisticated hair-care experience that nurtures your hair while
-            embracing the essence of sustainable living.
+            Founded in 2024, Voskopulence emerged from a deep passion
+            for creating organic, eco-conscious, and luxurious hair
+            care solutions. Our exclusive shampoo and conditioner bars
+            are thoughtfully crafted with naturally-derived ingredients
+            inspired by the rich, natural bounty of the Mediterranean.
+            Each formula is palm-oil-free, vegan, and cruelty-free,
+            bringing you closer to nature while honoring ethical
+            beauty. Each bar echoes the timeless beauty and serenity of
+            the Mediterranean Sea. At Voskopulence, we are committed to
+            offering a sophisticated hair-care experience that nurtures
+            your hair while embracing the essence of sustainable
+            living.
           </p>
         </div>
       </section>
