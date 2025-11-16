@@ -11,7 +11,7 @@ const CAP_PX = 5;
 const PROG_DISTANCE = 120;
 const EASE = 0.12;
 const PRESS_SCALE = "1.32";
-const PRESS_MS = 420; // a bit slower & smoother
+const PRESS_MS = 720; // a bit slower & smoother
 
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
@@ -832,7 +832,7 @@ export default function Home() {
 
     const shouldClose = dx > Math.min(window.innerWidth * 0.25, 200);
 
-    panel.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)";
+    panel.style.transition = "transform 420ms cubic-bezier(.19,1,.22,1)";
     panel.style.transform = shouldClose
       ? "translateX(100%)"
       : "translateX(0%)";
