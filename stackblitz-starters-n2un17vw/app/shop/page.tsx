@@ -30,53 +30,60 @@ const BARS = [
 
 export default function ShopPage() {
   return (
-    <main className="min-h-screen bg-[#f6fbf9] pt-[112px] pb-16">
-      <section className="mx-auto max-w-screen-xl px-6 lg:px-10">
-        <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] mb-4">
-          Our Bars
-        </h1>
-        <p className="text-neutral-700 mb-10 max-w-2xl">
-          Three solid bars crafted to COSMOS standards, inspired by Mediterranean botanicals.
-        </p>
+    <div className="min-h-screen bg-white pt-28 pb-20 px-6 lg:px-10">
+      <h1 className="text-4xl font-semibold text-[#004642] text-center mb-14">
+        Our Bars
+      </h1>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {BARS.map((bar) => (
-            <article
-              key={bar.id}
-              className="rounded-3xl bg-white shadow-[0_18px_40px_-22px_rgba(0,0,0,0.35)] border border-[#8C9A91]/20 flex flex-col overflow-hidden"
-            >
-              <div className="relative aspect-[4/5] bg-[#e6f2ee]">
-                <img
-                  src={asset(bar.img)}
-                  alt={bar.name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-
-              <div className="p-5 flex flex-col gap-3 flex-1">
-                <h2 className="text-lg font-semibold text-[#004642]">
-                  {bar.name}
-                </h2>
-                <p className="text-sm text-neutral-700 flex-1">{bar.desc}</p>
-
-                <a
-                  href={bar.shopifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center justify-center rounded-full border-2 border-[#004642]
-                             px-5 py-2.5 text-[#004642] text-sm font-semibold tracking-[0.06em]
-                             hover:bg-[#004642] hover:text-white transition-all duration-250
-                             hover:-translate-y-[1px]"
-                >
-                  Buy on Shopify
-                </a>
-              </div>
-            </article>
-          ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 max-w-6xl mx-auto">
+        
+        {/* Rosemary / Thyme Bar */}
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={asset("/Thyme_sea.png")}
+            alt="Mediterranean Rosemary & Thyme Bar"
+            className="rounded-2xl shadow-lg w-64 h-auto"
+          />
+          <h2 className="mt-4 text-xl font-semibold text-[#004642]">
+            Mediterranean Rosemary Bar
+          </h2>
+          <p className="text-neutral-600 mt-2">
+            Herbal, fresh, and uplifting.
+          </p>
         </div>
-      </section>
-    </main>
+
+        {/* Fig Bar */}
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={asset("/Fig_sea.png")}
+            alt="Fig & Cedar Bar"
+            className="rounded-2xl shadow-lg w-64 h-auto"
+          />
+          <h2 className="mt-4 text-xl font-semibold text-[#004642]">
+            Fig & Cedar Bar
+          </h2>
+          <p className="text-neutral-600 mt-2">
+            Warm, fruity, and soothing.
+          </p>
+        </div>
+
+        {/* Lemon Sea Breeze Bar */}
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={asset("/Lemon_sea.png")}
+            alt="Lemon Sea Breeze Bar"
+            className="rounded-2xl shadow-lg w-64 h-auto"
+          />
+          <h2 className="mt-4 text-xl font-semibold text-[#004642]">
+            Lemon Sea Breeze Bar
+          </h2>
+          <p className="text-neutral-600 mt-2">
+            Fresh, bright, and ocean-inspired.
+          </p>
+        </div>
+
+      </div>
+    </div>
   );
 }
+
