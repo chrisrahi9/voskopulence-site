@@ -61,19 +61,20 @@ export default function ShopPage() {
   return (
     <main className="min-h-screen bg-white pt-28 pb-20">
       <section className="mx-auto max-w-6xl px-6 lg:px-10">
-        <header className="text-center mb-14">
-          <p className="uppercase tracking-[0.22em] text-xs text-neutral-500">
-            Collection
-          </p>
-          <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] mt-3">
-            The Voskopulence Bars
-          </h1>
-          <p className="mt-4 text-sm sm:text-base text-neutral-700 max-w-2xl mx-auto">
-            Three solid bars crafted to COSMOS standards, each with its own
-            mood, ritual and hair story – all sharing the same Mediterranean,
-            eco-conscious heart.
-          </p>
-        </header>
+      <header className="text-center mb-10 px-4">
+  <p className="uppercase tracking-[0.22em] text-xs text-neutral-500">
+    Collection
+  </p>
+  <h1 className="text-2xl sm:text-3xl font-semibold tracking-[0.18em] uppercase text-[#004642] mt-4">
+    The Voskopulence Bars
+  </h1>
+  <p className="mt-3 text-sm sm:text-base text-neutral-700 max-w-2xl mx-auto">
+    Three solid bars crafted to COSMOS standards, each with its own
+    mood, ritual and hair story – all sharing the same Mediterranean,
+    eco-conscious heart.
+  </p>
+</header>
+
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
           {BARS.map((bar) => (
