@@ -173,7 +173,7 @@ const handleBuyClick = (bar: Bar) => {
             {/* Simple email form (using formsubmit) */}
             <form
               className="mt-4 space-y-3"
-              action="https://formsubmit.co/info@voskopulence.com"
+              action="https://formsubmit.co/chrisrahi9@hotmail.com"
               method="POST"
             >
               {/* So you know which bar they wanted */}
