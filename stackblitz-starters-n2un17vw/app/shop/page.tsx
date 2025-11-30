@@ -162,7 +162,7 @@ export default function ShopPage() {
             {/* Simple email form (using formsubmit) */}
             <form
               className="mt-4 space-y-3"
-              action="https://formsubmit.co/YOUR_EMAIL_HERE"
+              action="https://formsubmit.co/chris@voskopulence.com"
               method="POST"
             >
               {/* So you know which bar they wanted */}
