@@ -65,6 +65,17 @@ export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
 
   const closeModal = () => setSelectedBar(null);
+const handleBuyClick = (bar: Bar) => {
+  // 1) TRACK THE CLICK (e.g. with Plausible, if installed)
+  if (typeof window !== "undefined" && (window as any).plausible) {
+    (window as any).plausible("buy_click", {
+      props: { product: bar.id },
+    });
+  }
+
+  // 2) OPEN THE EXISTING MODAL
+  setSelectedBar(bar);
+};
 
   return (
     <main className="min-h-screen bg-white pt-28 pb-20 px-6 lg:px-10">
@@ -119,7 +130,7 @@ export default function ShopPage() {
                 <div className="mt-4">
                   <button
                     type="button"
-                    onClick={() => setSelectedBar(bar)}
+                    onClick={() => handleBuyClick(bar)}
                     className="inline-flex w-full items-center justify-center rounded-full bg-[#004642]
                                px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
                                hover:bg-[#015b55] transition-all duration-200 hover:-translate-y-[1px]
