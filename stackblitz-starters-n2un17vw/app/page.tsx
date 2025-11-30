@@ -1196,12 +1196,13 @@ export default function Home() {
                 </svg>
               </a>
 
-              <a
-                href="#about"
-                className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4"
-              >
-                Learn about the formula
-              </a>
+<a
+  href="/sustainability"
+  className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4"
+>
+  Learn about the formula
+</a>
+
             </div>
 
             <div className="mt-4 text-xs text-neutral-500">
