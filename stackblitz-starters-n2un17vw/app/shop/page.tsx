@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
@@ -9,7 +13,7 @@ type Bar = {
   hairType: string;
   benefits: string[];
   heroIngredients: string;
-  shopifyUrl: string; // put checkout or product link here later
+  // shopifyUrl: string; // not used in pre-launch phase
 };
 
 const BARS: Bar[] = [
@@ -24,8 +28,8 @@ const BARS: Bar[] = [
       "Helps reduce excess sebum at the roots",
       "Leaves hair light and refreshed",
     ],
-    heroIngredients: "Rosemary, thyme & mint essential oils, coconut & olive oils, castor oil, shea butter, nettle leaf powder",
-    shopifyUrl: "#", // TODO: replace with Shopify checkout/product URL
+    heroIngredients:
+      "Rosemary, thyme & mint essential oils, coconut & olive oils, castor oil, shea butter, nettle leaf powder",
   },
   {
     id: "fig",
@@ -38,8 +42,8 @@ const BARS: Bar[] = [
       "Adds light nourishment without heaviness",
       "Leaves a warm, fruity Mediterranean scent",
     ],
-    heroIngredients: "Fig extract, cedarwood & lavender, coconut & olive oils, castor oil, shea butter.",
-    shopifyUrl: "#",
+    heroIngredients:
+      "Fig extract, cedarwood & lavender, coconut & olive oils, castor oil, shea butter.",
   },
   {
     id: "lemon",
@@ -52,15 +56,20 @@ const BARS: Bar[] = [
       "Adds softness and shine",
       "Light, fresh citrus–marine scent",
     ],
-    heroIngredients: "Lemon peel oil, sea minerals, jojoba oil, coconut & olive oils, conditioning esters.",
-    shopifyUrl: "#",
+    heroIngredients:
+      "Lemon peel oil, sea minerals, jojoba oil, coconut & olive oils, conditioning esters.",
   },
 ];
 
 export default function ShopPage() {
+  const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
+
+  const closeModal = () => setSelectedBar(null);
+
   return (
     <main className="min-h-screen bg-white pt-28 pb-20 px-6 lg:px-10">
       <div className="max-w-6xl mx-auto">
+        {/* Title + intro (fixed in place, like you wanted) */}
         <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] text-center mb-4">
           Our Bars
         </h1>
@@ -69,6 +78,7 @@ export default function ShopPage() {
           different hair needs but all with the same Mediterranean, eco-conscious spirit.
         </p>
 
+        {/* Grid of bars */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
           {BARS.map((bar) => (
             <article
@@ -107,20 +117,94 @@ export default function ShopPage() {
                 </p>
 
                 <div className="mt-4">
-                  <a
-                    href={bar.shopifyUrl}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBar(bar)}
                     className="inline-flex w-full items-center justify-center rounded-full bg-[#004642]
                                px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
-                               hover:bg-[#015b55] transition-all duration-200 hover:-translate-y-[1px]"
+                               hover:bg-[#015b55] transition-all duration-200 hover:-translate-y-[1px]
+                               focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/70"
                   >
                     BUY NOW
-                  </a>
+                  </button>
                 </div>
               </div>
             </article>
           ))}
         </div>
       </div>
+
+      {/* WAITLIST MODAL */}
+      {selectedBar && (
+        <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-xl border border-[#8C9A91]/30 p-6 relative mx-4">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="absolute right-3 top-3 p-1 rounded-full hover:bg-neutral-100 text-neutral-500"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
+              Pre-launch · Out of stock
+            </p>
+            <h2 className="mt-2 text-base font-semibold text-[#004642]">
+              {selectedBar.name}
+            </h2>
+            <p className="mt-2 text-sm text-neutral-700">
+              We&apos;re preparing our first small batch of Voskopulence bars.
+              This product is not available to purchase yet, but you can leave
+              your email below and we&apos;ll let you know as soon as it&apos;s in stock.
+            </p>
+
+            {/* Simple email form (using formsubmit) */}
+            <form
+              className="mt-4 space-y-3"
+              action="https://formsubmit.co/YOUR_EMAIL_HERE"
+              method="POST"
+            >
+              {/* So you know which bar they wanted */}
+              <input
+                type="hidden"
+                name="product"
+                value={selectedBar.name}
+              />
+
+              {/* Prevent formsubmit from showing its own page too much */}
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_template" value="table" />
+
+              <label className="block text-sm font-medium text-neutral-800">
+                Email address
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="you@example.com"
+                className="w-full rounded-xl border border-[#c4d3ca] px-3 py-2 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-[#004642]/60"
+              />
+
+              <p className="text-[0.7rem] text-neutral-500">
+                You won&apos;t be charged now. This only subscribes you to a one-time
+                notification when this bar becomes available.
+              </p>
+
+              <button
+                type="submit"
+                className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-[#004642]
+                           px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
+                           hover:bg-[#015b55] transition-all duration-200"
+              >
+                Notify me at launch
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
