@@ -8,20 +8,17 @@ export default function SustainabilityPage() {
     <main className="min-h-screen bg-white pt-28 pb-20">
       <section className="mx-auto max-w-5xl px-6 lg:px-10">
         {/* HERO */}
-        <header className="mb-10">
-          <p className="uppercase tracking-[0.22em] text-xs text-neutral-500">
-            Sustainability & Formulation
-          </p>
-          <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] mt-3">
-            How our bars are crafted
-          </h1>
-          <p className="mt-4 text-sm sm:text-base text-neutral-700 max-w-3xl">
-            Voskopulence was created around one idea: hair care that feels
-            indulgent, but respects your scalp, the people who make it, and the
-            places that inspired it. Here is how we think about COSMOS standards,
-            ingredients and sustainability – in simple, transparent terms.
-          </p>
-        </header>
+      <div className="max-w-5xl mx-auto">
+  <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] text-center mb-4">
+    Sustainability & Formulation
+  </h1>
+
+  <p className="text-center text-neutral-700 max-w-3xl mx-auto mb-10 text-sm sm:text-base">
+    A transparent look at how Voskopulence bars are crafted: ingredients,
+    COSMOS-style standards, sustainability choices and our formulation philosophy.
+  </p>
+</div>
+
 
         {/* COSMOS EXPLAINER */}
         <section className="mt-10 rounded-3xl bg-[#f6fbf9] border border-[#8C9A91]/30 p-6 lg:p-7 shadow-[0_18px_40px_-22px_rgba(0,0,0,0.28)]">
