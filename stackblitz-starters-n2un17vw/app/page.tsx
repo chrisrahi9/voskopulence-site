@@ -668,7 +668,7 @@ export default function Home() {
       <header
         className="fixed inset-x-0 top-0 z-[9999] text-white/95"
         style={{
-          isolation: "isolate", // Safari blur/compositor stability
+          isolation: "isolate",           // Safari blur/compositor stability
           contain: "paint",
           ["--cap" as any]: `${capPx}px`,
           ["--bleed" as any]:
@@ -773,7 +773,7 @@ export default function Home() {
             <a href="/shop" className="hover:text-gray-200">
               Shop
             </a>
-            <a href="/#about" className="hover:text-gray-200">About</a>
+            <a href="/#about" className="hover:text-gray-200">
               About
             </a>
             <a href="/sustainability" className="hover:text-gray-200">
@@ -785,6 +785,9 @@ export default function Home() {
           </nav>
         </div>
       </header>
+    );
+  }
+
     );
   }
 
