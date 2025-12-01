@@ -14,7 +14,7 @@ export default function ContactPage() {
 
         <div className="rounded-3xl bg-[#f6fbf9] border border-[#8C9A91]/30 p-6 lg:p-8 shadow-[0_18px_40px_-22px_rgba(0,0,0,0.3)]">
           <form
-            action="https://formsubmit.co/YOUR_GMAIL_HERE"
+            action="https://formsubmit.co/info@voskopulence.com"
             method="POST"
             className="space-y-5"
           >
