@@ -773,7 +773,7 @@ export default function Home() {
             <a href="/shop" className="hover:text-gray-200">
               Shop
             </a>
-            <a href="#about" className="hover:text-gray-200">
+            <a href="/#about" className="hover:text-gray-200">About</a>
               About
             </a>
             <a href="/sustainability" className="hover:text-gray-200">
@@ -933,7 +933,7 @@ export default function Home() {
                   </li>
                   <li>
                     <a
-                      href="#about"
+                      href="/#about"
                       onClick={() => setMenuOpen(false)}
                       className="hover:text-gray-200"
                     >
