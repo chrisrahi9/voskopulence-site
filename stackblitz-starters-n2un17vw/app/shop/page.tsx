@@ -171,11 +171,28 @@ const handleBuyClick = (bar: Bar) => {
             </p>
 
             {/* Simple email form (using formsubmit) */}
-            <form
-              className="mt-4 space-y-3"
-              action="https://formsubmit.co/christrahi16@gmail.com"
-              method="POST"
-            >
+           <form
+  className="mt-4 space-y-3"
+  action="https://formsubmit.co/YOUR_GMAIL_HERE"
+  method="POST"
+>
+  {/* So you know which bar they wanted */}
+  <input type="hidden" name="product" value={selectedBar.name} />
+
+  {/* Prevent captcha + set email style + redirect */}
+  <input type="hidden" name="_captcha" value="false" />
+  <input type="hidden" name="_template" value="table" />
+  <input
+    type="hidden"
+    name="_subject"
+    value="New Voskopulence waitlist signup"
+  />
+  <input
+    type="hidden"
+    name="_next"
+    value="https://voskopulence.com/thank-you"
+  />
+
               {/* So you know which bar they wanted */}
               <input
                 type="hidden"
