@@ -933,7 +933,7 @@ export default function Home() {
                   </li>
                   <li>
                     <a
-                      href="/#about"
+                      href="#about"
                       onClick={() => setMenuOpen(false)}
                       className="hover:text-gray-200"
                     >
