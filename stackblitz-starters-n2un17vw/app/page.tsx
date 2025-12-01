@@ -788,9 +788,6 @@ export default function Home() {
     );
   }
 
-    );
-  }
-
   /* ---------- Curtain: LEFT → RIGHT, smooth, no jump ---------- */
 
   // Horizontal swipe handlers
