@@ -67,7 +67,6 @@ const CLICK_ENDPOINT = "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-T
 
   const closeModal = () => setSelectedBar(null);
 const handleBuyClick = (bar: Bar) => {
-  // 1) Fire-and-forget click logging to Google Sheets
   if (typeof window !== "undefined") {
     try {
       const payload = {
@@ -76,22 +75,18 @@ const handleBuyClick = (bar: Bar) => {
         userAgent: window.navigator.userAgent,
       };
 
-      // simple, no await needed
       fetch(CLICK_ENDPOINT, {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        keepalive: true, // best effort even on navigation
+        mode: "no-cors",
+        keepalive: true,
       }).catch(() => {});
     } catch {
       // ignore analytics errors
     }
   }
 
-  // 2) Open the existing modal
-  setSelectedBar(bar);
+  setSelectedBar(bar); // open the modal as before
 };
 
   return (
