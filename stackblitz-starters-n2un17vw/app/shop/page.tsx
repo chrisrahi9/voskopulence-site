@@ -63,17 +63,34 @@ const BARS: Bar[] = [
 
 export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
+const CLICK_ENDPOINT = "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec"; // your Apps Script URL
 
   const closeModal = () => setSelectedBar(null);
 const handleBuyClick = (bar: Bar) => {
-  // 1) TRACK THE CLICK (e.g. with Plausible, if installed)
-  if (typeof window !== "undefined" && (window as any).plausible) {
-    (window as any).plausible("buy_click", {
-      props: { product: bar.id },
-    });
+  // 1) Fire-and-forget click logging to Google Sheets
+  if (typeof window !== "undefined") {
+    try {
+      const payload = {
+        product: bar.id,
+        page: window.location.pathname,
+        userAgent: window.navigator.userAgent,
+      };
+
+      // simple, no await needed
+      fetch(CLICK_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        keepalive: true, // best effort even on navigation
+      }).catch(() => {});
+    } catch {
+      // ignore analytics errors
+    }
   }
 
-  // 2) OPEN THE EXISTING MODAL
+  // 2) Open the existing modal
   setSelectedBar(bar);
 };
 
