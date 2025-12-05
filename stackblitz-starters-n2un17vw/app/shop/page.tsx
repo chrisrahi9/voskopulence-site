@@ -202,7 +202,7 @@ const handleBuyClick = (bar: Bar) => {
   <input
     type="hidden"
     name="_next"
-    value="https://voskopulence.com/thank-you"
+    value="https://voskopulence-site.vercel.app/thank-you"
   />
 
               {/* So you know which bar they wanted */}
