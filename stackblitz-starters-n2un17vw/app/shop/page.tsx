@@ -5,6 +5,10 @@ import { useState } from "react";
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
+// 🔹 Google Apps Script endpoint for click tracking
+const CLICK_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec";
+
 type Bar = {
   id: string;
   name: string;
@@ -13,7 +17,6 @@ type Bar = {
   hairType: string;
   benefits: string[];
   heroIngredients: string;
-  // shopifyUrl: string; // not used in pre-launch phase
 };
 
 const BARS: Bar[] = [
@@ -63,37 +66,37 @@ const BARS: Bar[] = [
 
 export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
-const CLICK_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec";
 
-const handleBuyClick = (bar: Bar) => {
-  if (typeof window !== "undefined") {
-    try {
-      const payload = {
-        product: bar.id,
-        page: window.location.pathname,
-        userAgent: window.navigator.userAgent,
-      };
+  // ✅ this is what was missing
+  const closeModal = () => setSelectedBar(null);
 
-      fetch(CLICK_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        mode: "no-cors",
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      // ignore analytics errors
+  // ✅ click tracking + open modal
+  const handleBuyClick = (bar: Bar) => {
+    if (typeof window !== "undefined") {
+      try {
+        const payload = {
+          product: bar.id,
+          page: window.location.pathname,
+          userAgent: window.navigator.userAgent,
+        };
+
+        fetch(CLICK_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          mode: "no-cors",
+          keepalive: true,
+        }).catch(() => {});
+      } catch {
+        // ignore analytics errors
+      }
     }
-  }
 
-  setSelectedBar(bar); // open the modal as before
-};
-
+    setSelectedBar(bar);
+  };
 
   return (
     <main className="min-h-screen bg-white pt-28 pb-20 px-6 lg:px-10">
       <div className="max-w-6xl mx-auto">
-        {/* Title + intro (fixed in place, like you wanted) */}
         <h1 className="heading-script text-4xl sm:text-5xl text-[#004642] text-center mb-4">
           Our Bars
         </h1>
@@ -102,7 +105,6 @@ const handleBuyClick = (bar: Bar) => {
           different hair needs but all with the same Mediterranean, eco-conscious spirit.
         </p>
 
-        {/* Grid of bars */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
           {BARS.map((bar) => (
             <article
@@ -183,39 +185,24 @@ const handleBuyClick = (bar: Bar) => {
               your email below and we&apos;ll let you know as soon as it&apos;s in stock.
             </p>
 
-            {/* Simple email form (using formsubmit) */}
-           <form
-  className="mt-4 space-y-3"
-  action="https://formsubmit.co/christrahi16@gmail.com"
-  method="POST"
->
-  {/* So you know which bar they wanted */}
-  <input type="hidden" name="product" value={selectedBar.name} />
-
-  {/* Prevent captcha + set email style + redirect */}
-  <input type="hidden" name="_captcha" value="false" />
-  <input type="hidden" name="_template" value="table" />
-  <input
-    type="hidden"
-    name="_subject"
-    value="New Voskopulence waitlist signup"
-  />
-  <input
-    type="hidden"
-    name="_next"
-    value="https://voskopulence-site.vercel.app/thank-you"
-  />
-
-              {/* So you know which bar they wanted */}
+            <form
+              className="mt-4 space-y-3"
+              action="https://formsubmit.co/info@voskopulence.com"
+              method="POST"
+            >
+              <input type="hidden" name="product" value={selectedBar.name} />
+              <input type="hidden" name="_captcha" value="false" />
               <input
                 type="hidden"
-                name="product"
-                value={selectedBar.name}
+                name="_template"
+                value="table"
               />
-
-              {/* Prevent formsubmit from showing its own page too much */}
-              <input type="hidden" name="_captcha" value="false" />
-              <input type="hidden" name="_template" value="table" />
+              {/* when your real domain is ready, you can switch this URL */}
+              <input
+                type="hidden"
+                name="_next"
+                value="https://voskopulence-site.vercel.app/thank-you"
+              />
 
               <label className="block text-sm font-medium text-neutral-800">
                 Email address
