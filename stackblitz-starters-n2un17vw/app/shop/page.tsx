@@ -187,7 +187,7 @@ export default function ShopPage() {
 
             <form
               className="mt-4 space-y-3"
-              action="https://formsubmit.co/info@voskopulence.com"
+              action="https://formsubmit.co/christrahi16@gmail.com"
               method="POST"
             >
               <input type="hidden" name="product" value={selectedBar.name} />
