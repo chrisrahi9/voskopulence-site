@@ -14,38 +14,58 @@ export default function ContactPage() {
 
         <div className="rounded-3xl bg-[#f6fbf9] border border-[#8C9A91]/30 p-6 lg:p-8 shadow-[0_18px_40px_-22px_rgba(0,0,0,0.3)]">
          <form
-  action="https://formsubmit.co/christrahi16@gmail.com"
+  action="https://formsubmit.co/info@voskopulence.com"
   method="POST"
   className="space-y-4"
 >
+  {/* Disable captcha */}
   <input type="hidden" name="_captcha" value="false" />
 
-  {/* Custom subject so you know this came from the contact form */}
-  <input type="hidden" name="_subject" value="New message from Voskopulence contact form" />
+  {/* Better subject line in your inbox */}
+  <input
+    type="hidden"
+    name="_subject"
+    value="New message from Voskopulence contact form"
+  />
 
-  {/* Redirect to a DIFFERENT thank-you page */}
+  {/* Redirect after success */}
   <input
     type="hidden"
     name="_next"
     value="https://voskopulence-site.vercel.app/contact/thank-you"
   />
 
-  <label className="block text-sm text-neutral-600">Your Email</label>
+  {/* Name */}
+  <label className="block text-sm text-neutral-600">Your Name</label>
+  <input
+    type="text"
+    name="name"
+    required
+    placeholder="John Doe"
+    className="w-full border border-[#c4d3ca] px-3 py-2 rounded-lg"
+  />
+
+  {/* Email */}
+  <label className="block text-sm text-neutral-600 mt-2">Email Address</label>
   <input
     type="email"
     name="email"
     required
-    className="w-full border px-3 py-2 rounded-lg"
+    placeholder="you@example.com"
+    className="w-full border border-[#c4d3ca] px-3 py-2 rounded-lg"
   />
 
-  <label className="block text-sm text-neutral-600">Message</label>
+  {/* Message */}
+  <label className="block text-sm text-neutral-600 mt-2">Message</label>
   <textarea
     name="message"
     required
     rows={4}
-    className="w-full border px-3 py-2 rounded-lg"
+    placeholder="Write your message here..."
+    className="w-full border border-[#c4d3ca] px-3 py-2 rounded-lg"
   ></textarea>
 
+  {/* Submit */}
   <button
     type="submit"
     className="inline-flex w-full items-center justify-center rounded-full bg-[#004642]
@@ -55,7 +75,6 @@ export default function ContactPage() {
     Send Message
   </button>
 </form>
-
 
           <p className="mt-4 text-[0.75rem] text-neutral-500 text-center sm:text-left">
             You can also write to us directly at{" "}
