@@ -186,50 +186,43 @@ export default function ShopPage() {
             </p>
 
             <form
-              className="mt-4 space-y-3"
-              action="https://formsubmit.co/christrahi16@gmail.com"
-              method="POST"
-            >
-              <input type="hidden" name="product" value={selectedBar.name} />
-              <input type="hidden" name="_captcha" value="false" />
-              <input
-                type="hidden"
-                name="_template"
-                value="table"
-              />
-              {/* when your real domain is ready, you can switch this URL */}
-              <input
-                type="hidden"
-                name="_next"
-                value="https://voskopulence-site.vercel.app/thank-you"
-              />
+  className="mt-4 space-y-3"
+  action="https://formsubmit.co/christrahi16@gmail.com"
+  method="POST"
+>
+  <input type="hidden" name="product" value={selectedBar.name} />
+  <input type="hidden" name="_captcha" value="false" />
+  <input type="hidden" name="_template" value="table" />
 
-              <label className="block text-sm font-medium text-neutral-800">
-                Email address
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-[#c4d3ca] px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-[#004642]/60"
-              />
+  {/* ❌ IMPORTANT: remove any _next here too */}
 
-              <p className="text-[0.7rem] text-neutral-500">
-                You won&apos;t be charged now. This only subscribes you to a one-time
-                notification when this bar becomes available.
-              </p>
+  <label className="block text-sm font-medium text-neutral-800">
+    Email address
+  </label>
+  <input
+    type="email"
+    name="email"
+    required
+    placeholder="you@example.com"
+    className="w-full rounded-xl border border-[#c4d3ca] px-3 py-2 text-sm
+               focus:outline-none focus:ring-2 focus:ring-[#004642]/60"
+  />
 
-              <button
-                type="submit"
-                className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-[#004642]
-                           px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
-                           hover:bg-[#015b55] transition-all duration-200"
-              >
-                Notify me at launch
-              </button>
-            </form>
+  <p className="text-[0.7rem] text-neutral-500">
+    You won&apos;t be charged now. This only subscribes you to a one-time
+    notification when this bar becomes available.
+  </p>
+
+  <button
+    type="submit"
+    className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-[#004642]
+               px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
+               hover:bg-[#015b55] transition-all duration-200"
+  >
+    Notify me at launch
+  </button>
+</form>
+
           </div>
         </div>
       )}
