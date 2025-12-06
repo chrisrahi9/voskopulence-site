@@ -63,9 +63,9 @@ const BARS: Bar[] = [
 
 export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
-const CLICK_ENDPOINT = "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec"; // your Apps Script URL
+const CLICK_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec";
 
-  const closeModal = () => setSelectedBar(null);
 const handleBuyClick = (bar: Bar) => {
   if (typeof window !== "undefined") {
     try {
@@ -88,6 +88,7 @@ const handleBuyClick = (bar: Bar) => {
 
   setSelectedBar(bar); // open the modal as before
 };
+
 
   return (
     <main className="min-h-screen bg-white pt-28 pb-20 px-6 lg:px-10">
