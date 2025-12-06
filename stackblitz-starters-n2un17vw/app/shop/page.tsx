@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-// 🔹 Google Apps Script endpoint for click tracking
+// 🔹 Click tracking endpoint (Google Apps Script you already set up)
 const CLICK_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec";
+
+// 🔹 Forms endpoint (Google Apps Script for waitlist emails + sheet logging)
+// 👉 REPLACE this with your own Apps Script Web App URL
+const FORMS_ENDPOINT =
+  "https://script.google.com/macros/s/YOUR_FORMS_SCRIPT_ID/exec";
 
 type Bar = {
   id: string;
@@ -67,11 +72,21 @@ const BARS: Bar[] = [
 export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
 
-  // ✅ this is what was missing
-  const closeModal = () => setSelectedBar(null);
+  // waitlist form state (inside modal)
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
 
-  // ✅ click tracking + open modal
+  const closeModal = () => {
+    setSelectedBar(null);
+    setWaitlistEmail("");
+    setWaitlistStatus("idle");
+  };
+
+  // BUY NOW: track click + open modal
   const handleBuyClick = (bar: Bar) => {
+    // click tracking to Google Sheets
     if (typeof window !== "undefined") {
       try {
         const payload = {
@@ -92,6 +107,44 @@ export default function ShopPage() {
     }
 
     setSelectedBar(bar);
+    setWaitlistEmail("");
+    setWaitlistStatus("idle");
+  };
+
+  // Waitlist submit → send to Apps Script, stay on page
+  const handleWaitlistSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedBar) return;
+    if (!waitlistEmail) return;
+    if (waitlistStatus === "sending") return;
+
+    setWaitlistStatus("sending");
+
+    try {
+      await fetch(FORMS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "waitlist",
+          product: selectedBar.name,
+          email: waitlistEmail,
+          page:
+            typeof window !== "undefined"
+              ? window.location.pathname
+              : "/shop",
+          userAgent:
+            typeof navigator !== "undefined" ? navigator.userAgent : "",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+      });
+
+      setWaitlistStatus("sent");
+      setWaitlistEmail("");
+    } catch {
+      setWaitlistStatus("error");
+    }
   };
 
   return (
@@ -185,44 +238,46 @@ export default function ShopPage() {
               your email below and we&apos;ll let you know as soon as it&apos;s in stock.
             </p>
 
-            <form
-  className="mt-4 space-y-3"
-  action="https://formsubmit.co/christrahi16@gmail.com"
-  method="POST"
->
-  <input type="hidden" name="product" value={selectedBar.name} />
-  <input type="hidden" name="_captcha" value="false" />
-  <input type="hidden" name="_template" value="table" />
+            <form className="mt-4 space-y-3" onSubmit={handleWaitlistSubmit}>
+              <label className="block text-sm font-medium text-neutral-800">
+                Email address
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="you@example.com"
+                value={waitlistEmail}
+                onChange={(e) => setWaitlistEmail(e.target.value)}
+                className="w-full rounded-xl border border-[#c4d3ca] px-3 py-2 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-[#004642]/60"
+              />
 
-  {/* ❌ IMPORTANT: remove any _next here too */}
+              <p className="text-[0.7rem] text-neutral-500">
+                You won&apos;t be charged now. This only subscribes you to a one-time
+                notification when this bar becomes available.
+              </p>
 
-  <label className="block text-sm font-medium text-neutral-800">
-    Email address
-  </label>
-  <input
-    type="email"
-    name="email"
-    required
-    placeholder="you@example.com"
-    className="w-full rounded-xl border border-[#c4d3ca] px-3 py-2 text-sm
-               focus:outline-none focus:ring-2 focus:ring-[#004642]/60"
-  />
+              <button
+                type="submit"
+                disabled={waitlistStatus === "sending"}
+                className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-[#004642]
+                           px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
+                           hover:bg-[#015b55] transition-all duration-200 disabled:opacity-60"
+              >
+                {waitlistStatus === "sending"
+                  ? "Sending..."
+                  : waitlistStatus === "sent"
+                  ? "You’re on the list ✓"
+                  : "Notify me at launch"}
+              </button>
 
-  <p className="text-[0.7rem] text-neutral-500">
-    You won&apos;t be charged now. This only subscribes you to a one-time
-    notification when this bar becomes available.
-  </p>
-
-  <button
-    type="submit"
-    className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-[#004642]
-               px-4 py-2.5 text-sm font-semibold tracking-[0.12em] text-white
-               hover:bg-[#015b55] transition-all duration-200"
-  >
-    Notify me at launch
-  </button>
-</form>
-
+              {waitlistStatus === "error" && (
+                <p className="mt-2 text-sm text-red-600">
+                  Something went wrong. Please try again in a moment.
+                </p>
+              )}
+            </form>
           </div>
         </div>
       )}
