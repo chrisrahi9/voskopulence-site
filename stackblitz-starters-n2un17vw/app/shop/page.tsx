@@ -5,14 +5,9 @@ import { useState, FormEvent } from "react";
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
 
-// 🔹 Click tracking endpoint (Google Apps Script you already set up)
-const CLICK_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbxt5TLSf6uppEu-TiocLpq0Ya999Zsn3a-vwNy79Hn_sTLHG8SitVMKXwWRNOHb_BtWig/exec";
-
-// 🔹 Forms endpoint (Google Apps Script for waitlist emails + sheet logging)
-// 👉 REPLACE this with your own Apps Script Web App URL
-const FORMS_ENDPOINT =
-  "https://script.google.com/macros/s/YOUR_FORMS_SCRIPT_ID/exec";
+// 🔹 ONE endpoint for clicks + waitlist
+const ANALYTICS_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbxu9MZaTjNjJQJ6NrRoow1HMEkFoUwPGe3uB1VR1ltF-YZZSU6WBkkRGq_bOxBCqKaO/exec"; // <-- paste your web app URL here
 
 type Bar = {
   id: string;
@@ -71,8 +66,6 @@ const BARS: Bar[] = [
 
 export default function ShopPage() {
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
-
-  // waitlist form state (inside modal)
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistStatus, setWaitlistStatus] = useState<
     "idle" | "sending" | "sent" | "error"
@@ -86,26 +79,29 @@ export default function ShopPage() {
 
   // BUY NOW: track click + open modal
   const handleBuyClick = (bar: Bar) => {
-    // click tracking to Google Sheets
+    // 1) send click event
     if (typeof window !== "undefined") {
       try {
         const payload = {
+          event: "click",
           product: bar.id,
           page: window.location.pathname,
           userAgent: window.navigator.userAgent,
         };
 
-        fetch(CLICK_ENDPOINT, {
+        fetch(ANALYTICS_ENDPOINT, {
           method: "POST",
           body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" },
           mode: "no-cors",
           keepalive: true,
         }).catch(() => {});
       } catch {
-        // ignore analytics errors
+        // ignore
       }
     }
 
+    // 2) open modal
     setSelectedBar(bar);
     setWaitlistEmail("");
     setWaitlistStatus("idle");
@@ -121,10 +117,10 @@ export default function ShopPage() {
     setWaitlistStatus("sending");
 
     try {
-      await fetch(FORMS_ENDPOINT, {
+      await fetch(ANALYTICS_ENDPOINT, {
         method: "POST",
         body: JSON.stringify({
-          type: "waitlist",
+          event: "waitlist",
           product: selectedBar.name,
           email: waitlistEmail,
           page:
@@ -134,9 +130,7 @@ export default function ShopPage() {
           userAgent:
             typeof navigator !== "undefined" ? navigator.userAgent : "",
         }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         mode: "no-cors",
       });
 
