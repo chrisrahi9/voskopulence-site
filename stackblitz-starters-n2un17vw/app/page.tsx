@@ -257,25 +257,6 @@ export default function Home() {
     if (!isLongPress && !canceledTapRef.current && moved < 12) {
       scrollDown();
     }
-  // Smooth scroll to a section by id (used for About in nav + menu)
-  const scrollToSection = (id: string) => {
-    if (typeof window === "undefined") return;
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const reduce =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-
-    const yOffset =
-      window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
-
-    const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
-
-    window.scrollTo({
-      top: y,
-      behavior: reduce ? "auto" : "smooth",
-    });
-  };
 
     const el = ctaRef.current;
     if (el) {
@@ -390,6 +371,25 @@ export default function Home() {
         behavior: reduce ? "auto" : "smooth",
         block: "start",
       });
+  };
+    // Smooth scroll to a section by id (used for About in nav + menu)
+  const scrollToSection = (id: string) => {
+    if (typeof window === "undefined") return;
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+    const yOffset =
+      window.innerWidth < 640 ? -window.innerHeight * 0.12 : -window.innerHeight * 0.25;
+
+    const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
+
+    window.scrollTo({
+      top: y,
+      behavior: reduce ? "auto" : "smooth",
+    });
   };
 
   /* ---------- Lock page scroll when curtain is open ---------- */
