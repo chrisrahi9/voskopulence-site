@@ -189,7 +189,7 @@ export default function ShopPage() {
                   {bar.heroIngredients}
                 </p>
 
-                <div className="mt-4">
+                                <div className="mt-auto pt-4">
                   <button
                     type="button"
                     onClick={() => handleBuyClick(bar)}
@@ -201,6 +201,7 @@ export default function ShopPage() {
                     BUY NOW
                   </button>
                 </div>
+
               </div>
             </article>
           ))}
