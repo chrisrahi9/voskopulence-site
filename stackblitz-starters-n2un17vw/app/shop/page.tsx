@@ -291,83 +291,71 @@ export default function ShopPage() {
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* Sliding panel content (centered links) */}
-      <div
-        className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
-        style={{
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          willChange: "transform",
-          transform: "translateX(0)",
-        }}
+{/* Sliding panel content (centered links) */}
+<div
+  className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white relative"
+  style={{
+    paddingTop: "env(safe-area-inset-top)",
+    paddingBottom: "env(safe-area-inset-bottom)",
+    willChange: "transform",
+    transform: "translateX(0)",
+  }}
+>
+  {/* Top row */}
+  <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+    <span className="font-semibold text-white/95">Menu</span>
+    <button
+      type="button"
+      aria-label="Close menu"
+      className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+      onClick={() => setMenuOpen(false)}
+    >
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
       >
-        {/* Top row */}
-        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-          <span className="font-semibold text-white/95">Menu</span>
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M18 6L6 18M6 6l12 12"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
+        <path
+          d="M18 6L6 18M6 6l12 12"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+      </svg>
+    </button>
+  </div>
 
-        {/* Menu links */}
-        <nav className="grow grid place-items-center">
-          <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-            <li>
-              <a
-                href="/"
-                className="hover:text-gray-200"
-                onClick={() => setMenuOpen(false)}
-              >
-                Home
-              </a>
-            </li>
-            <li>
-              <a
-                href="/shop"
-                className="hover:text-gray-200"
-                onClick={() => setMenuOpen(false)}
-              >
-                Shop
-              </a>
-            </li>
-            <li>
-              <a
-                href="/sustainability"
-                className="hover:text-gray-200"
-                onClick={() => setMenuOpen(false)}
-              >
-                Sustainability
-              </a>
-            </li>
-            <li>
-              <a
-                href="/contact"
-                className="hover:text-gray-200"
-                onClick={() => setMenuOpen(false)}
-              >
-                Contact
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </div>
+  {/* Menu links */}
+  <nav className="grow grid place-items-center">
+    <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+      <li>
+        <a href="/" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
+          Home
+        </a>
+      </li>
+      <li>
+        <a href="/shop" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
+          Shop
+        </a>
+      </li>
+      <li>
+        <a href="/sustainability" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
+          Sustainability
+        </a>
+      </li>
+      <li>
+        <a href="/contact" onClick={() => setMenuOpen(false)} className="hover:text-gray-200">
+          Contact
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  {/* ⭐ Bottom green strip that hides the blurred background */}
+  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[#004642]" />
+</div>
+
     </div>,
     document.body
   )}
