@@ -170,26 +170,22 @@ export default function ShopPage() {
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px]">
           {/* Left: burger (mobile) */}
           <div className="grow basis-0 flex items-center">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-              aria-label="Open menu"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M4 7h16M4 12h16M4 17h16"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
+          <button
+  className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+  aria-label="Open menu"
+  aria-controls="mobile-menu"
+  aria-expanded={menuOpen}
+  onClick={() => setMenuOpen(true)}
+  style={{
+    opacity: menuOpen ? 0 : 1,
+    pointerEvents: menuOpen ? "none" : "auto",
+  }}
+>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+</button>
+
           </div>
 
           {/* Center: bigger logo, like home */}
@@ -257,124 +253,109 @@ export default function ShopPage() {
 
 
       {/* ---------- Mobile curtain menu ---------- */}
-      {/* ===== MOBILE CURTAIN (SHOP) ===== */}
-      {menuOpen && (
-        <div
-          id="mobile-menu"
-          role="dialog"
-          aria-modal="true"
-          className="lg:hidden fixed inset-0 z-[12000]"
-        >
-          {/* Backdrop – dark + blurred, closes on tap */}
+     {/* ===== MOBILE CURTAIN (copy of home style) ===== */}
+{mounted &&
+  typeof document !== "undefined" &&
+  menuOpen &&
+  createPortal(
+    <div
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      className="lg:hidden fixed inset-0 z-[12000]"
+    >
+      {/* Blurred translucent backdrop */}
+      <button
+        type="button"
+        aria-label="Close menu"
+        className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+        style={{
+          opacity: 1,
+          transition: "opacity 420ms cubic-bezier(.22,1,.36,1)",
+        }}
+        onClick={() => setMenuOpen(false)}
+      />
+
+      {/* Sliding panel content (centered links) */}
+      <div
+        className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          willChange: "transform",
+          transform: "translateX(0)",
+        }}
+      >
+        {/* Top row */}
+        <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
+          <span className="font-semibold text-white/95">Menu</span>
           <button
             type="button"
             aria-label="Close menu"
-            className="absolute inset-0"
-            style={{
-              background: "rgba(0,70,66,0.78)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-            }}
+            className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             onClick={() => setMenuOpen(false)}
-          />
-
-          {/* Sliding panel */}
-          <div
-            id="curtain-panel"
-            className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
-            style={{
-              paddingTop: "env(safe-area-inset-top)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-              willChange: "transform",
-              transform: "translateX(0)", // if you keep swipe logic, it will update this
-              background:
-                "linear-gradient(to bottom, rgba(0,70,66,0.98), rgba(0,70,66,0.95))",
-            }}
           >
-            {/* Top row */}
-            <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-              <span className="font-semibold text-white/95">Menu</span>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
 
-              {/* X button – now really closes */}
-              <button
-                type="button"
-                aria-label="Close menu"
-                className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        {/* Menu links */}
+        <nav className="grow grid place-items-center">
+          <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
+            <li>
+              <a
+                href="/"
+                className="hover:text-gray-200"
                 onClick={() => setMenuOpen(false)}
               >
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    d="M18 6L6 18M6 6l12 12"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* Centered links */}
-            <nav className="grow grid place-items-center">
-              <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
-                <li>
-                  <button
-                    type="button"
-                    className="hover:text-gray-200"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      router.push("/");
-                    }}
-                  >
-                    Home
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className="hover:text-gray-200"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      router.push("/shop");
-                    }}
-                  >
-                    Shop
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className="hover:text-gray-200"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      router.push("/sustainability");
-                    }}
-                  >
-                    Sustainability
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className="hover:text-gray-200"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      router.push("/contact");
-                    }}
-                  >
-                    Contact
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      )}
-
+                Home
+              </a>
+            </li>
+            <li>
+              <a
+                href="/shop"
+                className="hover:text-gray-200"
+                onClick={() => setMenuOpen(false)}
+              >
+                Shop
+              </a>
+            </li>
+            <li>
+              <a
+                href="/sustainability"
+                className="hover:text-gray-200"
+                onClick={() => setMenuOpen(false)}
+              >
+                Sustainability
+              </a>
+            </li>
+            <li>
+              <a
+                href="/contact"
+                className="hover:text-gray-200"
+                onClick={() => setMenuOpen(false)}
+              >
+                Contact
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>,
+    document.body
+  )}
 
       {/* ---------- Main shop content ---------- */}
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-10">
