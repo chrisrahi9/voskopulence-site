@@ -957,15 +957,20 @@ export default function Home() {
                       Shop
                     </a>
                   </li>
-                  <li>
-                    <a
-                      href="#about"
-                      onClick={() => setMenuOpen(false)}
-                      className="hover:text-gray-200"
-                    >
-                      About
-                    </a>
-                  </li>
+                         <li>
+          <a
+            href="#about"
+            className="hover:text-gray-200"
+            onClick={(e) => {
+              e.preventDefault();          // don’t jump instantly
+              scrollToSection("about");    // smooth scroll to section
+              setMenuOpen(false);          // then close the curtain
+            }}
+          >
+            About
+          </a>
+        </li>
+
                   <li>
                     <a
                       href="/sustainability"
