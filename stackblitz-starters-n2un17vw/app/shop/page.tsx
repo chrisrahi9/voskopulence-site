@@ -257,23 +257,45 @@ export default function ShopPage() {
 
 
       {/* ---------- Mobile curtain menu ---------- */}
+      {/* ===== MOBILE CURTAIN (SHOP) ===== */}
       {menuOpen && (
         <div
-          className="fixed inset-0 z-[9500] lg:hidden"
+          id="mobile-menu"
           role="dialog"
           aria-modal="true"
+          className="lg:hidden fixed inset-0 z-[12000]"
         >
-          {/* backdrop */}
+          {/* Backdrop – dark + blurred, closes on tap */}
           <button
+            type="button"
             aria-label="Close menu"
-            className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+            className="absolute inset-0"
+            style={{
+              background: "rgba(0,70,66,0.78)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+            }}
             onClick={() => setMenuOpen(false)}
           />
 
-          {/* panel */}
-          <div className="absolute inset-y-0 left-0 right-0 z-[9501] flex flex-col text-white bg-[#004642] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          {/* Sliding panel */}
+          <div
+            id="curtain-panel"
+            className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
+            style={{
+              paddingTop: "env(safe-area-inset-top)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+              willChange: "transform",
+              transform: "translateX(0)", // if you keep swipe logic, it will update this
+              background:
+                "linear-gradient(to bottom, rgba(0,70,66,0.98), rgba(0,70,66,0.95))",
+            }}
+          >
+            {/* Top row */}
             <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
               <span className="font-semibold text-white/95">Menu</span>
+
+              {/* X button – now really closes */}
               <button
                 type="button"
                 aria-label="Close menu"
@@ -281,8 +303,8 @@ export default function ShopPage() {
                 onClick={() => setMenuOpen(false)}
               >
                 <svg
-                  width="24"
-                  height="24"
+                  width="28"
+                  height="28"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -296,6 +318,7 @@ export default function ShopPage() {
               </button>
             </div>
 
+            {/* Centered links */}
             <nav className="grow grid place-items-center">
               <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
                 <li>
@@ -303,8 +326,8 @@ export default function ShopPage() {
                     type="button"
                     className="hover:text-gray-200"
                     onClick={() => {
-                      router.push("/");
                       setMenuOpen(false);
+                      router.push("/");
                     }}
                   >
                     Home
@@ -315,8 +338,8 @@ export default function ShopPage() {
                     type="button"
                     className="hover:text-gray-200"
                     onClick={() => {
-                      router.push("/shop");
                       setMenuOpen(false);
+                      router.push("/shop");
                     }}
                   >
                     Shop
@@ -327,8 +350,8 @@ export default function ShopPage() {
                     type="button"
                     className="hover:text-gray-200"
                     onClick={() => {
-                      router.push("/sustainability");
                       setMenuOpen(false);
+                      router.push("/sustainability");
                     }}
                   >
                     Sustainability
@@ -339,8 +362,8 @@ export default function ShopPage() {
                     type="button"
                     className="hover:text-gray-200"
                     onClick={() => {
-                      router.push("/contact");
                       setMenuOpen(false);
+                      router.push("/contact");
                     }}
                   >
                     Contact
@@ -351,6 +374,7 @@ export default function ShopPage() {
           </div>
         </div>
       )}
+
 
       {/* ---------- Main shop content ---------- */}
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-10">
