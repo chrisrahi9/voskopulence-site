@@ -293,7 +293,7 @@ export default function ShopPage() {
 
 {/* Sliding panel content (centered links) */}
 <div
-  className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white relative"
+  className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white relative h-full"
   style={{
     paddingTop: "env(safe-area-inset-top)",
     paddingBottom: "env(safe-area-inset-bottom)",
