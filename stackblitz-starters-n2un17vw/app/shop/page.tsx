@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 const ASSETS = "https://cdn.voskopulence.com";
@@ -67,8 +68,17 @@ const BARS: Bar[] = [
 
 export default function ShopPage() {
   const router = useRouter();
+
+  // --- MENU STATE ---
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // --- NECESSARY FOR THE CURTAIN BLUR (fixes hydration errors) ---
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // --- PRODUCT & WAITLIST STATE ---
   const [selectedBar, setSelectedBar] = useState<Bar | null>(null);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistStatus, setWaitlistStatus] = useState<
@@ -80,6 +90,7 @@ export default function ShopPage() {
     setWaitlistEmail("");
     setWaitlistStatus("idle");
   };
+
 
   // BUY NOW: track click + open modal
   const handleBuyClick = (bar: Bar) => {
