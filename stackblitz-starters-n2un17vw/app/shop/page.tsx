@@ -145,24 +145,84 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* ---------- Simple global header for this page ---------- */}
-      <header className="fixed inset-x-0 top-0 z-[9000] bg-[#004642] text-white/95 shadow-md">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 h-[64px] flex items-center justify-between">
-          {/* Left: logo */}
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2"
-          >
-            <img
-              src={asset("/logo_improved.svg")}
-              alt="Voskopulence"
-              className="h-9 w-auto"
-            />
-          </button>
+           {/* ---------- Header matching the welcome page ---------- */}
+      <header
+        className="fixed inset-x-0 top-0 z-[9999] text-white/95"
+        style={{
+          isolation: "isolate",
+          contain: "paint",
+          transform: "translateZ(0)",
+          WebkitBackfaceVisibility: "hidden",
+          backfaceVisibility: "hidden",
+        }}
+      >
+        {/* Blurred dark-green background like home */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            background: "rgba(0,70,66,0.94)",
+          }}
+          aria-hidden="true"
+        />
 
-          {/* Right: desktop nav + burger */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm">
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 flex items-center justify-between h-[64px] md:h-[72px]">
+          {/* Left: burger (mobile) */}
+          <div className="grow basis-0 flex items-center">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full lg:hidden relative z-[1] hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label="Open menu"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Center: bigger logo, like home */}
+          <div
+            className="absolute left-1/2 top-1/2 pointer-events-none"
+            style={{
+              transform: "translate3d(-50%, -50%, 0)",
+              textShadow: "0 1px 6px rgba(0,0,0,0.35)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="pointer-events-auto"
+              aria-label="Back to home"
+            >
+              <img
+                src={asset("/logo_improved.svg")}
+                alt="Voskopulence"
+                className="block w-auto h-[108px] md:h-[132px]"
+                loading="eager"
+                decoding="async"
+                style={{
+                  transform: "translateZ(0)",
+                  WebkitBackfaceVisibility: "hidden",
+                  backfaceVisibility: "hidden",
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Right: desktop nav (same links as curtain) */}
+          <nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm relative z-[1]">
             <button
               type="button"
               onClick={() => router.push("/")}
@@ -192,30 +252,9 @@ export default function ShopPage() {
               Contact
             </button>
           </nav>
-
-          {/* Mobile burger */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            aria-label="Open menu"
-          >
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M4 7h16M4 12h16M4 17h16"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
         </div>
       </header>
+
 
       {/* ---------- Mobile curtain menu ---------- */}
       {menuOpen && (
