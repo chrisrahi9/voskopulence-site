@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+
 
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
@@ -157,16 +158,19 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
            {/* ---------- Header matching the welcome page ---------- */}
-      <header
-        className="fixed inset-x-0 top-0 z-[9999] text-white/95"
-        style={{
-          isolation: "isolate",
-          contain: "paint",
-          transform: "translateZ(0)",
-          WebkitBackfaceVisibility: "hidden",
-          backfaceVisibility: "hidden",
-        }}
-      >
+     <header
+  className={`fixed inset-x-0 top-0 z-[9999] text-white/95 transition-opacity duration-300 ${
+    menuOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+  }`}
+  style={{
+    isolation: "isolate",
+    contain: "paint",
+    transform: "translateZ(0)",
+    WebkitBackfaceVisibility: "hidden",
+    backfaceVisibility: "hidden",
+  }}
+>
+
         {/* Blurred dark-green background like home */}
         <div
           className="absolute inset-0 pointer-events-none"
