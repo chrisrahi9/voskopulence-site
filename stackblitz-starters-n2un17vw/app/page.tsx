@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
+import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
 const ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
@@ -120,6 +120,7 @@ function unlockScroll() {
 }
 
 export default function Home() {
+  const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
 
@@ -792,16 +793,17 @@ export default function Home() {
             <a href="/shop" className="hover:text-gray-200">
               Shop
             </a>
-             <a
-    href="#about"
-    className="hover:text-gray-200"
-    onClick={(e) => {
-      e.preventDefault();
-      scrollToSection("about");
-    }}
-  >
-    About
-  </a>
+<a
+  href="/#about"
+  className="hover:text-gray-200"
+  onClick={(e) => {
+    e.preventDefault();
+    router.push("/#about");
+  }}
+>
+  About
+</a>
+
             <a href="/sustainability" className="hover:text-gray-200">
               Sustainability
             </a>
@@ -957,19 +959,19 @@ export default function Home() {
                       Shop
                     </a>
                   </li>
-                         <li>
-          <a
-            href="#about"
-            className="hover:text-gray-200"
-            onClick={(e) => {
-              e.preventDefault();          // don’t jump instantly
-              scrollToSection("about");    // smooth scroll to section
-              setMenuOpen(false);          // then close the curtain
-            }}
-          >
-            About
-          </a>
-        </li>
+<li>
+  <a
+    href="/#about"
+    className="hover:text-gray-200"
+    onClick={(e) => {
+      e.preventDefault();
+      router.push("/#about");
+      setMenuOpen(false);
+    }}
+  >
+    About
+  </a>
+</li>
 
                   <li>
                     <a
