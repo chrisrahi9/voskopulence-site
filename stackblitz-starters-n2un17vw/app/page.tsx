@@ -951,6 +951,20 @@ export default function Home() {
               <nav className="grow grid place-items-center">
                 <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
                   <li>
+  <a
+    href="/"
+    className="hover:text-gray-200"
+    onClick={(e) => {
+      e.preventDefault();
+      router.push("/");
+      setMenuOpen(false);
+    }}
+  >
+    Home
+  </a>
+</li>
+
+                  <li>
                     <a
                       href="/shop"
                       onClick={() => setMenuOpen(false)}
