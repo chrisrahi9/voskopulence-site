@@ -371,8 +371,9 @@ export default function ShopPage() {
           <div
             className="absolute left-1/2 top-1/2 pointer-events-none"
             style={{
-              transform:
-                "translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
+                  transform:
+      "translate3d(-50%, calc(-50% + 4px), 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))",
+
               transition: "transform 60ms linear",
               contain: "paint",
               textShadow: "0 1px 6px rgba(0,0,0,0.35)",
