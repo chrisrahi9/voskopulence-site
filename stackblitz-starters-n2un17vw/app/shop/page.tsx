@@ -296,36 +296,50 @@ export default function ShopPage() {
             id="mobile-menu"
             role="dialog"
             aria-modal="true"
-            className="lg:hidden fixed inset-0 z-[12000] overflow-hidden"
+            className="lg:hidden fixed inset-0 z-[12000]"
           >
-            {/* Blurred translucent backdrop */}
+            {/* Backdrop */}
             <button
-              type="button"
               aria-label="Close menu"
-              className="absolute inset-0 bg-[rgba(0,70,66,0.78)] backdrop-blur-md"
+              className="absolute inset-0 bg-[rgba(0,70,66,0.70)] backdrop-blur-md"
+              style={{
+                opacity: 1,
+                transition:
+                  "opacity 420ms cubic-bezier(.22,1,.36,1)",
+              }}
               onClick={() => setMenuOpen(false)}
             />
 
-            {/* Solid top & bottom bars to “cap” the blur */}
-            <div className="pointer-events-none fixed inset-x-0 top-0 h-[22px] bg-[#004642]" />
-            <div className="pointer-events-none fixed inset-x-0 bottom-0 h-[22px] bg-[#004642]" />
-
-            {/* Curtain content */}
+            {/* Sliding panel from LEFT */}
             <div
-              className="relative flex h-full flex-col text-white"
+              id="curtain-panel"
+              className="absolute inset-y-0 left-0 right-0 z-[12001] flex flex-col text-white"
               style={{
+                transform: "translateX(0%)",
+                transition:
+                  "transform 460ms cubic-bezier(.22,1,.36,1)",
                 paddingTop: "env(safe-area-inset-top)",
                 paddingBottom: "env(safe-area-inset-bottom)",
+                willChange: "transform",
+                transformOrigin: "left center",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
               }}
+              onTouchStart={(e) => startSwipeX(e)}
+              onTouchMove={(e) => moveSwipeX(e)}
+              onTouchEnd={() => endSwipeX()}
             >
               {/* Top row */}
               <div className="flex items-center justify-between h-[64px] px-5 shrink-0">
-                <span className="font-semibold text-white/95">Menu</span>
+                <span className="font-semibold text-white/95">
+                  Menu
+                </span>
                 <button
                   type="button"
                   aria-label="Close menu"
-                  className="p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                  className="p-2 rounded-md hover:bg:white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                   onClick={() => setMenuOpen(false)}
+                  style={{ position: "relative", zIndex: 1 }}
                 >
                   <svg
                     width="28"
@@ -343,32 +357,51 @@ export default function ShopPage() {
                 </button>
               </div>
 
-              {/* Centered links */}
+              {/* Links */}
               <nav className="grow grid place-items-center">
                 <ul className="flex flex-col items-center gap-8 text-[1.25rem] font-light tracking-wide">
                   <li>
-                    <a
-                      href="/"
-                      className="hover:text-gray-200"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Home
-                    </a>
-                  </li>
+  <a
+    href="/"
+    className="hover:text-gray-200"
+    onClick={(e) => {
+      e.preventDefault();
+      router.push("/");
+      setMenuOpen(false);
+    }}
+  >
+    Home
+  </a>
+</li>
+
                   <li>
                     <a
                       href="/shop"
-                      className="hover:text-gray-200"
                       onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
                     >
                       Shop
                     </a>
                   </li>
+<li>
+  <a
+    href="/#about"
+    className="hover:text-gray-200"
+    onClick={(e) => {
+      e.preventDefault();
+      router.push("/#about");
+      setMenuOpen(false);
+    }}
+  >
+    About
+  </a>
+</li>
+
                   <li>
                     <a
                       href="/sustainability"
-                      className="hover:text-gray-200"
                       onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
                     >
                       Sustainability
                     </a>
@@ -376,8 +409,8 @@ export default function ShopPage() {
                   <li>
                     <a
                       href="/contact"
-                      className="hover:text-gray-200"
                       onClick={() => setMenuOpen(false)}
+                      className="hover:text-gray-200"
                     >
                       Contact
                     </a>
@@ -388,6 +421,7 @@ export default function ShopPage() {
           </div>,
           document.body
         )}
+
 
       {/* ---------- Main shop content ---------- */}
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-10">
