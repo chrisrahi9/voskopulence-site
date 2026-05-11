@@ -81,7 +81,6 @@ function IOSCap() {
 }
 
 /* ---------- Robust scroll lock (no jump) ---------- */
-const scrollYRef = { current: 0 };
 
 const scrollYRef = { current: 0 };
 
