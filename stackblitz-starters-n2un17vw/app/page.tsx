@@ -83,13 +83,35 @@ function IOSCap() {
 /* ---------- Robust scroll lock (no jump) ---------- */
 const scrollYRef = { current: 0 };
 
+const scrollYRef = { current: 0 };
+
+function isIOSDevice() {
+  if (typeof window === "undefined") return false;
+
+  const ua = navigator.userAgent || "";
+
+  return (
+    /iP(hone|od|ad)/.test(ua) ||
+    (/\bMac\b/.test(ua) && "ontouchend" in window)
+  );
+}
+
 function lockScroll() {
   const docEl = document.documentElement;
   const body = document.body;
+
+  // SIMPLE desktop lock
+  if (!isIOSDevice()) {
+    body.style.overflow = "hidden";
+    return;
+  }
+
+  // iOS special lock
   scrollYRef.current = window.scrollY;
 
   docEl.style.overflow = "hidden";
   docEl.style.height = "100%";
+
   body.style.overflow = "hidden";
   body.style.position = "fixed";
   body.style.top = `-${scrollYRef.current}px`;
@@ -102,11 +124,18 @@ function unlockScroll() {
   const docEl = document.documentElement;
   const body = document.body;
 
+  // SIMPLE desktop unlock
+  if (!isIOSDevice()) {
+    body.style.overflow = "";
+    return;
+  }
+
   const top = body.style.top;
   const y = top ? -parseInt(top || "0", 10) : 0;
 
   docEl.style.overflow = "";
   docEl.style.height = "";
+
   body.style.overflow = "";
   body.style.position = "";
   body.style.top = "";
