@@ -539,7 +539,6 @@ export default function Home() {
             fragLoadingMaxRetry: 3,
           });
           // @ts-expect-error
-          // @ts-expect-error
 hls.config.maxInitialBitrate = 8_000_000;
 
           hlsRef.current = hls;
