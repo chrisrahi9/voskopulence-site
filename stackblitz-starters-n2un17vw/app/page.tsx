@@ -454,7 +454,7 @@ export default function Home() {
 
     const HLS_SRC = asset("/hero_hls/master.m3u8");
     const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
-    const MP4_SRC = asset("/hero_web.mp4");
+    const MP4_SRC = asset("/hero_web_v3.mp4");
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
@@ -530,7 +530,7 @@ export default function Home() {
         if (Hls?.isSupported?.()) {
           const hls = new Hls({
             capLevelToPlayerSize: true,
-            startLevel: -1,
+            startLevel: 2,
             maxBufferLength: 10,
             maxMaxBufferLength: 20,
             backBufferLength: 0,
@@ -539,7 +539,8 @@ export default function Home() {
             fragLoadingMaxRetry: 3,
           });
           // @ts-expect-error
-          hls.config.maxInitialBitrate = 2_500_000;
+          // @ts-expect-error
+hls.config.maxInitialBitrate = 8_000_000;
 
           hlsRef.current = hls;
           hls.attachMedia(v);
@@ -592,38 +593,31 @@ export default function Home() {
 
     setup();
 
-    const onLoaded = () => tryPlay(v);
-    const onCanPlay = () => {
-      if (v.paused) tryPlay(v);
-    };
-    v.addEventListener("loadedmetadata", onLoaded);
-    v.addEventListener("canplay", onCanPlay);
+  
 
     const onPlaying = () => {
       v.style.opacity = "1";
     };
     v.addEventListener("playing", onPlaying);
 
-    const onVis = () =>
-      document.visibilityState === "visible" ? tryPlay(v) : v.pause();
+    const onVis = () => {
+  if (document.visibilityState === "visible") {
+    tryPlay(v);
+  }
+};
     document.addEventListener("visibilitychange", onVis);
 
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (menuOpenRef.current) {
-          tryPlay(v);
-          return;
-        }
-        if (e.intersectionRatio > 0.03) tryPlay(v);
-        else v.pause();
-      },
+const io = new IntersectionObserver(
+  ([e]) => {
+    if (e.intersectionRatio > 0.03) {
+      tryPlay(v);
+    }
+  },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
     io.observe(v);
 
     return () => {
-      v.removeEventListener("loadedmetadata", onLoaded);
-      v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("playing", onPlaying);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
@@ -807,11 +801,7 @@ export default function Home() {
               className="block w-auto h-[108px] md:h-[132px] lg:h-[144px]"
               loading="eager"
               decoding="async"
-              style={{
-                transform: "translateZ(0)",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
+
             />
           </div>
 
@@ -1076,10 +1066,9 @@ export default function Home() {
               onError={() => {
                 videoRef.current?.classList.add("opacity-100");
               }}
-              style={{
-                willChange: "opacity",
-                transform: "translateZ(0)",
-              }}
+style={{
+  willChange: "opacity",
+}}
             >
               {/* WEBM then MP4 (H.264) */}
               <source
@@ -1087,7 +1076,7 @@ export default function Home() {
                 type="video/webm"
               />
               <source
-                src={asset("/hero_web.mp4")}
+                src={asset("/hero_web_v3.mp4")}
                 type="video/mp4; codecs=avc1"
               />
             </video>
