@@ -95,55 +95,37 @@ function isIOSDevice() {
 }
 
 function lockScroll() {
-  const docEl = document.documentElement;
-  const body = document.body;
+  if (isIOSDevice()) {
+    scrollYRef.current = window.scrollY;
 
-  // SIMPLE desktop lock
-  if (!isIOSDevice()) {
-    body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollYRef.current}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+
     return;
   }
 
-  // iOS special lock
-  scrollYRef.current = window.scrollY;
-
-  docEl.style.overflow = "hidden";
-  docEl.style.height = "100%";
-
-  body.style.overflow = "hidden";
-  body.style.position = "fixed";
-  body.style.top = `-${scrollYRef.current}px`;
-  body.style.left = "0";
-  body.style.right = "0";
-  body.style.width = "100%";
+  document.body.style.overflow = "hidden";
 }
 
 function unlockScroll() {
-  const docEl = document.documentElement;
-  const body = document.body;
+  if (isIOSDevice()) {
+    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
 
-  // SIMPLE desktop unlock
-  if (!isIOSDevice()) {
-    body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+
+    window.scrollTo(0, y);
+
     return;
   }
 
-  const top = body.style.top;
-  const y = top ? -parseInt(top || "0", 10) : 0;
-
-  docEl.style.overflow = "";
-  docEl.style.height = "";
-
-  body.style.overflow = "";
-  body.style.position = "";
-  body.style.top = "";
-  body.style.left = "";
-  body.style.right = "";
-  body.style.width = "";
-
-  requestAnimationFrame(() => {
-    window.scrollTo(0, y || scrollYRef.current || 0);
-  });
+  document.body.style.overflow = "";
 }
 
 export default function Home() {
@@ -530,7 +512,7 @@ export default function Home() {
         if (Hls?.isSupported?.()) {
           const hls = new Hls({
             capLevelToPlayerSize: true,
-            startLevel: 2,
+            startLevel: 3,
             maxBufferLength: 10,
             maxMaxBufferLength: 20,
             backBufferLength: 0,
