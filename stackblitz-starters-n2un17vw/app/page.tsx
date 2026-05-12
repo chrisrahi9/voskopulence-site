@@ -406,7 +406,6 @@ export default function Home() {
   useEffect(() => {
     if (menuOpen) lockScroll();
     else unlockScroll();
-    return () => unlockScroll();
   }, [menuOpen]);
 
   // fixes seams by giving us 1 physical pixel to overlap with
@@ -453,7 +452,10 @@ export default function Home() {
       const isiOS =
         /iP(hone|od|ad)/.test(navigator.platform) ||
         (/\bMac\b/.test(ua) && "ontouchend" in document);
-
+const isDesktopChrome =
+  /chrome/i.test(ua) &&
+  !/edg/i.test(ua) &&
+  !/android/i.test(ua);
       const isSafariDesktop =
         /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
 
@@ -506,7 +508,18 @@ export default function Home() {
         tryPlay(v);
         return;
       }
+if (isDesktopChrome) {
+  v.src = MP4_SRC;
 
+  try {
+    v.load();
+  } catch {}
+
+  v.loop = true;
+  tryPlay(v);
+
+  return;
+}
       try {
         const Hls = (await import("hls.js")).default;
         if (Hls?.isSupported?.()) {
@@ -545,8 +558,10 @@ hls.config.maxInitialBitrate = 8_000_000;
                   hls.loadLevel = -1;
                 }, 3000);
               }
-            } catch {}
-            tryPlay(v);
+} catch {}
+
+v.loop = true;
+tryPlay(v);
           });
           hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
             if (data?.fatal) {
