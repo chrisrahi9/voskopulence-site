@@ -1022,7 +1022,7 @@ const io = new IntersectionObserver(
       <section className="relative z-0 w-full overflow-visible">
         <div className="relative h-[96dvh] md:h-[96dvh] lg:h-[96dvh]">
           {/* 12px taller wrapper prevents seams */}
-          <div className="absolute inset-x-0 top-0 -bottom-[16px]">
+          <div className="absolute inset-x-0 top-0 -bottom-[16px] pointer-events-none">
             {/* instant static background before video loads */}
             <div
               className="absolute inset-0 bg-cover bg-center"
@@ -1072,8 +1072,8 @@ style={{
             <div className="absolute bottom-0 left-0 right-0 h-[16vh] bg-gradient-to-b from-transparent to-[#004642]/20 pointer-events-none" />
           </div>
 
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <div className="px-6 lg:px-10 text-center max-w-3xl">
+          <div className="relative z-10 h-full flex items-center justify-center pointer-events-none">
+            <div className="px-6 lg:px-10 text-center max-w-3xl pointer-events-auto">
               <h1
                 className="heading-script leading-tight tracking-[0.01em] text-white md:drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
                 style={{
