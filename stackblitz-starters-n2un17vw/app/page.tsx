@@ -422,7 +422,7 @@ export default function Home() {
     el.setAttribute("playsinline", "true");
     const p = el.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
-    v.setAttribute("loop", "true");
+    el.setAttribute("loop", "true");
   };
 
   // --- Video setup (HLS with MP4 fallback) ---
