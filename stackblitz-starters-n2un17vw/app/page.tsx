@@ -1050,7 +1050,7 @@ const io = new IntersectionObserver(
                     "clamp(2.5rem, 2rem + 2.5vw, 4rem)",
                 }}
               >
-                Welcome to Voskopulence
+                Test test
               </h1>
               <p className="mt-6 text-white/95 md:drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.5)] text-sans text-base lg:text-lg">
                 Solid shampoo &amp; conditioner bars crafted to
