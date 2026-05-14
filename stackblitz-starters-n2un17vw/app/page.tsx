@@ -884,7 +884,7 @@ const io = new IntersectionObserver(
       {mounted &&
         typeof document !== "undefined" &&
         menuOpen &&
-       null
+       {/* mobile menu removed temporarily */}
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
