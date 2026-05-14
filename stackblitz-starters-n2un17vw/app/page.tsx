@@ -722,10 +722,6 @@ const io = new IntersectionObserver(
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-           //backdropFilter:
-              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
-            //WebkitBackdropFilter:
-              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",
             background: hasCap
               ? `
                 linear-gradient(
