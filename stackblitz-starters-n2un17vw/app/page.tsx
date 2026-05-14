@@ -1033,39 +1033,8 @@ const io = new IntersectionObserver(
                 filter: "brightness(0.9)",
               }}
             />
-{/*
-            <video
-              ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={asset("/hero_poster.jpg")}
-              autoPlay
-              muted
-              playsInline
-              loop
-              preload="auto"
-              aria-hidden="true"
-              disablePictureInPicture
-              controlsList="nodownload noplaybackrate"
-              onLoadedData={(e) => {
-                e.currentTarget.classList.add("opacity-100");
-              }}
-              onPlay={(e) => {
-                e.currentTarget.classList.add("opacity-100");
-              }}
-              onError={() => {
-                videoRef.current?.classList.add("opacity-100");
-              }}
-style={{
-  willChange: "opacity",
-}}
-            >
-              {/* WEBM then MP4 (H.264) */}
-              <source
-                src={asset("/hero_web_v3.mp4")}
-                type="video/mp4; codecs=avc1"
-              />
-            </video>
-*/}
+
+            <div className="absolute inset-0 bg-black/20" />
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
             {/* Bottom gradient (also rides the extra 12px) */}
