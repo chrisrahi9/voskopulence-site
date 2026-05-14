@@ -174,7 +174,6 @@ export default function Home() {
     e
   ) => {
     if (!isTouch || e.pointerType !== "touch") return;
-    e.preventDefault();
 
     canceledTapRef.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
@@ -215,7 +214,6 @@ export default function Home() {
     )
       return;
     if (!startPos.current) return;
-    e.preventDefault();
 
     lastPos.current = { x: e.clientX, y: e.clientY };
     const dx = e.clientX - startPos.current.x;
@@ -245,7 +243,6 @@ export default function Home() {
       e.pointerId !== activePointerId.current
     )
       return;
-    e.preventDefault();
 
     try {
       (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
@@ -289,7 +286,6 @@ export default function Home() {
       e.pointerId !== activePointerId.current
     )
       return;
-    e.preventDefault();
     try {
       (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
     } catch {}
@@ -426,6 +422,7 @@ export default function Home() {
     el.setAttribute("playsinline", "true");
     const p = el.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
+    v.setAttribute("loop", "true");
   };
 
   // --- Video setup (HLS with MP4 fallback) ---
@@ -1064,10 +1061,6 @@ style={{
             >
               {/* WEBM then MP4 (H.264) */}
               <source
-                src={asset("/hero_web.webm")}
-                type="video/webm"
-              />
-              <source
                 src={asset("/hero_web_v3.mp4")}
                 type="video/mp4; codecs=avc1"
               />
@@ -1117,7 +1110,7 @@ style={{
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: isTouch ? "none" : "manipulation",
+                  touchAction: "manipulation",
                   transform: `
                     translate3d(0, 0, 0)
                     scale(var(--press,1))
