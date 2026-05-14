@@ -879,9 +879,7 @@ const io = new IntersectionObserver(
       <TopSentinel />
       <IOSCap />
       {/* === Header Portal === */}
-
-        : <SiteHeader capPx={capPx} />}
-
+<SiteHeader capPx={capPx} />
       {/* ===== Mobile curtain (portal) — mounted ONLY when open ===== */}
       {mounted &&
         typeof document !== "undefined" &&
