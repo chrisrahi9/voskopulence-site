@@ -1036,7 +1036,7 @@ const io = new IntersectionObserver(
 
             <video
               ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms]"
+              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
               poster={asset("/hero_poster.jpg")}
               autoPlay
               muted
