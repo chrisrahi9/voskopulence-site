@@ -1033,7 +1033,7 @@ const io = new IntersectionObserver(
                 filter: "brightness(0.9)",
               }}
             />
-
+{/*
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
@@ -1065,7 +1065,7 @@ style={{
                 type="video/mp4; codecs=avc1"
               />
             </video>
-
+*/}
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
             {/* Bottom gradient (also rides the extra 12px) */}
