@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
-const ASSETS = "https://cdn.voskopulence.com";
+const ASSETS = "/media";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const CAP_PX = 5;
@@ -1269,7 +1269,7 @@ style={{
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="flex justify-center md:justify-start">
             <img
-              src="https://cdn.voskopulence.com/Spotlight_pic.png"
+              src={asset("/Spotlight_pic.png")}
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
             />
