@@ -584,7 +584,6 @@ export default function Home() {
         requestAnimationFrame(() => {
           loopFadeStarted = false;
           revealVideo(v, 720);
-        });
       }, 260);
     };
 
