@@ -1112,7 +1112,6 @@ export default function Home() {
               autoPlay
               muted
               playsInline
-              loop
               preload="auto"
               aria-hidden="true"
               disablePictureInPicture
