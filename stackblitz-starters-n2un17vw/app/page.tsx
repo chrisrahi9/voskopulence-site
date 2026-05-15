@@ -418,19 +418,48 @@ export default function Home() {
     );
   }, []);
 
+  // Wheel safety net for desktop Chromium/Edge: if a fixed/composited layer eats
+  // the wheel default action, manually move the document on the next frame.
+  useEffect(() => {
+    if (isTouch) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (menuOpenRef.current || event.defaultPrevented) return;
+
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
+
+      const before = window.scrollY;
+      const deltaY = event.deltaY;
+      if (Math.abs(deltaY) < 1) return;
+
+      requestAnimationFrame(() => {
+        const didScroll = Math.abs(window.scrollY - before) > 0.5;
+        if (!didScroll) {
+          window.scrollBy({ top: deltaY, left: event.deltaX, behavior: "auto" });
+        }
+      });
+    };
+
+    const wheelOptions = { capture: true, passive: true } as AddEventListenerOptions;
+    window.addEventListener("wheel", onWheel, wheelOptions);
+    return () => window.removeEventListener("wheel", onWheel, wheelOptions);
+  }, []);
+
   // Unified helper: quiet attempt to play
   const tryPlay = (el: HTMLVideoElement | null) => {
     if (!el) return;
     el.muted = true;
     el.defaultMuted = true;
     el.autoplay = true;
-    el.loop = false;
+    el.loop = true;
     el.playsInline = true;
     // @ts-ignore - iOS/Safari vendor attribute
     el.setAttribute("webkit-playsinline", "true");
     el.setAttribute("playsinline", "true");
     el.setAttribute("muted", "true");
-    el.removeAttribute("loop");
+    el.setAttribute("loop", "true");
     const p = el.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
@@ -452,31 +481,29 @@ export default function Home() {
     if (!levels?.length) return -1;
 
     const profile = getConnectionProfile();
+    const viewportHeight = Math.max(window.innerHeight || 0, screen.height || 0);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const desiredHeight = profile.constrained
+      ? 720
+      : profile.moderate
+        ? Math.min(1080, viewportHeight * dpr)
+        : Math.max(1080, Math.min(1440, viewportHeight * dpr));
+
     const sorted = levels
       .map((level, index) => ({ ...level, index }))
       .sort((a, b) => (a.height || 0) - (b.height || 0));
 
-    // Chrome/Edge should look premium: use the highest available rendition unless
-    // the user explicitly has Save-Data/2G enabled, where 720p is the ceiling.
-    if (!profile.constrained) return sorted[sorted.length - 1]?.index ?? -1;
+    const match =
+      sorted.find((level) => (level.height || 0) >= desiredHeight * 0.9) ??
+      sorted[sorted.length - 1];
 
-    const constrainedMatch =
-      sorted.find((level) => (level.height || 0) >= 720) ?? sorted[0];
-
-    return constrainedMatch?.index ?? -1;
+    return match?.index ?? -1;
   };
 
-  const revealVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
+  const revealVideo = (el: HTMLVideoElement | null) => {
     if (!el) return;
-    el.style.transition = `opacity ${durationMs}ms ease`;
     el.style.opacity = "1";
     el.classList.add("opacity-100");
-  };
-
-  const dimVideoForLoop = (el: HTMLVideoElement | null, durationMs = 700) => {
-    if (!el) return;
-    el.style.transition = `opacity ${durationMs}ms ease`;
-    el.style.opacity = "0.08";
   };
 
   const loadMp4Fallback = (el: HTMLVideoElement, src: string) => {
@@ -510,46 +537,20 @@ export default function Home() {
 
     let destroyed = false;
     let nativeTimeout: number | null = null;
-    let loopFadeStarted = false;
-    const LOOP_FADE_SECONDS = 0.85;
 
-    const restartLoop = () => {
+    const loopForever = () => {
       if (destroyed) return;
-      loopFadeStarted = true;
-      dimVideoForLoop(v, 520);
-
-      window.setTimeout(() => {
-        if (destroyed) return;
-        try {
-          v.currentTime = 0;
-        } catch {}
-        tryPlay(v);
-        requestAnimationFrame(() => {
-          loopFadeStarted = false;
-          revealVideo(v, 720);
-        });
-      }, 260);
+      try {
+        v.currentTime = 0;
+      } catch {}
+      tryPlay(v);
     };
 
-    const prepareLoopFade = () => {
-      if (destroyed || loopFadeStarted || !Number.isFinite(v.duration)) return;
-      if (v.duration <= 1) return;
-
-      const remaining = v.duration - v.currentTime;
-      if (remaining > 0 && remaining <= LOOP_FADE_SECONDS) {
-        loopFadeStarted = true;
-        dimVideoForLoop(v, 700);
-      }
-    };
-
-    const reveal = () => {
-      if (!loopFadeStarted) revealVideo(v);
-    };
+    const reveal = () => revealVideo(v);
     v.addEventListener("loadeddata", reveal);
     v.addEventListener("canplay", reveal);
     v.addEventListener("playing", reveal);
-    v.addEventListener("timeupdate", prepareLoopFade);
-    v.addEventListener("ended", restartLoop);
+    v.addEventListener("ended", loopForever);
 
     const setup = async () => {
       const ua = navigator.userAgent || "";
@@ -596,16 +597,13 @@ export default function Home() {
           const hls = new Hls({
             capLevelToPlayerSize: false,
             startLevel: -1,
-            maxBufferLength: profile.constrained ? 8 : 24,
-            maxMaxBufferLength: profile.constrained ? 16 : 48,
+            maxBufferLength: profile.constrained ? 8 : 18,
+            maxMaxBufferLength: profile.constrained ? 16 : 36,
             backBufferLength: 0,
             enableWorker: true,
-            abrEwmaFastLive: 2,
-            abrEwmaSlowLive: 6,
-            abrBandWidthFactor: profile.constrained ? 0.75 : 0.98,
-            abrBandWidthUpFactor: profile.constrained ? 0.7 : 0.95,
-            maxStarvationDelay: profile.constrained ? 4 : 2,
-            maxLoadingDelay: profile.constrained ? 4 : 2,
+            abrEwmaFastLive: 3,
+            abrEwmaSlowLive: 9,
+            abrBandWidthFactor: profile.constrained ? 0.75 : 0.9,
             fragLoadingRetryDelay: 500,
             fragLoadingMaxRetry: 4,
             manifestLoadingMaxRetry: 3,
@@ -623,11 +621,9 @@ export default function Home() {
               const startLevel = choosePremiumStartLevel(hls.levels);
               if (startLevel >= 0) {
                 hls.startLevel = startLevel;
-                hls.currentLevel = startLevel;
                 hls.nextLevel = startLevel;
-                hls.loadLevel = startLevel;
-                hls.autoLevelCapping = startLevel;
               }
+              hls.autoLevelCapping = -1;
             } catch {}
 
             tryPlay(v);
@@ -686,8 +682,7 @@ export default function Home() {
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
-      v.removeEventListener("timeupdate", prepareLoopFade);
-      v.removeEventListener("ended", restartLoop);
+      v.removeEventListener("ended", loopForever);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
