@@ -578,9 +578,15 @@ export default function Home() {
         v.addEventListener("error", onNativeError, { once: true } as any);
         v.src = nativeSrc;
         try {
-          v.load();
+          v.currentTime = 0;
         } catch {}
         tryPlay(v);
+        requestAnimationFrame(() => {
+          loopFadeStarted = false;
+          revealVideo(v, 720);
+        });
+      }, 260);
+    };
 
         nativeTimeout = window.setTimeout(() => {
           if (!loaded && v.currentSrc === nativeSrc) onNativeError();
@@ -656,12 +662,11 @@ export default function Home() {
 
           return;
         }
-      } catch {}
+        } catch {}
 
       loadMp4Fallback(v, MP4_SRC);
     };
 
-    setup();
 
     const onVis = () => {
       if (document.visibilityState === "visible") tryPlay(v);
