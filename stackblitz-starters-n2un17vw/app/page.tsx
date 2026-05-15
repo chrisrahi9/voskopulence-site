@@ -1011,7 +1011,7 @@ const io = new IntersectionObserver(
           </div>,
           document.body
         )}
-       {/* mobile menu removed temporarily */}
+    
 
       {/* ===================== HERO ===================== */}
       <section className="relative z-0 w-full overflow-visible">
