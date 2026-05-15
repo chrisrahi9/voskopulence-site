@@ -226,14 +226,13 @@ export default function Home() {
     const dy = e.clientY - startPos.current.y;
 
     if (Math.hypot(dx, dy) > 12) {
+      // Movement should only cancel the short-tap scroll action. It should not
+      // cancel the hold visual or the long-press arrow while the finger is down.
       canceledTapRef.current = true;
-      if (longTimer.current) {
-        clearTimeout(longTimer.current);
-        longTimer.current = null;
-      }
     }
 
-    // While finger is down, always keep the big press scale.
+    // While finger is down, always keep the big press scale — even if the
+    // captured pointer moves outside of the visible circle.
     const el = ctaRef.current;
     if (el) {
       el.style.setProperty("--press", PRESS_SCALE);
@@ -1180,7 +1179,7 @@ style={{
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: "manipulation",
+                  touchAction: "none",
                   transform: `
                     translate3d(0, 0, 0)
                     scale(var(--press,1))
@@ -1223,9 +1222,14 @@ style={{
                   height="24"
                   viewBox="0 0 24 24"
                   aria-hidden="true"
-                  className={`absolute z-10 transition-all duration-220 ease-[cubic-bezier(.22,1,.36,1)]
-                    ${isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    [backface-visibility:hidden] [transform:translateZ(0)]`}
+                  className={`absolute left-1/2 top-1/2 z-10 transition-opacity duration-220 ease-[cubic-bezier(.22,1,.36,1)]
+                    ${isLongPress && showArrow ? "opacity-100" : "opacity-0"}
+                    [backface-visibility:hidden]`}
+                  style={{
+                    transform: `translate3d(-50%, ${
+                      isLongPress && showArrow ? "calc(-50% + 1px)" : "-50%"
+                    }, 0)`,
+                  }}
                 >
                   <path
                     d="M6 9.5 L12 15.5 L18 9.5"
