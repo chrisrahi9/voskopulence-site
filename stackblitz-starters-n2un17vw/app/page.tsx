@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
-const ASSETS = "https://cdn.voskopulence.com";
+const ASSETS = "/media";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const CAP_PX = 5;
@@ -16,6 +16,12 @@ const PRESS_MS = 720; // a bit slower & smoother
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+
+type NetworkInformationLike = {
+  effectiveType?: string;
+  downlink?: number;
+  saveData?: boolean;
+};
 
 /* ---------- Tiny fixed top sentinel to help iOS compositor ---------- */
 function TopSentinel() {
@@ -413,19 +419,110 @@ export default function Home() {
     );
   }, []);
 
+  // Wheel safety net for desktop Chromium/Edge: if a fixed/composited layer eats
+  // the wheel default action, manually move the document on the next frame.
+  useEffect(() => {
+    if (isTouch) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (menuOpenRef.current || event.defaultPrevented) return;
+
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
+
+      const before = window.scrollY;
+      const deltaY = event.deltaY;
+      if (Math.abs(deltaY) < 1) return;
+
+      requestAnimationFrame(() => {
+        const didScroll = Math.abs(window.scrollY - before) > 0.5;
+        if (!didScroll) {
+          window.scrollBy({ top: deltaY, left: event.deltaX, behavior: "auto" });
+        }
+      });
+    };
+
+    const wheelOptions = { capture: true, passive: true } as AddEventListenerOptions;
+    window.addEventListener("wheel", onWheel, wheelOptions);
+    return () => window.removeEventListener("wheel", onWheel, wheelOptions);
+  }, []);
+
   // Unified helper: quiet attempt to play
   const tryPlay = (el: HTMLVideoElement | null) => {
     if (!el) return;
     el.muted = true;
-    // @ts-ignore
+    el.defaultMuted = true;
+    el.autoplay = true;
+    el.loop = true;
+    el.playsInline = true;
+    // @ts-ignore - iOS/Safari vendor attribute
     el.setAttribute("webkit-playsinline", "true");
     el.setAttribute("playsinline", "true");
+    el.setAttribute("muted", "true");
+    el.setAttribute("loop", "true");
     const p = el.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
-    el.setAttribute("loop", "true");
   };
 
-  // --- Video setup (HLS with MP4 fallback) ---
+  const getConnectionProfile = () => {
+    const connection =
+      (navigator as any).connection as NetworkInformationLike | undefined;
+    const effectiveType = connection?.effectiveType ?? "";
+    const downlink = connection?.downlink ?? 10;
+    const saveData = Boolean(connection?.saveData);
+    const constrained =
+      saveData || /(^|-)2g$/.test(effectiveType) || effectiveType === "slow-2g";
+    const moderate = constrained || effectiveType === "3g" || downlink < 3;
+
+    return { constrained, moderate, downlink, saveData };
+  };
+
+  const choosePremiumStartLevel = (levels: any[]) => {
+    if (!levels?.length) return -1;
+
+    const profile = getConnectionProfile();
+    const viewportHeight = Math.max(window.innerHeight || 0, screen.height || 0);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const desiredHeight = profile.constrained
+      ? 720
+      : profile.moderate
+        ? Math.min(1080, viewportHeight * dpr)
+        : Math.max(1080, Math.min(1440, viewportHeight * dpr));
+
+    const sorted = levels
+      .map((level, index) => ({ ...level, index }))
+      .sort((a, b) => (a.height || 0) - (b.height || 0));
+
+    const match =
+      sorted.find((level) => (level.height || 0) >= desiredHeight * 0.9) ??
+      sorted[sorted.length - 1];
+
+    return match?.index ?? -1;
+  };
+
+  const revealVideo = (el: HTMLVideoElement | null) => {
+    if (!el) return;
+    el.style.opacity = "1";
+    el.classList.add("opacity-100");
+  };
+
+  const loadMp4Fallback = (el: HTMLVideoElement, src: string) => {
+    if (hlsRef.current) {
+      try {
+        hlsRef.current.destroy();
+      } catch {}
+      hlsRef.current = null;
+    }
+
+    el.src = src;
+    try {
+      el.load();
+    } catch {}
+    tryPlay(el);
+  };
+
+  // --- Premium adaptive hero video (native HLS, hls.js, MP4 fallback) ---
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -436,182 +533,157 @@ export default function Home() {
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
-
-    const revealPoster = () => {
-      v.style.opacity = "1";
-    };
-    v.addEventListener("loadeddata", revealPoster, { once: true } as any);
+    v.preload = "auto";
+    tryPlay(v);
 
     let destroyed = false;
+    let nativeTimeout: number | null = null;
+
+    const loopForever = () => {
+      if (destroyed) return;
+      try {
+        v.currentTime = 0;
+      } catch {}
+      tryPlay(v);
+    };
+
+    const reveal = () => revealVideo(v);
+    v.addEventListener("loadeddata", reveal);
+    v.addEventListener("canplay", reveal);
+    v.addEventListener("playing", reveal);
+    v.addEventListener("ended", loopForever);
 
     const setup = async () => {
       const ua = navigator.userAgent || "";
       const isiOS =
         /iP(hone|od|ad)/.test(navigator.platform) ||
         (/\bMac\b/.test(ua) && "ontouchend" in document);
-const isDesktopChrome =
-  /chrome/i.test(ua) &&
-  !/edg/i.test(ua) &&
-  !/android/i.test(ua);
       const isSafariDesktop =
         /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+      const nativeHls = v.canPlayType("application/vnd.apple.mpegurl");
 
-      if (isSafariDesktop) {
-        v.src = MP4_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
-
-      if (isiOS) {
+      // iPhone/iPad and desktop Safari use native playback. iOS gets the
+      // premium 1080-only playlist; Safari desktop uses adaptive master HLS.
+      if (isiOS || nativeHls || isSafariDesktop) {
         let loaded = false;
-        const onLoadedData = () => {
+        const nativeSrc = isiOS ? HLS_SRC_IOS_1080 : HLS_SRC;
+        const onLoaded = () => {
           loaded = true;
+          revealVideo(v);
         };
-        const onError = () => {
-          if (!loaded) {
-            v.removeEventListener("loadeddata", onLoadedData);
-            v.src = MP4_SRC;
-            try {
-              v.load();
-            } catch {}
-            tryPlay(v);
-          }
+        const onNativeError = () => {
+          if (!destroyed && !loaded) loadMp4Fallback(v, MP4_SRC);
         };
 
-        v.addEventListener("loadeddata", onLoadedData, {
-          once: true,
-        } as any);
-        v.addEventListener("error", onError, { once: true } as any);
-        v.src = HLS_SRC_IOS_1080;
+        v.addEventListener("loadeddata", onLoaded, { once: true } as any);
+        v.addEventListener("error", onNativeError, { once: true } as any);
+        v.src = nativeSrc;
         try {
           v.load();
         } catch {}
         tryPlay(v);
 
-        setTimeout(() => {
-          if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
-        }, 2000);
+        nativeTimeout = window.setTimeout(() => {
+          if (!loaded && v.currentSrc === nativeSrc) onNativeError();
+        }, 3500);
         return;
       }
 
-      if (v.canPlayType("application/vnd.apple.mpegurl")) {
-        v.src = HLS_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
-if (isDesktopChrome) {
-  v.src = MP4_SRC;
-
-  try {
-    v.load();
-  } catch {}
-
-  v.loop = true;
-  tryPlay(v);
-
-  return;
-}
       try {
         const Hls = (await import("hls.js")).default;
+        if (destroyed) return;
+
         if (Hls?.isSupported?.()) {
+          const profile = getConnectionProfile();
           const hls = new Hls({
-            capLevelToPlayerSize: true,
-            startLevel: 3,
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
+            capLevelToPlayerSize: false,
+            startLevel: -1,
+            maxBufferLength: profile.constrained ? 8 : 18,
+            maxMaxBufferLength: profile.constrained ? 16 : 36,
             backBufferLength: 0,
             enableWorker: true,
+            abrEwmaFastLive: 3,
+            abrEwmaSlowLive: 9,
+            abrBandWidthFactor: profile.constrained ? 0.75 : 0.9,
             fragLoadingRetryDelay: 500,
-            fragLoadingMaxRetry: 3,
-          });
-          // @ts-expect-error
-hls.config.maxInitialBitrate = 8_000_000;
+            fragLoadingMaxRetry: 4,
+            manifestLoadingMaxRetry: 3,
+          } as any);
 
           hlsRef.current = hls;
           hls.attachMedia(v);
+
           hls.on(Hls.Events.MEDIA_ATTACHED, () => {
             if (!destroyed) hls.loadSource(HLS_SRC);
           });
+
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             try {
-              if (hls.levels?.length) {
-                const lvls = hls.levels;
-                let pick = lvls.findIndex(
-                  (l: any) => (l.height ?? 0) >= 1080
-                );
-                if (pick < 0)
-                  pick = lvls.findIndex((l: any) =>
-                    /1080/i.test(l.name ?? "")
-                  );
-                if (pick < 0) pick = lvls.length - 1;
-                hls.currentLevel = pick;
-                setTimeout(() => {
-                  hls.loadLevel = -1;
-                }, 3000);
+              const startLevel = choosePremiumStartLevel(hls.levels);
+              if (startLevel >= 0) {
+                hls.startLevel = startLevel;
+                hls.nextLevel = startLevel;
               }
-} catch {}
+              hls.autoLevelCapping = -1;
+            } catch {}
 
-v.loop = true;
-tryPlay(v);
+            tryPlay(v);
           });
-          hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
-            if (data?.fatal) {
+
+          hls.on(Hls.Events.LEVEL_LOADED, () => {
+            revealVideo(v);
+            tryPlay(v);
+          });
+
+          hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+            if (!data?.fatal) return;
+
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
               try {
-                hls.destroy();
+                hls.startLoad();
+                return;
               } catch {}
-              hlsRef.current = null;
-              v.src = MP4_SRC;
-              try {
-                v.load();
-              } catch {}
-              tryPlay(v);
             }
+
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              try {
+                hls.recoverMediaError();
+                return;
+              } catch {}
+            }
+
+            loadMp4Fallback(v, MP4_SRC);
           });
+
           return;
         }
       } catch {}
 
-      v.src = MP4_SRC;
-      try {
-        v.load();
-      } catch {}
-      tryPlay(v);
+      loadMp4Fallback(v, MP4_SRC);
     };
 
     setup();
 
-  
-
-    const onPlaying = () => {
-      v.style.opacity = "1";
-    };
-    v.addEventListener("playing", onPlaying);
-
     const onVis = () => {
-  if (document.visibilityState === "visible") {
-    tryPlay(v);
-  }
-};
+      if (document.visibilityState === "visible") tryPlay(v);
+    };
     document.addEventListener("visibilitychange", onVis);
 
-const io = new IntersectionObserver(
-  ([e]) => {
-    if (e.intersectionRatio > 0.03) {
-      tryPlay(v);
-    }
-  },
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio > 0.03) tryPlay(v);
+      },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
     io.observe(v);
 
     return () => {
-      v.removeEventListener("playing", onPlaying);
+      destroyed = true;
+      if (nativeTimeout != null) window.clearTimeout(nativeTimeout);
+      v.removeEventListener("loadeddata", reveal);
+      v.removeEventListener("canplay", reveal);
+      v.removeEventListener("playing", reveal);
+      v.removeEventListener("ended", loopForever);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
@@ -1197,7 +1269,7 @@ style={{
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="flex justify-center md:justify-start">
             <img
-              src="https://cdn.voskopulence.com/Spotlight_pic.png"
+              src={asset("/Spotlight_pic.png")}
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
             />
