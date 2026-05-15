@@ -358,7 +358,7 @@ export default function Home() {
 
   // Smooth scroll to first next section
   const scrollDown = () => {
-    const targets = ["spotlight", "about"];
+        const targets = ["spotlight", "about"];
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
@@ -418,48 +418,19 @@ export default function Home() {
     );
   }, []);
 
-  // Wheel safety net for desktop Chromium/Edge: if a fixed/composited layer eats
-  // the wheel default action, manually move the document on the next frame.
-  useEffect(() => {
-    if (isTouch) return;
-
-    const onWheel = (event: WheelEvent) => {
-      if (menuOpenRef.current || event.defaultPrevented) return;
-
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      if (maxScroll <= 0) return;
-
-      const before = window.scrollY;
-      const deltaY = event.deltaY;
-      if (Math.abs(deltaY) < 1) return;
-
-      requestAnimationFrame(() => {
-        const didScroll = Math.abs(window.scrollY - before) > 0.5;
-        if (!didScroll) {
-          window.scrollBy({ top: deltaY, left: event.deltaX, behavior: "auto" });
-        }
-      });
-    };
-
-    const wheelOptions = { capture: true, passive: true } as AddEventListenerOptions;
-    window.addEventListener("wheel", onWheel, wheelOptions);
-    return () => window.removeEventListener("wheel", onWheel, wheelOptions);
-  }, []);
-
   // Unified helper: quiet attempt to play
   const tryPlay = (el: HTMLVideoElement | null) => {
     if (!el) return;
     el.muted = true;
     el.defaultMuted = true;
     el.autoplay = true;
-    el.loop = true;
+    el.loop = false;
     el.playsInline = true;
     // @ts-ignore - iOS/Safari vendor attribute
     el.setAttribute("webkit-playsinline", "true");
     el.setAttribute("playsinline", "true");
     el.setAttribute("muted", "true");
-    el.setAttribute("loop", "true");
+    el.removeAttribute("loop");
     const p = el.play?.();
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
@@ -481,29 +452,31 @@ export default function Home() {
     if (!levels?.length) return -1;
 
     const profile = getConnectionProfile();
-    const viewportHeight = Math.max(window.innerHeight || 0, screen.height || 0);
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const desiredHeight = profile.constrained
-      ? 720
-      : profile.moderate
-        ? Math.min(1080, viewportHeight * dpr)
-        : Math.max(1080, Math.min(1440, viewportHeight * dpr));
-
     const sorted = levels
       .map((level, index) => ({ ...level, index }))
       .sort((a, b) => (a.height || 0) - (b.height || 0));
 
-    const match =
-      sorted.find((level) => (level.height || 0) >= desiredHeight * 0.9) ??
-      sorted[sorted.length - 1];
+    // Chrome/Edge should look premium: use the highest available rendition unless
+    // the user explicitly has Save-Data/2G enabled, where 720p is the ceiling.
+    if (!profile.constrained) return sorted[sorted.length - 1]?.index ?? -1;
 
-    return match?.index ?? -1;
+    const constrainedMatch =
+      sorted.find((level) => (level.height || 0) >= 720) ?? sorted[0];
+
+    return constrainedMatch?.index ?? -1;
   };
 
-  const revealVideo = (el: HTMLVideoElement | null) => {
+  const revealVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
     if (!el) return;
+    el.style.transition = `opacity ${durationMs}ms ease`;
     el.style.opacity = "1";
     el.classList.add("opacity-100");
+  };
+
+  const dimVideoForLoop = (el: HTMLVideoElement | null, durationMs = 700) => {
+    if (!el) return;
+    el.style.transition = `opacity ${durationMs}ms ease`;
+    el.style.opacity = "0.08";
   };
 
   const loadMp4Fallback = (el: HTMLVideoElement, src: string) => {
@@ -537,46 +510,16 @@ export default function Home() {
 
     let destroyed = false;
     let nativeTimeout: number | null = null;
+    let loopFadeStarted = false;
+    const LOOP_FADE_SECONDS = 0.85;
 
-    const loopForever = () => {
+    const restartLoop = () => {
       if (destroyed) return;
-      try {
-        v.currentTime = 0;
-      } catch {}
-      tryPlay(v);
-    };
+      loopFadeStarted = true;
+      dimVideoForLoop(v, 520);
 
-    const reveal = () => revealVideo(v);
-    v.addEventListener("loadeddata", reveal);
-    v.addEventListener("canplay", reveal);
-    v.addEventListener("playing", reveal);
-    v.addEventListener("ended", loopForever);
-
-    const setup = async () => {
-      const ua = navigator.userAgent || "";
-      const isiOS =
-        /iP(hone|od|ad)/.test(navigator.platform) ||
-        (/\bMac\b/.test(ua) && "ontouchend" in document);
-      const isSafariDesktop =
-        /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
-      const nativeHls = v.canPlayType("application/vnd.apple.mpegurl");
-
-      // iPhone/iPad and desktop Safari use native playback. iOS gets the
-      // premium 1080-only playlist; Safari desktop uses adaptive master HLS.
-      if (isiOS || nativeHls || isSafariDesktop) {
-        let loaded = false;
-        const nativeSrc = isiOS ? HLS_SRC_IOS_1080 : HLS_SRC;
-        const onLoaded = () => {
-          loaded = true;
-          revealVideo(v);
-        };
-        const onNativeError = () => {
-          if (!destroyed && !loaded) loadMp4Fallback(v, MP4_SRC);
-        };
-
-        v.addEventListener("loadeddata", onLoaded, { once: true } as any);
-        v.addEventListener("error", onNativeError, { once: true } as any);
-        v.src = nativeSrc;
+      window.setTimeout(() => {
+        if (destroyed) return;
         try {
           v.currentTime = 0;
         } catch {}
@@ -584,15 +527,31 @@ export default function Home() {
         requestAnimationFrame(() => {
           loopFadeStarted = false;
           revealVideo(v, 720);
+        });
       }, 260);
     };
 
-        nativeTimeout = window.setTimeout(() => {
-          if (!loaded && v.currentSrc === nativeSrc) onNativeError();
-        }, 3500);
-        return;
-      }
+    const prepareLoopFade = () => {
+      if (destroyed || loopFadeStarted || !Number.isFinite(v.duration)) return;
+      if (v.duration <= 1) return;
 
+      const remaining = v.duration - v.currentTime;
+      if (remaining > 0 && remaining <= LOOP_FADE_SECONDS) {
+        loopFadeStarted = true;
+        dimVideoForLoop(v, 700);
+      }
+    };
+
+    const reveal = () => {
+      if (!loopFadeStarted) revealVideo(v);
+    };
+    v.addEventListener("loadeddata", reveal);
+    v.addEventListener("canplay", reveal);
+    v.addEventListener("playing", reveal);
+    v.addEventListener("timeupdate", prepareLoopFade);
+    v.addEventListener("ended", restartLoop);
+
+    const setupHlsJs = async () => {
       try {
         const Hls = (await import("hls.js")).default;
         if (destroyed) return;
@@ -602,13 +561,16 @@ export default function Home() {
           const hls = new Hls({
             capLevelToPlayerSize: false,
             startLevel: -1,
-            maxBufferLength: profile.constrained ? 8 : 18,
-            maxMaxBufferLength: profile.constrained ? 16 : 36,
+            maxBufferLength: profile.constrained ? 8 : 24,
+            maxMaxBufferLength: profile.constrained ? 16 : 48,
             backBufferLength: 0,
             enableWorker: true,
-            abrEwmaFastLive: 3,
-            abrEwmaSlowLive: 9,
-            abrBandWidthFactor: profile.constrained ? 0.75 : 0.9,
+            abrEwmaFastLive: 2,
+            abrEwmaSlowLive: 6,
+            abrBandWidthFactor: profile.constrained ? 0.75 : 0.98,
+            abrBandWidthUpFactor: profile.constrained ? 0.7 : 0.95,
+            maxStarvationDelay: profile.constrained ? 4 : 2,
+            maxLoadingDelay: profile.constrained ? 4 : 2,
             fragLoadingRetryDelay: 500,
             fragLoadingMaxRetry: 4,
             manifestLoadingMaxRetry: 3,
@@ -626,9 +588,11 @@ export default function Home() {
               const startLevel = choosePremiumStartLevel(hls.levels);
               if (startLevel >= 0) {
                 hls.startLevel = startLevel;
+                hls.currentLevel = startLevel;
                 hls.nextLevel = startLevel;
+                hls.loadLevel = startLevel;
+                hls.autoLevelCapping = startLevel;
               }
-              hls.autoLevelCapping = -1;
             } catch {}
 
             tryPlay(v);
@@ -661,11 +625,84 @@ export default function Home() {
 
           return;
         }
-        } catch {}
+      } catch {}
 
       loadMp4Fallback(v, MP4_SRC);
     };
 
+    const setup = async () => {
+      const ua = navigator.userAgent || "";
+      const isiOS =
+        /iP(hone|od|ad)/.test(navigator.platform) ||
+        (/\bMac\b/.test(ua) && "ontouchend" in document);
+      const isSafariDesktop =
+        /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+      const isDesktopChromium =
+        /\b(Chrome|Chromium|Edg)\//.test(ua) &&
+        !/Android|CriOS|FxiOS|OPR\//.test(ua);
+      const nativeHls = v.canPlayType("application/vnd.apple.mpegurl");
+
+      // iPhone/iPad and desktop Safari use native playback. iOS gets the
+      // premium 1080-only playlist; Safari desktop uses adaptive master HLS.
+      if (isiOS || nativeHls || isSafariDesktop) {
+        let loaded = false;
+        const nativeSrc = isiOS ? HLS_SRC_IOS_1080 : HLS_SRC;
+        const onLoaded = () => {
+          loaded = true;
+          revealVideo(v);
+        };
+        const onNativeError = () => {
+          if (!destroyed && !loaded) loadMp4Fallback(v, MP4_SRC);
+        };
+
+        v.addEventListener("loadeddata", onLoaded, { once: true } as any);
+        v.addEventListener("error", onNativeError, { once: true } as any);
+        v.src = nativeSrc;
+        try {
+          v.load();
+        } catch {}
+        tryPlay(v);
+
+        nativeTimeout = window.setTimeout(() => {
+          if (!loaded && v.currentSrc === nativeSrc) onNativeError();
+        }, 3500);
+        return;
+      }
+
+      // Chrome/Edge should use the exact premium MP4 the user verified in
+      // BunnyCDN. HLS remains as a safety fallback if that MP4 cannot load.
+      if (isDesktopChromium) {
+        let mp4Loaded = false;
+        const onMp4Loaded = () => {
+          mp4Loaded = true;
+          revealVideo(v);
+        };
+        const onMp4Error = () => {
+          if (!destroyed && !mp4Loaded) setupHlsJs();
+        };
+
+        v.addEventListener("loadeddata", onMp4Loaded, { once: true } as any);
+        v.addEventListener("error", onMp4Error, { once: true } as any);
+        v.src = MP4_SRC;
+        try {
+          v.load();
+        } catch {}
+        tryPlay(v);
+
+        nativeTimeout = window.setTimeout(() => {
+          if (!destroyed && !mp4Loaded && v.currentSrc.endsWith(MP4_SRC)) {
+            v.removeEventListener("loadeddata", onMp4Loaded);
+            v.removeEventListener("error", onMp4Error);
+            setupHlsJs();
+          }
+        }, 3500);
+        return;
+      }
+
+      await setupHlsJs();
+    };
+
+    setup();
 
     const onVis = () => {
       if (document.visibilityState === "visible") tryPlay(v);
@@ -681,12 +718,13 @@ export default function Home() {
     io.observe(v);
 
     return () => {
-      destroyed = true;
+            destroyed = true;
       if (nativeTimeout != null) window.clearTimeout(nativeTimeout);
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
-      v.removeEventListener("ended", loopForever);
+      v.removeEventListener("timeupdate", prepareLoopFade);
+      v.removeEventListener("ended", restartLoop);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
       if (hlsRef.current) {
@@ -1040,7 +1078,7 @@ export default function Home() {
   >
     Home
   </a>
-</li>
+                    </li>
 
                   <li>
                     <a
