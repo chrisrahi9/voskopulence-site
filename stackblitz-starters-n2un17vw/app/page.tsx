@@ -881,6 +881,9 @@ const io = new IntersectionObserver(
       {/* === Header Portal === */}
 <SiteHeader capPx={capPx} />
       {/* ===== Mobile curtain (portal) — mounted ONLY when open ===== */}
+      {mounted &&
+  typeof document !== "undefined" &&
+  menuOpen &&
  createPortal(
           <div
             id="mobile-menu"
@@ -1008,9 +1011,10 @@ const io = new IntersectionObserver(
                 </ul>
               </nav>
             </div>
-          </div>,
-          document.body
-        )}
+             </div>,
+    document.body
+  )
+}
     
 
       {/* ===================== HERO ===================== */}
