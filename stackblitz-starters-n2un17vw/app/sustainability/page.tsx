@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
-const ASSETS = "https://cdn.voskopulence.com";
+const ASSETS = "/media";
 const asset = (p: string) => `${ASSETS}${p}`;
 
 const PROG_DISTANCE = 120;
