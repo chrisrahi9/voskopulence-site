@@ -360,7 +360,7 @@ export default function Home() {
 
   // Smooth scroll to first next section
   const scrollDown = () => {
-    const targets = ["spotlight", "about"];
+        const targets = ["spotlight", "about"];
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
@@ -1078,7 +1078,7 @@ export default function Home() {
   >
     Home
   </a>
-</li>
+  </li>
 
                   <li>
                     <a
