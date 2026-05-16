@@ -134,6 +134,8 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const heroMp4Src = directAsset("/hero_web_v3.mp4");
+  const heroPosterSrc = directAsset("/hero_poster.jpg");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -421,119 +423,90 @@ export default function Home() {
     el.classList.add("opacity-100");
   };
 
-  // Direct CDN MP4 only: avoids adaptive HLS quality drops and lets native loop work.
+  // Direct CDN MP4 only: avoids adaptive HLS quality drops and keeps looping native.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const DIRECT_MP4_SRC = directAsset("/hero_web_v3.mp4");
-    const DIRECT_POSTER = directAsset("/hero_poster.jpg");
-
     let destroyed = false;
 
-    const reveal = () => revealHeroVideo(v);
-    const ensurePlayback = () => {
-      if (destroyed) return;
+    const applyVideoFlags = () => {
       v.loop = true;
       v.defaultMuted = true;
       v.muted = true;
       v.autoplay = true;
       v.playsInline = true;
+      v.preload = "auto";
+      v.poster = heroPosterSrc;
       v.setAttribute("loop", "");
       v.setAttribute("muted", "");
       v.setAttribute("autoplay", "");
       v.setAttribute("playsinline", "");
       // @ts-ignore - iOS/Safari vendor attribute
       v.setAttribute("webkit-playsinline", "");
+    };
 
+    const play = () => {
+      if (destroyed) return;
+      applyVideoFlags();
       const playPromise = v.play?.();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
       }
     };
 
-    v.poster = DIRECT_POSTER;
-    v.preload = "auto";
+    const reveal = () => revealHeroVideo(v);
+    const restart = () => {
+      if (destroyed) return;
+      try {
+        v.currentTime = 0;
+      } catch {}
+      play();
+    };
 
-    v.addEventListener("loadeddata", reveal);
-    v.addEventListener("canplay", reveal);
-    v.addEventListener("playing", reveal);
-
-    if (v.currentSrc !== DIRECT_MP4_SRC) {
-      v.src = DIRECT_MP4_SRC;
+    applyVideoFlags();
+    if (v.currentSrc !== heroMp4Src) {
+      v.src = heroMp4Src;
       try {
         v.load();
       } catch {}
     }
 
-    ensurePlayback();
+    v.addEventListener("loadeddata", reveal);
+    v.addEventListener("canplay", reveal);
+    v.addEventListener("playing", reveal);
+    v.addEventListener("ended", restart);
+    v.addEventListener("pause", play);
+
+    play();
 
     const onVis = () => {
-      if (document.visibilityState === "visible") ensurePlayback();
+      if (document.visibilityState === "visible") play();
     };
     document.addEventListener("visibilitychange", onVis);
 
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.intersectionRatio > 0.03) ensurePlayback();
+        if (entry.intersectionRatio > 0.03) play();
       },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
     io.observe(v);
 
+    const revealTimeout = window.setTimeout(() => revealHeroVideo(v), 1200);
+
     return () => {
       destroyed = true;
+      window.clearTimeout(revealTimeout);
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
+      v.removeEventListener("ended", restart);
+      v.removeEventListener("pause", play);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
     };
-  }, []);
-
-  // One small autoplay nudge + poster safety. Keep this in sync with the
-  // primary direct-MP4 setup so a later playback nudge cannot drop loop/source.
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-
-    const directMp4Src = directAsset("/hero_web_v3.mp4");
-    const applyVideoFlags = () => {
-      v.loop = true;
-      v.muted = true;
-      v.defaultMuted = true;
-      v.autoplay = true;
-      v.playsInline = true;
-      v.setAttribute("loop", "");
-      v.setAttribute("muted", "");
-      v.setAttribute("autoplay", "");
-      v.setAttribute("playsinline", "");
-      // @ts-ignore - iOS/Safari vendor attribute
-      v.setAttribute("webkit-playsinline", "");
-    };
-    const tryOnce = () => {
-      applyVideoFlags();
-      if (v.currentSrc && v.currentSrc !== directMp4Src) {
-        v.src = directMp4Src;
-        try {
-          v.load();
-        } catch {}
-      }
-      v.play().catch(() => {});
-    };
-
-    applyVideoFlags();
-    if (v.readyState >= 2) tryOnce();
-    else {
-      const onCanPlay = () => {
-        tryOnce();
-        v.removeEventListener("canplay", onCanPlay);
-      };
-      v.addEventListener("canplay", onCanPlay);
-    }
-    const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
-    return () => clearTimeout(t);
-  }, []);
+  }, [heroMp4Src, heroPosterSrc]);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
@@ -917,9 +890,7 @@ export default function Home() {
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${directAsset(
-                  "/hero_poster.jpg"
-                )})`,
+                backgroundImage: `url(${heroPosterSrc})`,
                 filter: "brightness(0.9)",
               }}
             />
@@ -927,7 +898,8 @@ export default function Home() {
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={directAsset("/hero_poster.jpg")}
+              poster={heroPosterSrc}
+              src={heroMp4Src}
               autoPlay
               muted
               loop
@@ -948,13 +920,7 @@ export default function Home() {
 style={{
   willChange: "opacity",
 }}
-            >
-              {/* WEBM then MP4 (H.264) */}
-              <source
-                src={directAsset("/hero_web_v3.mp4")}
-                type="video/mp4; codecs=avc1"
-              />
-            </video>
+            />
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
