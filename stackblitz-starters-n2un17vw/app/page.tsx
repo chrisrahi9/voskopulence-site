@@ -429,6 +429,14 @@ export default function Home() {
     if (!v) return;
 
     let destroyed = false;
+    let isHeroVisible = true;
+    let recoveryTimer: number | null = null;
+
+    const clearRecoveryTimer = () => {
+      if (recoveryTimer == null) return;
+      window.clearTimeout(recoveryTimer);
+      recoveryTimer = null;
+    };
 
     const applyVideoFlags = () => {
       v.loop = true;
@@ -446,13 +454,58 @@ export default function Home() {
       v.setAttribute("webkit-playsinline", "");
     };
 
+    const ensureDirectSource = () => {
+      if (v.currentSrc === heroMp4Src || v.src === heroMp4Src) return;
+
+      v.src = heroMp4Src;
+      try {
+        v.load();
+      } catch {}
+    };
+
     const play = () => {
-      if (destroyed) return;
+      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+        return;
+      }
+
       applyVideoFlags();
+      ensureDirectSource();
+
       const playPromise = v.play?.();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
       }
+    };
+
+    const scheduleRecovery = () => {
+      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+        return;
+      }
+
+      clearRecoveryTimer();
+      recoveryTimer = window.setTimeout(() => {
+        recoveryTimer = null;
+        if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+          return;
+        }
+
+        applyVideoFlags();
+        ensureDirectSource();
+
+        if (v.ended) {
+          try {
+            v.currentTime = 0;
+          } catch {}
+        }
+
+        if (
+          v.paused ||
+          v.ended ||
+          v.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+        ) {
+          play();
+        }
+      }, 200);
     };
 
     const reveal = () => revealHeroVideo(v);
@@ -465,29 +518,30 @@ export default function Home() {
     };
 
     applyVideoFlags();
-    if (v.currentSrc !== heroMp4Src) {
-      v.src = heroMp4Src;
-      try {
-        v.load();
-      } catch {}
-    }
+    ensureDirectSource();
 
     v.addEventListener("loadeddata", reveal);
     v.addEventListener("canplay", reveal);
     v.addEventListener("playing", reveal);
     v.addEventListener("ended", restart);
-    v.addEventListener("pause", play);
+    v.addEventListener("pause", scheduleRecovery);
+    v.addEventListener("stalled", scheduleRecovery);
+    v.addEventListener("suspend", scheduleRecovery);
+    v.addEventListener("waiting", scheduleRecovery);
 
     play();
 
     const onVis = () => {
       if (document.visibilityState === "visible") play();
+      else clearRecoveryTimer();
     };
     document.addEventListener("visibilitychange", onVis);
 
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.intersectionRatio > 0.03) play();
+        isHeroVisible = entry.intersectionRatio > 0.03;
+        if (isHeroVisible) play();
+        else clearRecoveryTimer();
       },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
@@ -497,12 +551,16 @@ export default function Home() {
 
     return () => {
       destroyed = true;
+      clearRecoveryTimer();
       window.clearTimeout(revealTimeout);
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
       v.removeEventListener("ended", restart);
-      v.removeEventListener("pause", play);
+      v.removeEventListener("pause", scheduleRecovery);
+      v.removeEventListener("stalled", scheduleRecovery);
+      v.removeEventListener("suspend", scheduleRecovery);
+      v.removeEventListener("waiting", scheduleRecovery);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
     };
@@ -907,6 +965,7 @@ export default function Home() {
               preload="auto"
               aria-hidden="true"
               disablePictureInPicture
+              disableRemotePlayback
               controlsList="nodownload noplaybackrate"
               onLoadedData={(e) => {
                 e.currentTarget.classList.add("opacity-100");
@@ -917,9 +976,11 @@ export default function Home() {
               onError={() => {
                 videoRef.current?.classList.add("opacity-100");
               }}
-style={{
-  willChange: "opacity",
-}}
+              style={{
+                willChange: "opacity",
+                backfaceVisibility: "hidden",
+                transform: "translateZ(0)",
+              }}
             />
 
             {/* Legibility overlay */}
