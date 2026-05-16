@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ScrollToTop from "./_components/ScrollToTop";
+import SmoothWheelScroll from "./_components/SmoothWheelScroll";
 
 export const metadata: Metadata = {
   title: "Voskopulence",
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Suspense fallback={null}>
           <ScrollToTop />
+          <SmoothWheelScroll />
         </Suspense>
         {children}
       </body>
