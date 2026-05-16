@@ -139,7 +139,6 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<any>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -420,8 +419,7 @@ export default function Home() {
     );
   }, []);
 
-  // Unified helper: quiet attempt to play
-  const tryPlay = (el: HTMLVideoElement | null) => {
+  const revealVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
     if (!el) return;
     el.muted = true;
     el.defaultMuted = true;
@@ -727,12 +725,6 @@ export default function Home() {
       v.removeEventListener("ended", restartLoop);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
-      if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
-        hlsRef.current = null;
-      }
     };
   }, []);
 
@@ -1139,7 +1131,7 @@ export default function Home() {
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${asset(
+                backgroundImage: `url(${directAsset(
                   "/hero_poster.jpg"
                 )})`,
                 filter: "brightness(0.9)",
@@ -1149,7 +1141,7 @@ export default function Home() {
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={asset("/hero_poster.jpg")}
+              poster={directAsset("/hero_poster.jpg")}
               autoPlay
               muted
               playsInline
@@ -1172,7 +1164,7 @@ style={{
             >
               {/* WEBM then MP4 (H.264) */}
               <source
-                src={asset("/hero_web_v3.mp4")}
+                src={directAsset("/hero_web_v3.mp4")}
                 type="video/mp4; codecs=avc1"
               />
             </video>
