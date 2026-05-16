@@ -5,7 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
 const ASSETS = "/media";
+const DIRECT_ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
+const directAsset = (p: string) => `${DIRECT_ASSETS}${p}`;
 
 const CAP_PX = 5;
 const PROG_DISTANCE = 120;
@@ -502,6 +504,7 @@ export default function Home() {
     const HLS_SRC = asset("/hero_hls/master.m3u8");
     const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
     const MP4_SRC = asset("/hero_web_v3.mp4");
+    const DIRECT_MP4_SRC = directAsset("/hero_web_v3.mp4");
     const POSTER = asset("/hero_poster.jpg");
 
     v.poster = POSTER;
@@ -670,32 +673,29 @@ export default function Home() {
       }
 
       // Chrome/Edge should use the exact premium MP4 the user verified in
-      // BunnyCDN. HLS remains as a safety fallback if that MP4 cannot load.
+      // BunnyCDN. Load it directly from BunnyCDN and use native looping here so
+      // desktop playback cannot drop into a softer HLS rendition or stop after
+      // one pass.
       if (isDesktopChromium) {
-        let mp4Loaded = false;
-        const onMp4Loaded = () => {
-          mp4Loaded = true;
-          revealVideo(v);
-        };
+        const onMp4Loaded = () => revealVideo(v);
         const onMp4Error = () => {
-          if (!destroyed && !mp4Loaded) setupHlsJs();
+          if (!destroyed) setupHlsJs();
         };
 
+        v.removeEventListener("timeupdate", prepareLoopFade);
+        v.removeEventListener("ended", restartLoop);
         v.addEventListener("loadeddata", onMp4Loaded, { once: true } as any);
         v.addEventListener("error", onMp4Error, { once: true } as any);
-        v.src = MP4_SRC;
+        v.src = DIRECT_MP4_SRC;
+        v.loop = true;
+        v.setAttribute("loop", "true");
         try {
           v.load();
         } catch {}
         tryPlay(v);
+        v.loop = true;
+        v.setAttribute("loop", "true");
 
-        nativeTimeout = window.setTimeout(() => {
-          if (!destroyed && !mp4Loaded && v.currentSrc.endsWith(MP4_SRC)) {
-            v.removeEventListener("loadeddata", onMp4Loaded);
-            v.removeEventListener("error", onMp4Error);
-            setupHlsJs();
-          }
-        }, 3500);
         return;
       }
 
@@ -718,7 +718,7 @@ export default function Home() {
     io.observe(v);
 
     return () => {
-            destroyed = true;
+      destroyed = true;
       if (nativeTimeout != null) window.clearTimeout(nativeTimeout);
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
