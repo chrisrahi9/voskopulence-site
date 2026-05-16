@@ -673,28 +673,29 @@ export default function Home() {
       }
 
       // Chrome/Edge should use the exact premium MP4 the user verified in
-      // BunnyCDN. Load it directly from BunnyCDN so Vercel's media proxy cannot
-      // delay startup and accidentally trip the HLS fallback timer.
+      // BunnyCDN. Load it directly from BunnyCDN and use native looping here so
+      // desktop playback cannot drop into a softer HLS rendition or stop after
+      // one pass.
       if (isDesktopChromium) {
-        let mp4Loaded = false;
-        const onMp4Loaded = () => {
-          mp4Loaded = true;
-          revealVideo(v);
-        };
+        const onMp4Loaded = () => revealVideo(v);
         const onMp4Error = () => {
-          if (!destroyed && !mp4Loaded) setupHlsJs();
+          if (!destroyed) setupHlsJs();
         };
 
+        v.removeEventListener("timeupdate", prepareLoopFade);
+        v.removeEventListener("ended", restartLoop);
         v.addEventListener("loadeddata", onMp4Loaded, { once: true } as any);
         v.addEventListener("error", onMp4Error, { once: true } as any);
         v.src = DIRECT_MP4_SRC;
+        v.loop = true;
+        v.setAttribute("loop", "true");
         try {
           v.load();
         } catch {}
         tryPlay(v);
+        v.loop = true;
+        v.setAttribute("loop", "true");
 
-        // Do not time out from MP4 into HLS just because first-frame decode is
-        // slow; HLS is only a true error fallback on desktop Chromium.
         return;
       }
 
