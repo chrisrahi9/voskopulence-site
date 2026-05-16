@@ -1078,7 +1078,7 @@ export default function Home() {
   >
     Home
   </a>
-                    </li>
+  </li>
 
                   <li>
                     <a
