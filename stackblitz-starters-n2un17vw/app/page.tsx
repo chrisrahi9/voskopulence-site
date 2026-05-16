@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
-const ASSETS = "https://cdn.voskopulence.com";
+const ASSETS = "/media";
+const DIRECT_ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
+const directAsset = (p: string) => `${DIRECT_ASSETS}${p}`;
 
 const CAP_PX = 5;
 const PROG_DISTANCE = 120;
@@ -16,6 +18,7 @@ const PRESS_MS = 720; // a bit slower & smoother
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+
 
 /* ---------- Tiny fixed top sentinel to help iOS compositor ---------- */
 function TopSentinel() {
@@ -131,7 +134,6 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<any>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -220,14 +222,13 @@ export default function Home() {
     const dy = e.clientY - startPos.current.y;
 
     if (Math.hypot(dx, dy) > 12) {
+      // Movement should only cancel the short-tap scroll action. It should not
+      // cancel the hold visual or the long-press arrow while the finger is down.
       canceledTapRef.current = true;
-      if (longTimer.current) {
-        clearTimeout(longTimer.current);
-        longTimer.current = null;
-      }
     }
 
-    // While finger is down, always keep the big press scale.
+    // While finger is down, always keep the big press scale — even if the
+    // captured pointer moves outside of the visible circle.
     const el = ctaRef.current;
     if (el) {
       el.style.setProperty("--press", PRESS_SCALE);
@@ -413,225 +414,115 @@ export default function Home() {
     );
   }, []);
 
-  // Unified helper: quiet attempt to play
-  const tryPlay = (el: HTMLVideoElement | null) => {
+  const revealHeroVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
     if (!el) return;
-    el.muted = true;
-    // @ts-ignore
-    el.setAttribute("webkit-playsinline", "true");
-    el.setAttribute("playsinline", "true");
-    const p = el.play?.();
-    if (p && typeof p.catch === "function") p.catch(() => {});
-    el.setAttribute("loop", "true");
+    el.style.transition = `opacity ${durationMs}ms ease`;
+    el.style.opacity = "1";
+    el.classList.add("opacity-100");
   };
 
-  // --- Video setup (HLS with MP4 fallback) ---
+  // Direct CDN MP4 only: avoids adaptive HLS quality drops and lets native loop work.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
-    const MP4_SRC = asset("/hero_web_v3.mp4");
-    const POSTER = asset("/hero_poster.jpg");
-
-    v.poster = POSTER;
-
-    const revealPoster = () => {
-      v.style.opacity = "1";
-    };
-    v.addEventListener("loadeddata", revealPoster, { once: true } as any);
+    const DIRECT_MP4_SRC = directAsset("/hero_web_v3.mp4");
+    const DIRECT_POSTER = directAsset("/hero_poster.jpg");
 
     let destroyed = false;
 
-    const setup = async () => {
-      const ua = navigator.userAgent || "";
-      const isiOS =
-        /iP(hone|od|ad)/.test(navigator.platform) ||
-        (/\bMac\b/.test(ua) && "ontouchend" in document);
-const isDesktopChrome =
-  /chrome/i.test(ua) &&
-  !/edg/i.test(ua) &&
-  !/android/i.test(ua);
-      const isSafariDesktop =
-        /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+    const reveal = () => revealHeroVideo(v);
+    const ensurePlayback = () => {
+      if (destroyed) return;
+      v.loop = true;
+      v.defaultMuted = true;
+      v.muted = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.setAttribute("loop", "");
+      v.setAttribute("muted", "");
+      v.setAttribute("autoplay", "");
+      v.setAttribute("playsinline", "");
+      // @ts-ignore - iOS/Safari vendor attribute
+      v.setAttribute("webkit-playsinline", "");
 
-      if (isSafariDesktop) {
-        v.src = MP4_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
+      const playPromise = v.play?.();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
       }
+    };
 
-      if (isiOS) {
-        let loaded = false;
-        const onLoadedData = () => {
-          loaded = true;
-        };
-        const onError = () => {
-          if (!loaded) {
-            v.removeEventListener("loadeddata", onLoadedData);
-            v.src = MP4_SRC;
-            try {
-              v.load();
-            } catch {}
-            tryPlay(v);
-          }
-        };
+    v.poster = DIRECT_POSTER;
+    v.preload = "auto";
 
-        v.addEventListener("loadeddata", onLoadedData, {
-          once: true,
-        } as any);
-        v.addEventListener("error", onError, { once: true } as any);
-        v.src = HLS_SRC_IOS_1080;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
+    v.addEventListener("loadeddata", reveal);
+    v.addEventListener("canplay", reveal);
+    v.addEventListener("playing", reveal);
 
-        setTimeout(() => {
-          if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
-        }, 2000);
-        return;
-      }
-
-      if (v.canPlayType("application/vnd.apple.mpegurl")) {
-        v.src = HLS_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
-if (isDesktopChrome) {
-  v.src = MP4_SRC;
-
-  try {
-    v.load();
-  } catch {}
-
-  v.loop = true;
-  tryPlay(v);
-
-  return;
-}
-      try {
-        const Hls = (await import("hls.js")).default;
-        if (Hls?.isSupported?.()) {
-          const hls = new Hls({
-            capLevelToPlayerSize: true,
-            startLevel: 3,
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
-            backBufferLength: 0,
-            enableWorker: true,
-            fragLoadingRetryDelay: 500,
-            fragLoadingMaxRetry: 3,
-          });
-          // @ts-expect-error
-hls.config.maxInitialBitrate = 8_000_000;
-
-          hlsRef.current = hls;
-          hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-            if (!destroyed) hls.loadSource(HLS_SRC);
-          });
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            try {
-              if (hls.levels?.length) {
-                const lvls = hls.levels;
-                let pick = lvls.findIndex(
-                  (l: any) => (l.height ?? 0) >= 1080
-                );
-                if (pick < 0)
-                  pick = lvls.findIndex((l: any) =>
-                    /1080/i.test(l.name ?? "")
-                  );
-                if (pick < 0) pick = lvls.length - 1;
-                hls.currentLevel = pick;
-                setTimeout(() => {
-                  hls.loadLevel = -1;
-                }, 3000);
-              }
-} catch {}
-
-v.loop = true;
-tryPlay(v);
-          });
-          hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
-            if (data?.fatal) {
-              try {
-                hls.destroy();
-              } catch {}
-              hlsRef.current = null;
-              v.src = MP4_SRC;
-              try {
-                v.load();
-              } catch {}
-              tryPlay(v);
-            }
-          });
-          return;
-        }
-      } catch {}
-
-      v.src = MP4_SRC;
+    if (v.currentSrc !== DIRECT_MP4_SRC) {
+      v.src = DIRECT_MP4_SRC;
       try {
         v.load();
       } catch {}
-      tryPlay(v);
-    };
+    }
 
-    setup();
-
-  
-
-    const onPlaying = () => {
-      v.style.opacity = "1";
-    };
-    v.addEventListener("playing", onPlaying);
+    ensurePlayback();
 
     const onVis = () => {
-  if (document.visibilityState === "visible") {
-    tryPlay(v);
-  }
-};
+      if (document.visibilityState === "visible") ensurePlayback();
+    };
     document.addEventListener("visibilitychange", onVis);
 
-const io = new IntersectionObserver(
-  ([e]) => {
-    if (e.intersectionRatio > 0.03) {
-      tryPlay(v);
-    }
-  },
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio > 0.03) ensurePlayback();
+      },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
     io.observe(v);
 
     return () => {
-      v.removeEventListener("playing", onPlaying);
+      destroyed = true;
+      v.removeEventListener("loadeddata", reveal);
+      v.removeEventListener("canplay", reveal);
+      v.removeEventListener("playing", reveal);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
-      if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
-        hlsRef.current = null;
-      }
     };
   }, []);
 
-  // One small autoplay nudge + poster safety
+  // One small autoplay nudge + poster safety. Keep this in sync with the
+  // primary direct-MP4 setup so a later playback nudge cannot drop loop/source.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.muted = true;
-    v.setAttribute("playsinline", "true");
-    // @ts-ignore
-    v.setAttribute("webkit-playsinline", "true");
-    const tryOnce = () => v.play().catch(() => {});
+
+    const directMp4Src = directAsset("/hero_web_v3.mp4");
+    const applyVideoFlags = () => {
+      v.loop = true;
+      v.muted = true;
+      v.defaultMuted = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.setAttribute("loop", "");
+      v.setAttribute("muted", "");
+      v.setAttribute("autoplay", "");
+      v.setAttribute("playsinline", "");
+      // @ts-ignore - iOS/Safari vendor attribute
+      v.setAttribute("webkit-playsinline", "");
+    };
+    const tryOnce = () => {
+      applyVideoFlags();
+      if (v.currentSrc && v.currentSrc !== directMp4Src) {
+        v.src = directMp4Src;
+        try {
+          v.load();
+        } catch {}
+      }
+      v.play().catch(() => {});
+    };
+
+    applyVideoFlags();
     if (v.readyState >= 2) tryOnce();
     else {
       const onCanPlay = () => {
@@ -1026,7 +917,7 @@ const io = new IntersectionObserver(
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${asset(
+                backgroundImage: `url(${directAsset(
                   "/hero_poster.jpg"
                 )})`,
                 filter: "brightness(0.9)",
@@ -1036,11 +927,11 @@ const io = new IntersectionObserver(
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={asset("/hero_poster.jpg")}
+              poster={directAsset("/hero_poster.jpg")}
               autoPlay
               muted
-              playsInline
               loop
+              playsInline
               preload="auto"
               aria-hidden="true"
               disablePictureInPicture
@@ -1060,7 +951,7 @@ style={{
             >
               {/* WEBM then MP4 (H.264) */}
               <source
-                src={asset("/hero_web_v3.mp4")}
+                src={directAsset("/hero_web_v3.mp4")}
                 type="video/mp4; codecs=avc1"
               />
             </video>
@@ -1109,7 +1000,7 @@ style={{
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: "manipulation",
+                  touchAction: "none",
                   transform: `
                     translate3d(0, 0, 0)
                     scale(var(--press,1))
@@ -1152,9 +1043,14 @@ style={{
                   height="24"
                   viewBox="0 0 24 24"
                   aria-hidden="true"
-                  className={`absolute z-10 transition-all duration-220 ease-[cubic-bezier(.22,1,.36,1)]
-                    ${isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    [backface-visibility:hidden] [transform:translateZ(0)]`}
+                  className={`absolute left-1/2 top-1/2 z-10 transition-opacity duration-220 ease-[cubic-bezier(.22,1,.36,1)]
+                    ${isLongPress && showArrow ? "opacity-100" : "opacity-0"}
+                    [backface-visibility:hidden]`}
+                  style={{
+                    transform: `translate3d(-50%, ${
+                      isLongPress && showArrow ? "calc(-50% + 1px)" : "-50%"
+                    }, 0)`,
+                  }}
                 >
                   <path
                     d="M6 9.5 L12 15.5 L18 9.5"
@@ -1197,7 +1093,7 @@ style={{
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="flex justify-center md:justify-start">
             <img
-              src="https://cdn.voskopulence.com/Spotlight_pic.png"
+              src={asset("/Spotlight_pic.png")}
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
             />
