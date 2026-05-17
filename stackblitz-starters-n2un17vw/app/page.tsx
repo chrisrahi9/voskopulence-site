@@ -19,6 +19,11 @@ const PRESS_MS = 720; // a bit slower & smoother
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
 
+type NetworkInformationLike = {
+  effectiveType?: string;
+  downlink?: number;
+  saveData?: boolean;
+};
 
 /* ---------- Tiny fixed top sentinel to help iOS compositor ---------- */
 function TopSentinel() {
@@ -134,8 +139,6 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const heroMp4Src = directAsset("/hero_web_v3.mp4");
-  const heroPosterSrc = directAsset("/hero_poster.jpg");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -356,7 +359,7 @@ export default function Home() {
 
   // Smooth scroll to first next section
   const scrollDown = () => {
-    const targets = ["spotlight", "about"];
+        const targets = ["spotlight", "about"];
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     for (const id of targets) {
@@ -416,132 +419,296 @@ export default function Home() {
     );
   }, []);
 
-  const revealHeroVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
+  const revealVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
+    if (!el) return;
+    el.muted = true;
+    el.defaultMuted = true;
+    el.autoplay = true;
+    el.loop = false;
+    el.playsInline = true;
+    // @ts-ignore - iOS/Safari vendor attribute
+    el.setAttribute("webkit-playsinline", "true");
+    el.setAttribute("playsinline", "true");
+    el.setAttribute("muted", "true");
+    el.removeAttribute("loop");
+    const p = el.play?.();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  };
+
+  const getConnectionProfile = () => {
+    const connection =
+      (navigator as any).connection as NetworkInformationLike | undefined;
+    const effectiveType = connection?.effectiveType ?? "";
+    const downlink = connection?.downlink ?? 10;
+    const saveData = Boolean(connection?.saveData);
+    const constrained =
+      saveData || /(^|-)2g$/.test(effectiveType) || effectiveType === "slow-2g";
+    const moderate = constrained || effectiveType === "3g" || downlink < 3;
+
+    return { constrained, moderate, downlink, saveData };
+  };
+
+  const choosePremiumStartLevel = (levels: any[]) => {
+    if (!levels?.length) return -1;
+
+    const profile = getConnectionProfile();
+    const sorted = levels
+      .map((level, index) => ({ ...level, index }))
+      .sort((a, b) => (a.height || 0) - (b.height || 0));
+
+    // Chrome/Edge should look premium: use the highest available rendition unless
+    // the user explicitly has Save-Data/2G enabled, where 720p is the ceiling.
+    if (!profile.constrained) return sorted[sorted.length - 1]?.index ?? -1;
+
+    const constrainedMatch =
+      sorted.find((level) => (level.height || 0) >= 720) ?? sorted[0];
+
+    return constrainedMatch?.index ?? -1;
+  };
+
+  const revealVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
     if (!el) return;
     el.style.transition = `opacity ${durationMs}ms ease`;
     el.style.opacity = "1";
     el.classList.add("opacity-100");
   };
 
-  // Direct CDN MP4 only: avoids adaptive HLS quality drops and keeps looping native.
+  const dimVideoForLoop = (el: HTMLVideoElement | null, durationMs = 700) => {
+    if (!el) return;
+    el.style.transition = `opacity ${durationMs}ms ease`;
+    el.style.opacity = "0.08";
+  };
+
+  const loadMp4Fallback = (el: HTMLVideoElement, src: string) => {
+    if (hlsRef.current) {
+      try {
+        hlsRef.current.destroy();
+      } catch {}
+      hlsRef.current = null;
+    }
+
+    el.src = src;
+    try {
+      el.load();
+    } catch {}
+    tryPlay(el);
+  };
+
+  // --- Premium adaptive hero video (native HLS, hls.js, MP4 fallback) ---
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
+    const HLS_SRC = asset("/hero_hls/master.m3u8");
+    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
+    const MP4_SRC = asset("/hero_web_v3.mp4");
+    const DIRECT_MP4_SRC = directAsset("/hero_web_v3.mp4");
+    const POSTER = asset("/hero_poster.jpg");
+
+    v.poster = POSTER;
+    v.preload = "auto";
+    tryPlay(v);
+
     let destroyed = false;
-    let isHeroVisible = true;
-    let recoveryTimer: number | null = null;
+    let nativeTimeout: number | null = null;
+    let loopFadeStarted = false;
+    const LOOP_FADE_SECONDS = 0.85;
 
-    const clearRecoveryTimer = () => {
-      if (recoveryTimer == null) return;
-      window.clearTimeout(recoveryTimer);
-      recoveryTimer = null;
-    };
-
-    const applyVideoFlags = () => {
-      v.loop = true;
-      v.defaultMuted = true;
-      v.muted = true;
-      v.autoplay = true;
-      v.playsInline = true;
-      v.preload = "auto";
-      v.poster = heroPosterSrc;
-      v.setAttribute("loop", "");
-      v.setAttribute("muted", "");
-      v.setAttribute("autoplay", "");
-      v.setAttribute("playsinline", "");
-      // @ts-ignore - iOS/Safari vendor attribute
-      v.setAttribute("webkit-playsinline", "");
-    };
-
-    const ensureDirectSource = () => {
-      if (v.currentSrc === heroMp4Src || v.src === heroMp4Src) return;
-
-      v.src = heroMp4Src;
-      try {
-        v.load();
-      } catch {}
-    };
-
-    const play = () => {
-      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
-        return;
-      }
-
-      applyVideoFlags();
-      ensureDirectSource();
-
-      const playPromise = v.play?.();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
-      }
-    };
-
-    const scheduleRecovery = () => {
-      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
-        return;
-      }
-
-      clearRecoveryTimer();
-      recoveryTimer = window.setTimeout(() => {
-        recoveryTimer = null;
-        if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
-          return;
-        }
-
-        applyVideoFlags();
-        ensureDirectSource();
-
-        if (v.ended) {
-          try {
-            v.currentTime = 0;
-          } catch {}
-        }
-
-        if (
-          v.paused ||
-          v.ended ||
-          v.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
-        ) {
-          play();
-        }
-      }, 200);
-    };
-
-    const reveal = () => revealHeroVideo(v);
-    const restart = () => {
+    const restartLoop = () => {
       if (destroyed) return;
-      try {
-        v.currentTime = 0;
-      } catch {}
-      play();
+      loopFadeStarted = true;
+      dimVideoForLoop(v, 520);
+
+      window.setTimeout(() => {
+        if (destroyed) return;
+        try {
+          v.currentTime = 0;
+        } catch {}
+        tryPlay(v);
+        requestAnimationFrame(() => {
+          loopFadeStarted = false;
+          revealVideo(v, 720);
+        });
+      }, 260);
     };
 
-    applyVideoFlags();
-    ensureDirectSource();
+    const prepareLoopFade = () => {
+      if (destroyed || loopFadeStarted || !Number.isFinite(v.duration)) return;
+      if (v.duration <= 1) return;
 
+      const remaining = v.duration - v.currentTime;
+      if (remaining > 0 && remaining <= LOOP_FADE_SECONDS) {
+        loopFadeStarted = true;
+        dimVideoForLoop(v, 700);
+      }
+    };
+
+    const reveal = () => {
+      if (!loopFadeStarted) revealVideo(v);
+    };
     v.addEventListener("loadeddata", reveal);
     v.addEventListener("canplay", reveal);
     v.addEventListener("playing", reveal);
-    v.addEventListener("ended", restart);
-    v.addEventListener("pause", scheduleRecovery);
-    v.addEventListener("stalled", scheduleRecovery);
-    v.addEventListener("suspend", scheduleRecovery);
-    v.addEventListener("waiting", scheduleRecovery);
+    v.addEventListener("timeupdate", prepareLoopFade);
+    v.addEventListener("ended", restartLoop);
 
-    play();
+    const setupHlsJs = async () => {
+      try {
+        const Hls = (await import("hls.js")).default;
+        if (destroyed) return;
+
+        if (Hls?.isSupported?.()) {
+          const profile = getConnectionProfile();
+          const hls = new Hls({
+            capLevelToPlayerSize: false,
+            startLevel: -1,
+            maxBufferLength: profile.constrained ? 8 : 24,
+            maxMaxBufferLength: profile.constrained ? 16 : 48,
+            backBufferLength: 0,
+            enableWorker: true,
+            abrEwmaFastLive: 2,
+            abrEwmaSlowLive: 6,
+            abrBandWidthFactor: profile.constrained ? 0.75 : 0.98,
+            abrBandWidthUpFactor: profile.constrained ? 0.7 : 0.95,
+            maxStarvationDelay: profile.constrained ? 4 : 2,
+            maxLoadingDelay: profile.constrained ? 4 : 2,
+            fragLoadingRetryDelay: 500,
+            fragLoadingMaxRetry: 4,
+            manifestLoadingMaxRetry: 3,
+          } as any);
+
+          hlsRef.current = hls;
+          hls.attachMedia(v);
+
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+            if (!destroyed) hls.loadSource(HLS_SRC);
+          });
+
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            try {
+              const startLevel = choosePremiumStartLevel(hls.levels);
+              if (startLevel >= 0) {
+                hls.startLevel = startLevel;
+                hls.currentLevel = startLevel;
+                hls.nextLevel = startLevel;
+                hls.loadLevel = startLevel;
+                hls.autoLevelCapping = startLevel;
+              }
+            } catch {}
+
+            tryPlay(v);
+          });
+
+          hls.on(Hls.Events.LEVEL_LOADED, () => {
+            revealVideo(v);
+            tryPlay(v);
+          });
+
+          hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+            if (!data?.fatal) return;
+
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              try {
+                hls.startLoad();
+                return;
+              } catch {}
+            }
+
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              try {
+                hls.recoverMediaError();
+                return;
+              } catch {}
+            }
+
+            loadMp4Fallback(v, MP4_SRC);
+          });
+
+          return;
+        }
+
+      loadMp4Fallback(v, MP4_SRC);
+    };
+
+    const setup = async () => {
+      const ua = navigator.userAgent || "";
+      const isiOS =
+        /iP(hone|od|ad)/.test(navigator.platform) ||
+        (/\bMac\b/.test(ua) && "ontouchend" in document);
+      const isSafariDesktop =
+        /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+      const isDesktopChromium =
+        /\b(Chrome|Chromium|Edg)\//.test(ua) &&
+        !/Android|CriOS|FxiOS|OPR\//.test(ua);
+      const nativeHls = v.canPlayType("application/vnd.apple.mpegurl");
+
+      // iPhone/iPad and desktop Safari use native playback. iOS gets the
+      // premium 1080-only playlist; Safari desktop uses adaptive master HLS.
+      if (isiOS || nativeHls || isSafariDesktop) {
+        let loaded = false;
+        const nativeSrc = isiOS ? HLS_SRC_IOS_1080 : HLS_SRC;
+        const onLoaded = () => {
+          loaded = true;
+          revealVideo(v);
+        };
+        const onNativeError = () => {
+          if (!destroyed && !loaded) loadMp4Fallback(v, MP4_SRC);
+        };
+
+        v.addEventListener("loadeddata", onLoaded, { once: true } as any);
+        v.addEventListener("error", onNativeError, { once: true } as any);
+        v.src = nativeSrc;
+        try {
+          v.load();
+        } catch {}
+        tryPlay(v);
+
+        nativeTimeout = window.setTimeout(() => {
+          if (!loaded && v.currentSrc === nativeSrc) onNativeError();
+        }, 3500);
+        return;
+      }
+
+      // Chrome/Edge should use the exact premium MP4 the user verified in
+      // BunnyCDN. Load it directly from BunnyCDN and use native looping here so
+      // desktop playback cannot drop into a softer HLS rendition or stop after
+      // one pass.
+      if (isDesktopChromium) {
+        const onMp4Loaded = () => revealVideo(v);
+        const onMp4Error = () => {
+          if (!destroyed) setupHlsJs();
+        };
+
+        v.removeEventListener("timeupdate", prepareLoopFade);
+        v.removeEventListener("ended", restartLoop);
+        v.addEventListener("loadeddata", onMp4Loaded, { once: true } as any);
+        v.addEventListener("error", onMp4Error, { once: true } as any);
+        v.src = DIRECT_MP4_SRC;
+        v.loop = true;
+        v.setAttribute("loop", "true");
+        try {
+          v.load();
+        } catch {}
+        tryPlay(v);
+        v.loop = true;
+        v.setAttribute("loop", "true");
+
+        return;
+      }
+
+      await setupHlsJs();
+    };
+
+    setup();
 
     const onVis = () => {
-      if (document.visibilityState === "visible") play();
-      else clearRecoveryTimer();
+      if (document.visibilityState === "visible") tryPlay(v);
     };
     document.addEventListener("visibilitychange", onVis);
 
     const io = new IntersectionObserver(
       ([entry]) => {
-        isHeroVisible = entry.intersectionRatio > 0.03;
-        if (isHeroVisible) play();
-        else clearRecoveryTimer();
+        if (entry.intersectionRatio > 0.03) tryPlay(v);
       },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
@@ -551,16 +718,12 @@ export default function Home() {
 
     return () => {
       destroyed = true;
-      clearRecoveryTimer();
-      window.clearTimeout(revealTimeout);
+      if (nativeTimeout != null) window.clearTimeout(nativeTimeout);
       v.removeEventListener("loadeddata", reveal);
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
-      v.removeEventListener("ended", restart);
-      v.removeEventListener("pause", scheduleRecovery);
-      v.removeEventListener("stalled", scheduleRecovery);
-      v.removeEventListener("suspend", scheduleRecovery);
-      v.removeEventListener("waiting", scheduleRecovery);
+      v.removeEventListener("timeupdate", prepareLoopFade);
+      v.removeEventListener("ended", restartLoop);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
     };
@@ -887,7 +1050,7 @@ export default function Home() {
   >
     Home
   </a>
-</li>
+  </li>
 
                   <li>
                     <a
@@ -948,7 +1111,9 @@ export default function Home() {
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${heroPosterSrc})`,
+                backgroundImage: `url(${directAsset(
+                  "/hero_poster.jpg"
+                )})`,
                 filter: "brightness(0.9)",
               }}
             />
@@ -956,11 +1121,9 @@ export default function Home() {
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={heroPosterSrc}
-              src={heroMp4Src}
+              poster={directAsset("/hero_poster.jpg")}
               autoPlay
               muted
-              loop
               playsInline
               preload="auto"
               aria-hidden="true"
@@ -976,12 +1139,16 @@ export default function Home() {
               onError={() => {
                 videoRef.current?.classList.add("opacity-100");
               }}
-              style={{
-                willChange: "opacity",
-                backfaceVisibility: "hidden",
-                transform: "translateZ(0)",
-              }}
-            />
+style={{
+  willChange: "opacity",
+}}
+            >
+              {/* WEBM then MP4 (H.264) */}
+              <source
+                src={directAsset("/hero_web_v3.mp4")}
+                type="video/mp4; codecs=avc1"
+              />
+            </video>
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
