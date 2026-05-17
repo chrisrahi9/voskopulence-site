@@ -626,7 +626,6 @@ export default function Home() {
 
           return;
         }
-      } catch {}
 
       loadMp4Fallback(v, MP4_SRC);
     };
@@ -715,6 +714,8 @@ export default function Home() {
     );
     io.observe(v);
 
+    const revealTimeout = window.setTimeout(() => revealHeroVideo(v), 1200);
+
     return () => {
       destroyed = true;
       if (nativeTimeout != null) window.clearTimeout(nativeTimeout);
@@ -726,28 +727,7 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
     };
-  }, []);
-
-  // One small autoplay nudge + poster safety
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = true;
-    v.setAttribute("playsinline", "true");
-    // @ts-ignore
-    v.setAttribute("webkit-playsinline", "true");
-    const tryOnce = () => v.play().catch(() => {});
-    if (v.readyState >= 2) tryOnce();
-    else {
-      const onCanPlay = () => {
-        tryOnce();
-        v.removeEventListener("canplay", onCanPlay);
-      };
-      v.addEventListener("canplay", onCanPlay);
-    }
-    const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
-    return () => clearTimeout(t);
-  }, []);
+  }, [heroMp4Src, heroPosterSrc]);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
@@ -1148,6 +1128,7 @@ export default function Home() {
               preload="auto"
               aria-hidden="true"
               disablePictureInPicture
+              disableRemotePlayback
               controlsList="nodownload noplaybackrate"
               onLoadedData={(e) => {
                 e.currentTarget.classList.add("opacity-100");
