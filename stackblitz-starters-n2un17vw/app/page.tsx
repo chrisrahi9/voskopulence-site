@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation"; 
 // All assets live at CDN root:
-const ASSETS = "https://cdn.voskopulence.com";
+const ASSETS = "/media";
+const DIRECT_ASSETS = "https://cdn.voskopulence.com";
 const asset = (p: string) => `${ASSETS}${p}`;
+const directAsset = (p: string) => `${DIRECT_ASSETS}${p}`;
 
 const CAP_PX = 5;
 const PROG_DISTANCE = 120;
@@ -16,6 +18,7 @@ const PRESS_MS = 720; // a bit slower & smoother
 // Gate touch-only handlers (desktop uses mouse)
 const isTouch =
   typeof window !== "undefined" && matchMedia("(hover: none)").matches;
+
 
 /* ---------- Tiny fixed top sentinel to help iOS compositor ---------- */
 function TopSentinel() {
@@ -131,7 +134,8 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<any>(null);
+  const heroMp4Src = directAsset("/hero_web_v3.mp4");
+  const heroPosterSrc = directAsset("/hero_poster.jpg");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -220,14 +224,13 @@ export default function Home() {
     const dy = e.clientY - startPos.current.y;
 
     if (Math.hypot(dx, dy) > 12) {
+      // Movement should only cancel the short-tap scroll action. It should not
+      // cancel the hold visual or the long-press arrow while the finger is down.
       canceledTapRef.current = true;
-      if (longTimer.current) {
-        clearTimeout(longTimer.current);
-        longTimer.current = null;
-      }
     }
 
-    // While finger is down, always keep the big press scale.
+    // While finger is down, always keep the big press scale — even if the
+    // captured pointer moves outside of the visible circle.
     const el = ctaRef.current;
     if (el) {
       el.style.setProperty("--press", PRESS_SCALE);
@@ -413,236 +416,155 @@ export default function Home() {
     );
   }, []);
 
-  // Unified helper: quiet attempt to play
-  const tryPlay = (el: HTMLVideoElement | null) => {
+  const revealHeroVideo = (el: HTMLVideoElement | null, durationMs = 700) => {
     if (!el) return;
-    el.muted = true;
-    // @ts-ignore
-    el.setAttribute("webkit-playsinline", "true");
-    el.setAttribute("playsinline", "true");
-    const p = el.play?.();
-    if (p && typeof p.catch === "function") p.catch(() => {});
-    el.setAttribute("loop", "true");
+    el.style.transition = `opacity ${durationMs}ms ease`;
+    el.style.opacity = "1";
+    el.classList.add("opacity-100");
   };
 
-  // --- Video setup (HLS with MP4 fallback) ---
+  // Direct CDN MP4 only: avoids adaptive HLS quality drops and keeps looping native.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const HLS_SRC = asset("/hero_hls/master.m3u8");
-    const HLS_SRC_IOS_1080 = asset("/hero_hls/1080_only.m3u8");
-    const MP4_SRC = asset("/hero_web_v3.mp4");
-    const POSTER = asset("/hero_poster.jpg");
-
-    v.poster = POSTER;
-
-    const revealPoster = () => {
-      v.style.opacity = "1";
-    };
-    v.addEventListener("loadeddata", revealPoster, { once: true } as any);
-
     let destroyed = false;
+    let isHeroVisible = true;
+    let recoveryTimer: number | null = null;
 
-    const setup = async () => {
-      const ua = navigator.userAgent || "";
-      const isiOS =
-        /iP(hone|od|ad)/.test(navigator.platform) ||
-        (/\bMac\b/.test(ua) && "ontouchend" in document);
-const isDesktopChrome =
-  /chrome/i.test(ua) &&
-  !/edg/i.test(ua) &&
-  !/android/i.test(ua);
-      const isSafariDesktop =
-        /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+    const clearRecoveryTimer = () => {
+      if (recoveryTimer == null) return;
+      window.clearTimeout(recoveryTimer);
+      recoveryTimer = null;
+    };
 
-      if (isSafariDesktop) {
-        v.src = MP4_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
+    const applyVideoFlags = () => {
+      v.loop = true;
+      v.defaultMuted = true;
+      v.muted = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.preload = "auto";
+      v.poster = heroPosterSrc;
+      v.setAttribute("loop", "");
+      v.setAttribute("muted", "");
+      v.setAttribute("autoplay", "");
+      v.setAttribute("playsinline", "");
+      // @ts-ignore - iOS/Safari vendor attribute
+      v.setAttribute("webkit-playsinline", "");
+    };
 
-      if (isiOS) {
-        let loaded = false;
-        const onLoadedData = () => {
-          loaded = true;
-        };
-        const onError = () => {
-          if (!loaded) {
-            v.removeEventListener("loadeddata", onLoadedData);
-            v.src = MP4_SRC;
-            try {
-              v.load();
-            } catch {}
-            tryPlay(v);
-          }
-        };
+    const ensureDirectSource = () => {
+      if (v.currentSrc === heroMp4Src || v.src === heroMp4Src) return;
 
-        v.addEventListener("loadeddata", onLoadedData, {
-          once: true,
-        } as any);
-        v.addEventListener("error", onError, { once: true } as any);
-        v.src = HLS_SRC_IOS_1080;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-
-        setTimeout(() => {
-          if (!loaded && v.currentSrc === HLS_SRC_IOS_1080) onError();
-        }, 2000);
-        return;
-      }
-
-      if (v.canPlayType("application/vnd.apple.mpegurl")) {
-        v.src = HLS_SRC;
-        try {
-          v.load();
-        } catch {}
-        tryPlay(v);
-        return;
-      }
-if (isDesktopChrome) {
-  v.src = MP4_SRC;
-
-  try {
-    v.load();
-  } catch {}
-
-  v.loop = true;
-  tryPlay(v);
-
-  return;
-}
-      try {
-        const Hls = (await import("hls.js")).default;
-        if (Hls?.isSupported?.()) {
-          const hls = new Hls({
-            capLevelToPlayerSize: true,
-            startLevel: 3,
-            maxBufferLength: 10,
-            maxMaxBufferLength: 20,
-            backBufferLength: 0,
-            enableWorker: true,
-            fragLoadingRetryDelay: 500,
-            fragLoadingMaxRetry: 3,
-          });
-          // @ts-expect-error
-hls.config.maxInitialBitrate = 8_000_000;
-
-          hlsRef.current = hls;
-          hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-            if (!destroyed) hls.loadSource(HLS_SRC);
-          });
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            try {
-              if (hls.levels?.length) {
-                const lvls = hls.levels;
-                let pick = lvls.findIndex(
-                  (l: any) => (l.height ?? 0) >= 1080
-                );
-                if (pick < 0)
-                  pick = lvls.findIndex((l: any) =>
-                    /1080/i.test(l.name ?? "")
-                  );
-                if (pick < 0) pick = lvls.length - 1;
-                hls.currentLevel = pick;
-                setTimeout(() => {
-                  hls.loadLevel = -1;
-                }, 3000);
-              }
-} catch {}
-
-v.loop = true;
-tryPlay(v);
-          });
-          hls.on(Hls.Events.ERROR, (_e: any, data: any) => {
-            if (data?.fatal) {
-              try {
-                hls.destroy();
-              } catch {}
-              hlsRef.current = null;
-              v.src = MP4_SRC;
-              try {
-                v.load();
-              } catch {}
-              tryPlay(v);
-            }
-          });
-          return;
-        }
-      } catch {}
-
-      v.src = MP4_SRC;
+      v.src = heroMp4Src;
       try {
         v.load();
       } catch {}
-      tryPlay(v);
     };
 
-    setup();
+    const play = () => {
+      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+        return;
+      }
 
-  
+      applyVideoFlags();
+      ensureDirectSource();
 
-    const onPlaying = () => {
-      v.style.opacity = "1";
+      const playPromise = v.play?.();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
     };
-    v.addEventListener("playing", onPlaying);
+
+    const scheduleRecovery = () => {
+      if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+        return;
+      }
+
+      clearRecoveryTimer();
+      recoveryTimer = window.setTimeout(() => {
+        recoveryTimer = null;
+        if (destroyed || document.visibilityState === "hidden" || !isHeroVisible) {
+          return;
+        }
+
+        applyVideoFlags();
+        ensureDirectSource();
+
+        if (v.ended) {
+          try {
+            v.currentTime = 0;
+          } catch {}
+        }
+
+        if (
+          v.paused ||
+          v.ended ||
+          v.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+        ) {
+          play();
+        }
+      }, 200);
+    };
+
+    const reveal = () => revealHeroVideo(v);
+    const restart = () => {
+      if (destroyed) return;
+      try {
+        v.currentTime = 0;
+      } catch {}
+      play();
+    };
+
+    applyVideoFlags();
+    ensureDirectSource();
+
+    v.addEventListener("loadeddata", reveal);
+    v.addEventListener("canplay", reveal);
+    v.addEventListener("playing", reveal);
+    v.addEventListener("ended", restart);
+    v.addEventListener("pause", scheduleRecovery);
+    v.addEventListener("stalled", scheduleRecovery);
+    v.addEventListener("suspend", scheduleRecovery);
+    v.addEventListener("waiting", scheduleRecovery);
+
+    play();
 
     const onVis = () => {
-  if (document.visibilityState === "visible") {
-    tryPlay(v);
-  }
-};
+      if (document.visibilityState === "visible") play();
+      else clearRecoveryTimer();
+    };
     document.addEventListener("visibilitychange", onVis);
 
-const io = new IntersectionObserver(
-  ([e]) => {
-    if (e.intersectionRatio > 0.03) {
-      tryPlay(v);
-    }
-  },
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        isHeroVisible = entry.intersectionRatio > 0.03;
+        if (isHeroVisible) play();
+        else clearRecoveryTimer();
+      },
       { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
     );
     io.observe(v);
 
+    const revealTimeout = window.setTimeout(() => revealHeroVideo(v), 1200);
+
     return () => {
-      v.removeEventListener("playing", onPlaying);
+      destroyed = true;
+      clearRecoveryTimer();
+      window.clearTimeout(revealTimeout);
+      v.removeEventListener("loadeddata", reveal);
+      v.removeEventListener("canplay", reveal);
+      v.removeEventListener("playing", reveal);
+      v.removeEventListener("ended", restart);
+      v.removeEventListener("pause", scheduleRecovery);
+      v.removeEventListener("stalled", scheduleRecovery);
+      v.removeEventListener("suspend", scheduleRecovery);
+      v.removeEventListener("waiting", scheduleRecovery);
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
-      if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
-        hlsRef.current = null;
-      }
     };
-  }, []);
-
-  // One small autoplay nudge + poster safety
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = true;
-    v.setAttribute("playsinline", "true");
-    // @ts-ignore
-    v.setAttribute("webkit-playsinline", "true");
-    const tryOnce = () => v.play().catch(() => {});
-    if (v.readyState >= 2) tryOnce();
-    else {
-      const onCanPlay = () => {
-        tryOnce();
-        v.removeEventListener("canplay", onCanPlay);
-      };
-      v.addEventListener("canplay", onCanPlay);
-    }
-    const t = setTimeout(() => v.classList.add("opacity-100"), 1200);
-    return () => clearTimeout(t);
-  }, []);
+  }, [heroMp4Src, heroPosterSrc]);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
@@ -1026,9 +948,7 @@ const io = new IntersectionObserver(
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${asset(
-                  "/hero_poster.jpg"
-                )})`,
+                backgroundImage: `url(${heroPosterSrc})`,
                 filter: "brightness(0.9)",
               }}
             />
@@ -1036,14 +956,16 @@ const io = new IntersectionObserver(
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"
-              poster={asset("/hero_poster.jpg")}
+              poster={heroPosterSrc}
+              src={heroMp4Src}
               autoPlay
               muted
-              playsInline
               loop
+              playsInline
               preload="auto"
               aria-hidden="true"
               disablePictureInPicture
+              disableRemotePlayback
               controlsList="nodownload noplaybackrate"
               onLoadedData={(e) => {
                 e.currentTarget.classList.add("opacity-100");
@@ -1054,16 +976,12 @@ const io = new IntersectionObserver(
               onError={() => {
                 videoRef.current?.classList.add("opacity-100");
               }}
-style={{
-  willChange: "opacity",
-}}
-            >
-              {/* WEBM then MP4 (H.264) */}
-              <source
-                src={asset("/hero_web_v3.mp4")}
-                type="video/mp4; codecs=avc1"
-              />
-            </video>
+              style={{
+                willChange: "opacity",
+                backfaceVisibility: "hidden",
+                transform: "translateZ(0)",
+              }}
+            />
 
             {/* Legibility overlay */}
             <div className="absolute inset-0 bg-black/30" />
@@ -1109,7 +1027,7 @@ style={{
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  touchAction: "manipulation",
+                  touchAction: "none",
                   transform: `
                     translate3d(0, 0, 0)
                     scale(var(--press,1))
@@ -1152,9 +1070,14 @@ style={{
                   height="24"
                   viewBox="0 0 24 24"
                   aria-hidden="true"
-                  className={`absolute z-10 transition-all duration-220 ease-[cubic-bezier(.22,1,.36,1)]
-                    ${isLongPress && showArrow ? "opacity-100 translate-y-[2px]" : "opacity-0"}
-                    [backface-visibility:hidden] [transform:translateZ(0)]`}
+                  className={`absolute left-1/2 top-1/2 z-10 transition-opacity duration-220 ease-[cubic-bezier(.22,1,.36,1)]
+                    ${isLongPress && showArrow ? "opacity-100" : "opacity-0"}
+                    [backface-visibility:hidden]`}
+                  style={{
+                    transform: `translate3d(-50%, ${
+                      isLongPress && showArrow ? "calc(-50% + 1px)" : "-50%"
+                    }, 0)`,
+                  }}
                 >
                   <path
                     d="M6 9.5 L12 15.5 L18 9.5"
@@ -1197,7 +1120,7 @@ style={{
         <div className="relative mx-auto max-w-screen-xl px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="flex justify-center md:justify-start">
             <img
-              src="https://cdn.voskopulence.com/Spotlight_pic.png"
+              src={asset("/Spotlight_pic.png")}
               alt="Mediterranean Rosemary Bar"
               className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"
             />
