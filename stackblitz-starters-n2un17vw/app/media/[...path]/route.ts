@@ -8,10 +8,30 @@ const HLS_CONTENT_TYPES = [
   "application/x-mpegurl",
   "audio/mpegurl",
 ];
+const DIRECT_MEDIA_EXTENSIONS = [".mp4", ".mov", ".webm"];
+const HERO_VIDEO_VERSION = "20260517-direct-mp4";
 
 const isHlsManifest = (path: string, contentType: string) =>
   path.endsWith(".m3u8") ||
   HLS_CONTENT_TYPES.some((type) => contentType.toLowerCase().includes(type));
+
+const shouldRedirectToCdn = (path: string) =>
+  DIRECT_MEDIA_EXTENSIONS.some((extension) => path.endsWith(extension));
+
+const buildDirectCdnUrl = (request: Request, rawPath: string) => {
+  const url = new URL(request.url);
+  const directUrl = new URL(`${CDN_ORIGIN}/${rawPath}`);
+
+  url.searchParams.forEach((value, key) => {
+    directUrl.searchParams.set(key, value);
+  });
+
+  if (rawPath === "hero_web_v3.mp4" && !directUrl.searchParams.has("v")) {
+    directUrl.searchParams.set("v", HERO_VIDEO_VERSION);
+  }
+
+  return directUrl.toString();
+};
 
 const rewriteManifestUrls = (manifest: string) =>
   manifest
@@ -26,6 +46,10 @@ export async function GET(
 
   if (!rawPath || rawPath.includes("..")) {
     return new Response("Not found", { status: 404 });
+  }
+
+  if (shouldRedirectToCdn(rawPath)) {
+    return Response.redirect(buildDirectCdnUrl(request, rawPath), 307);
   }
 
   const upstreamUrl = `${CDN_ORIGIN}/${rawPath}`;
