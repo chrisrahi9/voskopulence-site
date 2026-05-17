@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 // All assets live at CDN root:
 const ASSETS = "/media";
 const DIRECT_ASSETS = "https://cdn.voskopulence.com";
+const HERO_VIDEO_VERSION = "20260517-direct-mp4";
 const asset = (p: string) => `${ASSETS}${p}`;
 const directAsset = (p: string) => `${DIRECT_ASSETS}${p}`;
+const heroDirectAsset = (p: string) =>
+  `${directAsset(p)}?v=${HERO_VIDEO_VERSION}`;
 
 const CAP_PX = 5;
 const PROG_DISTANCE = 120;
@@ -134,8 +137,8 @@ function unlockScroll() {
 export default function Home() {
   const router = useRouter(); 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const heroMp4Src = directAsset("/hero_web_v3.mp4");
-  const heroPosterSrc = directAsset("/hero_poster.jpg");
+  const heroMp4Src = heroDirectAsset("/hero_web_v3.mp4");
+  const heroPosterSrc = heroDirectAsset("/hero_poster.jpg");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -430,6 +433,7 @@ export default function Home() {
 
     let destroyed = false;
     let isHeroVisible = true;
+    let manualLooping = false;
     let recoveryTimer: number | null = null;
 
     const clearRecoveryTimer = () => {
@@ -511,10 +515,27 @@ export default function Home() {
     const reveal = () => revealHeroVideo(v);
     const restart = () => {
       if (destroyed) return;
+      manualLooping = false;
       try {
         v.currentTime = 0;
       } catch {}
       play();
+    };
+
+    const manualLoopIfNearEnd = () => {
+      if (
+        destroyed ||
+        manualLooping ||
+        !Number.isFinite(v.duration) ||
+        v.duration <= 1
+      ) {
+        return;
+      }
+
+      if (v.duration - v.currentTime <= 0.12) {
+        manualLooping = true;
+        restart();
+      }
     };
 
     applyVideoFlags();
@@ -524,6 +545,7 @@ export default function Home() {
     v.addEventListener("canplay", reveal);
     v.addEventListener("playing", reveal);
     v.addEventListener("ended", restart);
+    v.addEventListener("timeupdate", manualLoopIfNearEnd);
     v.addEventListener("pause", scheduleRecovery);
     v.addEventListener("stalled", scheduleRecovery);
     v.addEventListener("suspend", scheduleRecovery);
@@ -557,6 +579,7 @@ export default function Home() {
       v.removeEventListener("canplay", reveal);
       v.removeEventListener("playing", reveal);
       v.removeEventListener("ended", restart);
+      v.removeEventListener("timeupdate", manualLoopIfNearEnd);
       v.removeEventListener("pause", scheduleRecovery);
       v.removeEventListener("stalled", scheduleRecovery);
       v.removeEventListener("suspend", scheduleRecovery);
