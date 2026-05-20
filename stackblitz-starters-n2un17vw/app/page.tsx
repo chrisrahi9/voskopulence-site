@@ -139,6 +139,8 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const heroMp4Src = heroDirectAsset("/hero_web_v3.mp4");
   const heroPosterSrc = heroDirectAsset("/hero_poster.jpg");
+  const heroHlsSrc = asset("/hero_hls/master.m3u8");
+  const heroHlsIos1080Src = asset("/hero_hls/1080_only.m3u8");
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -426,10 +428,18 @@ export default function Home() {
     el.classList.add("opacity-100");
   };
 
-  // Direct CDN MP4 only: avoids adaptive HLS quality drops and keeps looping native.
+  // Use native HLS on iOS/Safari and direct MP4 everywhere else.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+
+    const ua = navigator.userAgent || "";
+    const isiOS =
+      /iP(hone|od|ad)/.test(navigator.platform) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in document);
+    const isSafariDesktop =
+      /^((?!chrome|android|edg).)*safari/i.test(ua) && !isiOS;
+    const shouldUseNativeHls = isiOS || isSafariDesktop;
 
     let destroyed = false;
     let isHeroVisible = true;
@@ -458,10 +468,16 @@ export default function Home() {
       v.setAttribute("webkit-playsinline", "");
     };
 
-    const ensureDirectSource = () => {
-      if (v.currentSrc === heroMp4Src || v.src === heroMp4Src) return;
+    const ensureSource = () => {
+      const expectedSrc = shouldUseNativeHls
+        ? isiOS
+          ? heroHlsIos1080Src
+          : heroHlsSrc
+        : heroMp4Src;
 
-      v.src = heroMp4Src;
+      if (v.currentSrc === expectedSrc || v.src === expectedSrc) return;
+
+      v.src = expectedSrc;
       try {
         v.load();
       } catch {}
@@ -473,7 +489,7 @@ export default function Home() {
       }
 
       applyVideoFlags();
-      ensureDirectSource();
+      ensureSource();
 
       const playPromise = v.play?.();
       if (playPromise && typeof playPromise.catch === "function") {
@@ -494,7 +510,7 @@ export default function Home() {
         }
 
         applyVideoFlags();
-        ensureDirectSource();
+        ensureSource();
 
         if (v.ended) {
           try {
@@ -526,6 +542,7 @@ export default function Home() {
       if (
         destroyed ||
         manualLooping ||
+        shouldUseNativeHls ||
         !Number.isFinite(v.duration) ||
         v.duration <= 1
       ) {
@@ -539,7 +556,7 @@ export default function Home() {
     };
 
     applyVideoFlags();
-    ensureDirectSource();
+    ensureSource();
 
     v.addEventListener("loadeddata", reveal);
     v.addEventListener("canplay", reveal);
@@ -587,7 +604,7 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVis);
       io.disconnect();
     };
-  }, [heroMp4Src, heroPosterSrc]);
+  }, [heroMp4Src, heroPosterSrc, heroHlsSrc, heroHlsIos1080Src]);
 
   // Cap is only needed on phones; on desktop it should be 0
   const [capPx, setCapPx] = useState<number>(0);
