@@ -21,9 +21,16 @@ export default function HeroVideoController() {
     let originalVideo: HTMLVideoElement | null = null;
     let retryTimer: number | null = null;
     let startupTimer: number | null = null;
+    let stallTimer: number | null = null;
     let legacyGuardTimer: number | null = null;
     let legacyGuardObserver: MutationObserver | null = null;
     let hlsFatalCount = 0;
+    let iosAdaptiveFallbackActive = false;
+
+    const ua = navigator.userAgent || "";
+    const isiOS =
+      /iP(hone|od|ad)/.test(ua) ||
+      (/\bMac\b/.test(ua) && "ontouchend" in window);
 
     const reveal = () => {
       if (!adaptiveVideo || disposed) return;
@@ -36,13 +43,29 @@ export default function HeroVideoController() {
       video.autoplay = true;
       video.loop = true;
       video.playsInline = true;
-      video.preload = "metadata";
+      // On iPhone we deliberately begin with the premium MP4, so allow Safari
+      // to buffer it aggressively. Other browsers can stay lighter at startup.
+      video.preload = isiOS ? "auto" : "metadata";
       video.poster = POSTER;
       video.setAttribute("muted", "");
       video.setAttribute("autoplay", "");
       video.setAttribute("loop", "");
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
+    };
+
+    const clearStartupTimer = () => {
+      if (startupTimer !== null) {
+        window.clearTimeout(startupTimer);
+        startupTimer = null;
+      }
+    };
+
+    const clearStallTimer = () => {
+      if (stallTimer !== null) {
+        window.clearTimeout(stallTimer);
+        stallTimer = null;
+      }
     };
 
     const stopLegacyDownload = () => {
@@ -68,9 +91,7 @@ export default function HeroVideoController() {
 
       legacyGuardObserver = new MutationObserver(() => {
         if (disposed || !originalVideo) return;
-        if (originalVideo.getAttribute("src")) {
-          stopLegacyDownload();
-        }
+        if (originalVideo.getAttribute("src")) stopLegacyDownload();
       });
       legacyGuardObserver.observe(originalVideo, {
         attributes: true,
@@ -96,16 +117,10 @@ export default function HeroVideoController() {
       promise?.catch(() => {});
     };
 
-    const clearStartupTimer = () => {
-      if (startupTimer !== null) {
-        window.clearTimeout(startupTimer);
-        startupTimer = null;
-      }
-    };
-
     const usePremiumMp4 = () => {
       if (!adaptiveVideo || disposed) return;
       clearStartupTimer();
+      clearStallTimer();
       try {
         hls?.destroy();
       } catch {}
@@ -118,19 +133,54 @@ export default function HeroVideoController() {
       play();
     };
 
-    const armStartupFallback = (timeoutMs: number) => {
+    const useNativeAdaptiveHls = (resumeAt = 0) => {
+      if (!adaptiveVideo || disposed || iosAdaptiveFallbackActive) return;
+      iosAdaptiveFallbackActive = true;
+      clearStartupTimer();
+      clearStallTimer();
+
+      try {
+        hls?.destroy();
+      } catch {}
+      hls = null;
+
+      const video = adaptiveVideo;
+      setFlags(video);
+      video.src = MASTER_HLS;
+
+      const restoreTime = () => {
+        video.removeEventListener("loadedmetadata", restoreTime);
+        if (resumeAt > 0.2 && Number.isFinite(video.duration)) {
+          try {
+            video.currentTime = Math.min(resumeAt, Math.max(0, video.duration - 0.2));
+          } catch {}
+        }
+        play();
+      };
+      video.addEventListener("loadedmetadata", restoreTime);
+
+      try {
+        video.load();
+      } catch {}
+      play();
+    };
+
+    const armIosStartupFallback = () => {
       clearStartupTimer();
       startupTimer = window.setTimeout(() => {
         startupTimer = null;
+        if (disposed || !adaptiveVideo || iosAdaptiveFallbackActive) return;
+
+        // If the premium MP4 has not produced playable data promptly, the real
+        // connection is not sustaining premium startup. Hand control to Apple's
+        // native adaptive HLS instead of leaving the visitor on the poster.
         if (
-          disposed ||
-          !adaptiveVideo ||
-          adaptiveVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          adaptiveVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+          adaptiveVideo.paused
         ) {
-          return;
+          useNativeAdaptiveHls(adaptiveVideo.currentTime || 0);
         }
-        usePremiumMp4();
-      }, timeoutMs);
+      }, 4500);
     };
 
     const mount = () => {
@@ -174,10 +224,31 @@ export default function HeroVideoController() {
       };
       const onPlaying = () => {
         clearStartupTimer();
+        clearStallTimer();
         reveal();
       };
+      const onWaiting = () => {
+        if (!isiOS || iosAdaptiveFallbackActive || disposed) return;
+        clearStallTimer();
+        const resumeAt = video.currentTime || 0;
+        stallTimer = window.setTimeout(() => {
+          stallTimer = null;
+          if (
+            !disposed &&
+            !iosAdaptiveFallbackActive &&
+            video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+          ) {
+            // A sustained stall is stronger evidence than a guessed connection
+            // type. Only now allow iPhone to step down through native HLS.
+            useNativeAdaptiveHls(resumeAt);
+          }
+        }, 1200);
+      };
       const onVideoError = () => {
-        if (!disposed && adaptiveVideo?.src !== PREMIUM_MP4) {
+        if (disposed) return;
+        if (isiOS && !iosAdaptiveFallbackActive) {
+          useNativeAdaptiveHls(video.currentTime || 0);
+        } else if (video.src !== PREMIUM_MP4) {
           usePremiumMp4();
         }
       };
@@ -188,6 +259,8 @@ export default function HeroVideoController() {
       video.addEventListener("loadeddata", onReady);
       video.addEventListener("canplay", onReady);
       video.addEventListener("playing", onPlaying);
+      video.addEventListener("waiting", onWaiting);
+      video.addEventListener("stalled", onWaiting);
       video.addEventListener("error", onVideoError);
       document.addEventListener("visibilitychange", onVisibility);
 
@@ -200,24 +273,23 @@ export default function HeroVideoController() {
         effectiveType === "slow-2g" ||
         effectiveType === "2g";
 
-      // Prefer hls.js whenever the browser exposes MSE/MMS support. This now
-      // includes modern iPhones (iOS 17.1+). Native iOS HLS tends to start at a
-      // deliberately conservative rendition and does not expose a quality API,
-      // which was the cause of the visibly soft first seconds on iPhone.
-      if (Hls.isSupported()) {
+      if (isiOS) {
+        // iPhone quality policy: premium first. The direct H.264 MP4 cannot be
+        // silently downgraded by Safari, so the first visible frames stay sharp.
+        // Only measured startup trouble or a sustained stall activates HLS ABR.
+        usePremiumMp4();
+        armIosStartupFallback();
+      } else if (Hls.isSupported()) {
         hls = new Hls({
-          // Start with a premium assumption on normal connections. ABR remains
-          // enabled and immediately learns from real fragment throughput, so a
-          // genuinely weak connection can still step down before it starves.
-          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 80_000_000,
-          abrBandWidthFactor: clearlyConstrained ? 0.82 : 0.95,
-          abrBandWidthUpFactor: clearlyConstrained ? 0.72 : 0.88,
+          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 20_000_000,
+          abrBandWidthFactor: 0.92,
+          abrBandWidthUpFactor: 0.82,
           capLevelToPlayerSize: false,
           testBandwidth: false,
           maxBufferLength: clearlyConstrained ? 10 : 24,
           maxMaxBufferLength: clearlyConstrained ? 20 : 45,
-          maxStarvationDelay: clearlyConstrained ? 4 : 3,
-          maxLoadingDelay: clearlyConstrained ? 4 : 3,
+          maxStarvationDelay: 3,
+          maxLoadingDelay: 3,
           enableWorker: true,
           startLevel: -1,
         });
@@ -228,23 +300,10 @@ export default function HeroVideoController() {
         });
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (!hls || disposed) return;
-
           if (!clearlyConstrained && hls.levels.length > 0) {
-            // First fragment: explicitly request the highest variant, but keep
-            // auto-level mode enabled for every fragment after it.
-            const highestLevel = hls.levels.reduce((bestIndex, level, index) => {
-              const best = hls!.levels[bestIndex];
-              const levelScore = (level.height || 0) * 1_000_000 + (level.bitrate || 0);
-              const bestScore = (best?.height || 0) * 1_000_000 + (best?.bitrate || 0);
-              return levelScore > bestScore ? index : bestIndex;
-            }, 0);
-
-            hls.startLevel = highestLevel;
-            hls.nextAutoLevel = highestLevel;
+            hls.nextAutoLevel = hls.levels.length - 1;
           }
-
           play();
-          armStartupFallback(6500);
         });
         hls.on(Hls.Events.LEVEL_SWITCHED, () => reveal());
         hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -265,19 +324,14 @@ export default function HeroVideoController() {
             } catch {}
           }
 
-          // If MMS/MSE playback is unavailable or unstable on a particular
-          // Safari build, fail over to the full-quality MP4 rather than showing
-          // a blank/gray hero.
           usePremiumMp4();
         });
       } else if (nativeHls) {
-        // Older Apple devices that cannot run hls.js keep native HLS support.
         video.src = MASTER_HLS;
         try {
           video.load();
         } catch {}
         play();
-        armStartupFallback(6500);
       } else {
         usePremiumMp4();
       }
@@ -286,6 +340,8 @@ export default function HeroVideoController() {
         video.removeEventListener("loadeddata", onReady);
         video.removeEventListener("canplay", onReady);
         video.removeEventListener("playing", onPlaying);
+        video.removeEventListener("waiting", onWaiting);
+        video.removeEventListener("stalled", onWaiting);
         video.removeEventListener("error", onVideoError);
         document.removeEventListener("visibilitychange", onVisibility);
       };
@@ -298,15 +354,14 @@ export default function HeroVideoController() {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       if (legacyGuardTimer !== null) window.clearTimeout(legacyGuardTimer);
       clearStartupTimer();
+      clearStallTimer();
       cleanupListeners?.();
       legacyGuardObserver?.disconnect();
       try {
         hls?.destroy();
       } catch {}
       adaptiveVideo?.remove();
-      if (originalVideo) {
-        originalVideo.style.visibility = "";
-      }
+      if (originalVideo) originalVideo.style.visibility = "";
     };
   }, []);
 
