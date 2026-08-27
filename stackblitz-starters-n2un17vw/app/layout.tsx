@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import ScrollToTop from "./_components/ScrollToTop";
 import HeroVideoController from "./_components/HeroVideoController";
+import PremiumMotionController from "./_components/PremiumMotionController";
 
 export const metadata: Metadata = {
   title: "Voskopulence",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollToTop />
         </Suspense>
         <HeroVideoController />
+        <PremiumMotionController />
         {children}
       </body>
     </html>
