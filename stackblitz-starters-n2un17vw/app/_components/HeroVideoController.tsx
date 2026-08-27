@@ -20,9 +20,13 @@ export default function HeroVideoController() {
     let adaptiveVideo: HTMLVideoElement | null = null;
     let originalVideo: HTMLVideoElement | null = null;
     let retryTimer: number | null = null;
+    let startupTimer: number | null = null;
+    let legacyGuardTimer: number | null = null;
+    let legacyGuardObserver: MutationObserver | null = null;
+    let hlsFatalCount = 0;
 
     const reveal = () => {
-      if (!adaptiveVideo) return;
+      if (!adaptiveVideo || disposed) return;
       adaptiveVideo.style.opacity = "1";
     };
 
@@ -32,7 +36,9 @@ export default function HeroVideoController() {
       video.autoplay = true;
       video.loop = true;
       video.playsInline = true;
-      video.preload = "auto";
+      // "auto" made Safari keep a full MP4 request alive while HLS was starting.
+      // Metadata is enough; play() will fetch what playback actually needs.
+      video.preload = "metadata";
       video.poster = POSTER;
       video.setAttribute("muted", "");
       video.setAttribute("autoplay", "");
@@ -41,22 +47,96 @@ export default function HeroVideoController() {
       video.setAttribute("webkit-playsinline", "");
     };
 
+    const stopLegacyDownload = () => {
+      const legacy = originalVideo;
+      if (!legacy) return;
+      try {
+        legacy.pause();
+      } catch {}
+      legacy.preload = "none";
+      legacy.removeAttribute("autoplay");
+      legacy.removeAttribute("src");
+      legacy.querySelectorAll("source").forEach((source) => {
+        source.removeAttribute("src");
+      });
+      try {
+        legacy.load();
+      } catch {}
+    };
+
+    const quarantineLegacyPlayer = () => {
+      if (!originalVideo) return;
+      stopLegacyDownload();
+
+      // The old React effect can try to restore its source after we mount.
+      // Watch that detached/hidden element and immediately cancel any such request.
+      legacyGuardObserver = new MutationObserver(() => {
+        if (disposed || !originalVideo) return;
+        if (originalVideo.getAttribute("src")) {
+          stopLegacyDownload();
+        }
+      });
+      legacyGuardObserver.observe(originalVideo, {
+        attributes: true,
+        attributeFilter: ["src", "autoplay", "preload"],
+        subtree: true,
+      });
+
+      const started = Date.now();
+      const guard = () => {
+        if (disposed || !originalVideo) return;
+        stopLegacyDownload();
+        if (Date.now() - started < 5000) {
+          legacyGuardTimer = window.setTimeout(guard, 250);
+        }
+      };
+      guard();
+    };
+
     const play = () => {
       if (!adaptiveVideo || disposed || document.visibilityState === "hidden") return;
       setFlags(adaptiveVideo);
-      adaptiveVideo.play().catch(() => {});
+      const promise = adaptiveVideo.play();
+      promise?.catch(() => {});
+    };
+
+    const clearStartupTimer = () => {
+      if (startupTimer !== null) {
+        window.clearTimeout(startupTimer);
+        startupTimer = null;
+      }
     };
 
     const usePremiumMp4 = () => {
       if (!adaptiveVideo || disposed) return;
+      clearStartupTimer();
       try {
         hls?.destroy();
       } catch {}
       hls = null;
       setFlags(adaptiveVideo);
       adaptiveVideo.src = PREMIUM_MP4;
-      adaptiveVideo.load();
+      try {
+        adaptiveVideo.load();
+      } catch {}
       play();
+    };
+
+    const armStartupFallback = (timeoutMs: number) => {
+      clearStartupTimer();
+      startupTimer = window.setTimeout(() => {
+        startupTimer = null;
+        if (
+          disposed ||
+          !adaptiveVideo ||
+          adaptiveVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+        ) {
+          return;
+        }
+        // Native HLS occasionally gets stuck during startup on iOS. A direct
+        // premium H.264 MP4 is the safest last-resort recovery path.
+        usePremiumMp4();
+      }, timeoutMs);
     };
 
     const mount = () => {
@@ -67,14 +147,18 @@ export default function HeroVideoController() {
       ) as HTMLVideoElement | null;
 
       if (!originalVideo || !originalVideo.parentElement) {
-        retryTimer = window.setTimeout(mount, 60);
+        retryTimer = window.setTimeout(mount, 50);
         return;
       }
 
-      // Keep the old React-managed player in place but invisible. That prevents
-      // its legacy recovery handlers from fighting the new adaptive player.
+      const parent = originalVideo.parentElement;
+      quarantineLegacyPlayer();
+
+      // The original SSR video has a direct MP4 src and preload=auto. Hide it,
+      // stop its request, and put the adaptive element in front of it.
       originalVideo.style.opacity = "0";
       originalVideo.style.visibility = "hidden";
+      originalVideo.style.pointerEvents = "none";
 
       const video = document.createElement("video");
       adaptiveVideo = video;
@@ -90,27 +174,42 @@ export default function HeroVideoController() {
       video.disablePictureInPicture = true;
       video.disableRemotePlayback = true;
       setFlags(video);
+      parent.insertBefore(video, originalVideo.nextSibling);
 
-      originalVideo.insertAdjacentElement("afterend", video);
-
-      const onReady = () => reveal();
-      const onPlaying = () => reveal();
+      const onReady = () => {
+        clearStartupTimer();
+        reveal();
+      };
+      const onPlaying = () => {
+        clearStartupTimer();
+        reveal();
+      };
+      const onVideoError = () => {
+        if (!disposed && adaptiveVideo?.src !== PREMIUM_MP4) {
+          usePremiumMp4();
+        }
+      };
       const onVisibility = () => {
         if (document.visibilityState === "visible") play();
       };
+
       video.addEventListener("loadeddata", onReady);
       video.addEventListener("canplay", onReady);
       video.addEventListener("playing", onPlaying);
+      video.addEventListener("error", onVideoError);
       document.addEventListener("visibilitychange", onVisibility);
 
       const nativeHls = video.canPlayType("application/vnd.apple.mpegurl");
 
       if (nativeHls) {
-        // iPhone/iPad/macOS Safari use Apple's native adaptive HLS engine.
-        // Direct CDN access avoids the failing Vercel /media proxy entirely.
+        // iPhone/iPad/macOS Safari: let Apple's HLS engine adapt continuously.
+        // Do not force 1080-only: that is exactly what can stall a weaker link.
         video.src = MASTER_HLS;
-        video.load();
+        try {
+          video.load();
+        } catch {}
         play();
+        armStartupFallback(6500);
       } else if (Hls.isSupported()) {
         const connection = (navigator as any)
           .connection as NetworkInformationLike | undefined;
@@ -121,19 +220,19 @@ export default function HeroVideoController() {
           effectiveType === "2g";
 
         hls = new Hls({
-          // Start with an intentionally optimistic bandwidth estimate so a good
-          // connection does not begin at a soft low rendition. ABR stays active
-          // and can immediately step down when measured throughput requires it.
-          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 25_000_000,
-          abrBandWidthFactor: 0.95,
-          abrBandWidthUpFactor: 0.85,
+          // Bias startup high on normal links, but leave ABR fully enabled so it
+          // can step down quickly if real throughput proves lower.
+          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 20_000_000,
+          abrBandWidthFactor: 0.92,
+          abrBandWidthUpFactor: 0.82,
           capLevelToPlayerSize: false,
           testBandwidth: false,
-          maxBufferLength: clearlyConstrained ? 10 : 30,
-          maxMaxBufferLength: clearlyConstrained ? 20 : 60,
+          maxBufferLength: clearlyConstrained ? 10 : 24,
+          maxMaxBufferLength: clearlyConstrained ? 20 : 45,
           maxStarvationDelay: 3,
           maxLoadingDelay: 3,
           enableWorker: true,
+          startLevel: -1,
         });
 
         hls.attachMedia(video);
@@ -144,25 +243,25 @@ export default function HeroVideoController() {
           if (!hls || disposed) return;
 
           if (!clearlyConstrained && hls.levels.length > 0) {
-            const highest = hls.levels.length - 1;
-            hls.startLevel = highest;
-            hls.nextAutoLevel = highest;
+            hls.nextAutoLevel = hls.levels.length - 1;
           }
 
           play();
+          armStartupFallback(6500);
         });
         hls.on(Hls.Events.LEVEL_SWITCHED, () => reveal());
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (!hls || disposed || !data.fatal) return;
+          hlsFatalCount += 1;
 
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsFatalCount <= 1) {
             try {
-              hls.startLoad();
+              hls.startLoad(-1);
               return;
             } catch {}
           }
 
-          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsFatalCount <= 1) {
             try {
               hls.recoverMediaError();
               return;
@@ -175,19 +274,11 @@ export default function HeroVideoController() {
         usePremiumMp4();
       }
 
-      // Never expose a blank/gray hero while the video is negotiating startup.
-      // The existing direct-CDN poster remains visible underneath this element.
-      const startupGuard = window.setTimeout(() => {
-        if (!disposed && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          reveal();
-        }
-      }, 1600);
-
       return () => {
-        window.clearTimeout(startupGuard);
         video.removeEventListener("loadeddata", onReady);
         video.removeEventListener("canplay", onReady);
         video.removeEventListener("playing", onPlaying);
+        video.removeEventListener("error", onVideoError);
         document.removeEventListener("visibilitychange", onVisibility);
       };
     };
@@ -197,7 +288,10 @@ export default function HeroVideoController() {
     return () => {
       disposed = true;
       if (retryTimer !== null) window.clearTimeout(retryTimer);
+      if (legacyGuardTimer !== null) window.clearTimeout(legacyGuardTimer);
+      clearStartupTimer();
       cleanupListeners?.();
+      legacyGuardObserver?.disconnect();
       try {
         hls?.destroy();
       } catch {}
