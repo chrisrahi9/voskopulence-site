@@ -3,11 +3,16 @@
 import { useEffect } from "react";
 import Hls from "hls.js";
 
-// Use Bunny's own hostname until the custom cdn.voskopulence.com certificate is renewed.
+// Bunny's native hostname currently has the healthy TLS certificate.
 const CDN = "https://vosko-cdn.b-cdn.net";
+
+// Experimental premium path: sharpened 3840x2160 upscale.
+const FOUR_K_MP4 = `${CDN}/hero_web_4k_test.mp4`;
+
+// Keep the previously proven/sharper media as the complete fallback chain.
 const PREMIUM_HLS = `${CDN}/hero_hls/1080p/playlist.m3u8`;
 const MASTER_HLS = `${CDN}/hero_hls/master.m3u8`;
-const PREMIUM_MP4 = `${CDN}/hero_web_v3.mp4`;
+const FALLBACK_MP4 = `${CDN}/hero_web_v3.mp4`;
 const POSTER = `${CDN}/hero_poster.jpg`;
 
 type NetworkInformationLike = {
@@ -15,7 +20,7 @@ type NetworkInformationLike = {
   saveData?: boolean;
 };
 
-type PlaybackMode = "premium" | "adaptive" | "mp4";
+type PlaybackMode = "fourk" | "premium" | "adaptive" | "mp4";
 
 export default function HeroVideoController() {
   useEffect(() => {
@@ -28,7 +33,8 @@ export default function HeroVideoController() {
     let stallTimer: number | null = null;
     let legacyGuardTimer: number | null = null;
     let legacyObserver: MutationObserver | null = null;
-    let mode: PlaybackMode = "premium";
+    let removeListeners: (() => void) | null = null;
+    let mode: PlaybackMode = "fourk";
     let hasPlayed = false;
     let fatalCount = 0;
 
@@ -102,20 +108,42 @@ export default function HeroVideoController() {
       el.addEventListener("loadedmetadata", restore);
     };
 
-    const startMp4 = (resumeAt = 0) => {
+    const setDirectSource = (
+      src: string,
+      nextMode: PlaybackMode,
+      resumeAt = 0
+    ) => {
       if (!video || disposed) return;
-      mode = "mp4";
-      video.dataset.heroMode = mode;
       clearStartupTimer();
       clearStallTimer();
       destroyHls();
+      hasPlayed = false;
+      mode = nextMode;
+      video.dataset.heroMode = mode;
       setFlags(video);
       restoreTimeWhenReady(resumeAt);
-      video.src = PREMIUM_MP4;
+      video.src = src;
       try {
         video.load();
       } catch {}
       play();
+    };
+
+    const armStartupFallback = (
+      expectedMode: PlaybackMode,
+      delayMs: number,
+      fallback: (resumeAt: number) => void
+    ) => {
+      clearStartupTimer();
+      startupTimer = window.setTimeout(() => {
+        startupTimer = null;
+        if (disposed || !video || mode !== expectedMode || hasPlayed) return;
+        fallback(video.currentTime || 0);
+      }, delayMs);
+    };
+
+    const startFallbackMp4 = (resumeAt = 0) => {
+      setDirectSource(FALLBACK_MP4, "mp4", resumeAt);
     };
 
     const startHlsJs = (
@@ -124,15 +152,15 @@ export default function HeroVideoController() {
       resumeAt = 0
     ) => {
       if (!video || disposed) return;
+      clearStartupTimer();
+      clearStallTimer();
       destroyHls();
+      hasPlayed = false;
       mode = nextMode;
       video.dataset.heroMode = mode;
       const el = video;
 
       hls = new Hls({
-        // Premium mode contains only 1080p, so there is no low rendition to
-        // choose accidentally. Adaptive mode is entered only after actual
-        // startup/buffering trouble or an explicit Save-Data/2G signal.
         abrEwmaDefaultEstimate:
           nextMode === "adaptive"
             ? explicitlyConstrained
@@ -181,7 +209,7 @@ export default function HeroVideoController() {
 
         const resume = el.currentTime || resumeAt || 0;
         if (mode === "premium") startAdaptive(resume);
-        else startMp4(resume);
+        else startFallbackMp4(resume);
       });
     };
 
@@ -194,58 +222,38 @@ export default function HeroVideoController() {
       video.dataset.heroMode = mode;
 
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        destroyHls();
-        setFlags(video);
-        restoreTimeWhenReady(resumeAt);
-        video.src = MASTER_HLS;
-        try {
-          video.load();
-        } catch {}
-        play();
+        setDirectSource(MASTER_HLS, "adaptive", resumeAt);
       } else if (Hls.isSupported()) {
         startHlsJs(MASTER_HLS, "adaptive", resumeAt);
       } else {
-        startMp4(resumeAt);
+        startFallbackMp4(resumeAt);
       }
     };
 
-    const startPremium = () => {
+    const startPremium1080 = (resumeAt = 0) => {
       if (!video || disposed) return;
-      clearStartupTimer();
-      clearStallTimer();
-      hasPlayed = false;
-      mode = "premium";
-      video.dataset.heroMode = mode;
 
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        destroyHls();
-        setFlags(video);
-        video.src = PREMIUM_HLS;
-        try {
-          video.load();
-        } catch {}
-        play();
+        setDirectSource(PREMIUM_HLS, "premium", resumeAt);
       } else if (Hls.isSupported()) {
-        startHlsJs(PREMIUM_HLS, "premium");
+        startHlsJs(PREMIUM_HLS, "premium", resumeAt);
       } else {
-        startMp4();
+        startFallbackMp4(resumeAt);
         return;
       }
 
-      // Premium-first: do not downgrade because of a guessed connection speed.
-      // Only open the adaptive ladder if 1080p has not actually started.
-      startupTimer = window.setTimeout(() => {
-        startupTimer = null;
-        if (
-          disposed ||
-          !video ||
-          mode !== "premium" ||
-          hasPlayed
-        ) {
-          return;
-        }
-        startAdaptive(video.currentTime || 0);
-      }, 5000);
+      // If the fixed 1080p fallback itself cannot start, then open the
+      // adaptive ladder rather than jumping directly to a low rendition.
+      armStartupFallback("premium", 4500, startAdaptive);
+    };
+
+    const startFourK = () => {
+      if (!video || disposed) return;
+      setDirectSource(FOUR_K_MP4, "fourk");
+
+      // The file is fast-start optimized. Give it a generous window to produce
+      // actual playback, then fall back to the known-good fixed 1080p HLS.
+      armStartupFallback("fourk", 5500, startPremium1080);
     };
 
     const stopLegacyVideo = () => {
@@ -271,9 +279,8 @@ export default function HeroVideoController() {
       legacyVideo.style.visibility = "hidden";
       legacyVideo.style.pointerEvents = "none";
 
-      // The old page effect can try to restore its source. Cancel that race.
       legacyObserver = new MutationObserver(() => {
-        if (!disposed && legacyVideo?.getAttribute("src")) stopLegacyVideo();
+        if (!disposed) stopLegacyVideo();
       });
       legacyObserver.observe(legacyVideo, {
         attributes: true,
@@ -330,27 +337,34 @@ export default function HeroVideoController() {
       };
 
       const onWaiting = () => {
-        if (!video || disposed || !hasPlayed || mode !== "premium") return;
+        if (!video || disposed || !hasPlayed) return;
+        if (mode !== "fourk" && mode !== "premium") return;
+
         clearStallTimer();
+        const stalledMode = mode;
         const resumeAt = video.currentTime || 0;
         stallTimer = window.setTimeout(() => {
           stallTimer = null;
           if (
-            !disposed &&
-            video &&
-            mode === "premium" &&
-            video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+            disposed ||
+            !video ||
+            mode !== stalledMode ||
+            video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
           ) {
-            startAdaptive(resumeAt);
+            return;
           }
-        }, 1400);
+
+          if (stalledMode === "fourk") startPremium1080(resumeAt);
+          else startAdaptive(resumeAt);
+        }, 1600);
       };
 
       const onError = () => {
         if (!video || disposed) return;
         const resumeAt = video.currentTime || 0;
-        if (mode === "premium") startAdaptive(resumeAt);
-        else if (mode === "adaptive") startMp4(resumeAt);
+        if (mode === "fourk") startPremium1080(resumeAt);
+        else if (mode === "premium") startAdaptive(resumeAt);
+        else if (mode === "adaptive") startFallbackMp4(resumeAt);
       };
 
       const onVisibility = () => {
@@ -365,10 +379,7 @@ export default function HeroVideoController() {
       video.addEventListener("error", onError);
       document.addEventListener("visibilitychange", onVisibility);
 
-      if (explicitlyConstrained) startAdaptive();
-      else startPremium();
-
-      return () => {
+      removeListeners = () => {
         if (!video) return;
         video.removeEventListener("loadeddata", reveal);
         video.removeEventListener("canplay", reveal);
@@ -378,9 +389,12 @@ export default function HeroVideoController() {
         video.removeEventListener("error", onError);
         document.removeEventListener("visibilitychange", onVisibility);
       };
+
+      if (explicitlyConstrained) startAdaptive();
+      else startFourK();
     };
 
-    const cleanupListeners = mount();
+    mount();
 
     return () => {
       disposed = true;
@@ -388,7 +402,7 @@ export default function HeroVideoController() {
       if (legacyGuardTimer !== null) window.clearTimeout(legacyGuardTimer);
       clearStartupTimer();
       clearStallTimer();
-      cleanupListeners?.();
+      removeListeners?.();
       legacyObserver?.disconnect();
       destroyHls();
       video?.remove();
