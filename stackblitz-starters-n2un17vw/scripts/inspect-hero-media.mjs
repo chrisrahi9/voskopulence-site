@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const CDN = "https://cdn.voskopulence.com";
 const MP4 = `${CDN}/hero_web_v3.mp4`;
 const MASTER = `${CDN}/hero_hls/master.m3u8`;
