@@ -36,8 +36,6 @@ export default function HeroVideoController() {
       video.autoplay = true;
       video.loop = true;
       video.playsInline = true;
-      // "auto" made Safari keep a full MP4 request alive while HLS was starting.
-      // Metadata is enough; play() will fetch what playback actually needs.
       video.preload = "metadata";
       video.poster = POSTER;
       video.setAttribute("muted", "");
@@ -68,8 +66,6 @@ export default function HeroVideoController() {
       if (!originalVideo) return;
       stopLegacyDownload();
 
-      // The old React effect can try to restore its source after we mount.
-      // Watch that detached/hidden element and immediately cancel any such request.
       legacyGuardObserver = new MutationObserver(() => {
         if (disposed || !originalVideo) return;
         if (originalVideo.getAttribute("src")) {
@@ -133,8 +129,6 @@ export default function HeroVideoController() {
         ) {
           return;
         }
-        // Native HLS occasionally gets stuck during startup on iOS. A direct
-        // premium H.264 MP4 is the safest last-resort recovery path.
         usePremiumMp4();
       }, timeoutMs);
     };
@@ -154,8 +148,6 @@ export default function HeroVideoController() {
       const parent = originalVideo.parentElement;
       quarantineLegacyPlayer();
 
-      // The original SSR video has a direct MP4 src and preload=auto. Hide it,
-      // stop its request, and put the adaptive element in front of it.
       originalVideo.style.opacity = "0";
       originalVideo.style.visibility = "hidden";
       originalVideo.style.pointerEvents = "none";
@@ -200,37 +192,32 @@ export default function HeroVideoController() {
       document.addEventListener("visibilitychange", onVisibility);
 
       const nativeHls = video.canPlayType("application/vnd.apple.mpegurl");
+      const connection = (navigator as any)
+        .connection as NetworkInformationLike | undefined;
+      const effectiveType = connection?.effectiveType ?? "";
+      const clearlyConstrained =
+        Boolean(connection?.saveData) ||
+        effectiveType === "slow-2g" ||
+        effectiveType === "2g";
 
-      if (nativeHls) {
-        // iPhone/iPad/macOS Safari: let Apple's HLS engine adapt continuously.
-        // Do not force 1080-only: that is exactly what can stall a weaker link.
-        video.src = MASTER_HLS;
-        try {
-          video.load();
-        } catch {}
-        play();
-        armStartupFallback(6500);
-      } else if (Hls.isSupported()) {
-        const connection = (navigator as any)
-          .connection as NetworkInformationLike | undefined;
-        const effectiveType = connection?.effectiveType ?? "";
-        const clearlyConstrained =
-          Boolean(connection?.saveData) ||
-          effectiveType === "slow-2g" ||
-          effectiveType === "2g";
-
+      // Prefer hls.js whenever the browser exposes MSE/MMS support. This now
+      // includes modern iPhones (iOS 17.1+). Native iOS HLS tends to start at a
+      // deliberately conservative rendition and does not expose a quality API,
+      // which was the cause of the visibly soft first seconds on iPhone.
+      if (Hls.isSupported()) {
         hls = new Hls({
-          // Bias startup high on normal links, but leave ABR fully enabled so it
-          // can step down quickly if real throughput proves lower.
-          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 20_000_000,
-          abrBandWidthFactor: 0.92,
-          abrBandWidthUpFactor: 0.82,
+          // Start with a premium assumption on normal connections. ABR remains
+          // enabled and immediately learns from real fragment throughput, so a
+          // genuinely weak connection can still step down before it starves.
+          abrEwmaDefaultEstimate: clearlyConstrained ? 2_500_000 : 80_000_000,
+          abrBandWidthFactor: clearlyConstrained ? 0.82 : 0.95,
+          abrBandWidthUpFactor: clearlyConstrained ? 0.72 : 0.88,
           capLevelToPlayerSize: false,
           testBandwidth: false,
           maxBufferLength: clearlyConstrained ? 10 : 24,
           maxMaxBufferLength: clearlyConstrained ? 20 : 45,
-          maxStarvationDelay: 3,
-          maxLoadingDelay: 3,
+          maxStarvationDelay: clearlyConstrained ? 4 : 3,
+          maxLoadingDelay: clearlyConstrained ? 4 : 3,
           enableWorker: true,
           startLevel: -1,
         });
@@ -243,7 +230,17 @@ export default function HeroVideoController() {
           if (!hls || disposed) return;
 
           if (!clearlyConstrained && hls.levels.length > 0) {
-            hls.nextAutoLevel = hls.levels.length - 1;
+            // First fragment: explicitly request the highest variant, but keep
+            // auto-level mode enabled for every fragment after it.
+            const highestLevel = hls.levels.reduce((bestIndex, level, index) => {
+              const best = hls!.levels[bestIndex];
+              const levelScore = (level.height || 0) * 1_000_000 + (level.bitrate || 0);
+              const bestScore = (best?.height || 0) * 1_000_000 + (best?.bitrate || 0);
+              return levelScore > bestScore ? index : bestIndex;
+            }, 0);
+
+            hls.startLevel = highestLevel;
+            hls.nextAutoLevel = highestLevel;
           }
 
           play();
@@ -268,8 +265,19 @@ export default function HeroVideoController() {
             } catch {}
           }
 
+          // If MMS/MSE playback is unavailable or unstable on a particular
+          // Safari build, fail over to the full-quality MP4 rather than showing
+          // a blank/gray hero.
           usePremiumMp4();
         });
+      } else if (nativeHls) {
+        // Older Apple devices that cannot run hls.js keep native HLS support.
+        video.src = MASTER_HLS;
+        try {
+          video.load();
+        } catch {}
+        play();
+        armStartupFallback(6500);
       } else {
         usePremiumMp4();
       }
