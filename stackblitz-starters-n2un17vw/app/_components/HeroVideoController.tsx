@@ -3,14 +3,12 @@
 import { useEffect } from "react";
 import Hls from "hls.js";
 
-// Bunny's native hostname has valid TLS; keep using it until the custom CDN
-// hostname certificate is renewed. The v2 ladder is encoded from the cleaner
-// high-bitrate source while preserving the existing 2.83-second hero cut.
+// Use Bunny's own hostname until the custom cdn.voskopulence.com certificate is renewed.
 const CDN = "https://vosko-cdn.b-cdn.net";
-const PREMIUM_HLS = `${CDN}/hero_hls_v2/1080p/playlist.m3u8`;
-const MASTER_HLS = `${CDN}/hero_hls_v2/master.m3u8`;
-const PREMIUM_MP4 = `${CDN}/hero_web_v4.mp4`;
-const POSTER = `${CDN}/hero_poster_v2.jpg`;
+const PREMIUM_HLS = `${CDN}/hero_hls/1080p/playlist.m3u8`;
+const MASTER_HLS = `${CDN}/hero_hls/master.m3u8`;
+const PREMIUM_MP4 = `${CDN}/hero_web_v3.mp4`;
+const POSTER = `${CDN}/hero_poster.jpg`;
 
 type NetworkInformationLike = {
   effectiveType?: string;
