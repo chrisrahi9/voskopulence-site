@@ -1,4 +1,4 @@
-const CDN_ORIGIN = "https://cdn.voskopulence.com";
+const CDN_ORIGIN = "https://vosko-cdn.b-cdn.net";
 
 export const runtime = "edge";
 
@@ -36,6 +36,7 @@ const buildDirectCdnUrl = (request: Request, rawPath: string) => {
 const rewriteManifestUrls = (manifest: string) =>
   manifest
     .replaceAll(`${CDN_ORIGIN}/`, "/media/")
+    .replaceAll("https://cdn.voskopulence.com/", "/media/")
     .replaceAll("https://www.cdn.voskopulence.com/", "/media/");
 
 export async function GET(
