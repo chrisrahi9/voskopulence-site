@@ -5,12 +5,16 @@ import Hls from "hls.js";
 
 const CDN = "https://vosko-cdn.b-cdn.net";
 
-// New premium MP4 ladder. These are deliberately much lighter than the first
-// 4K experiment and use normal H.264 High Profile + fast-start MP4.
-const FOUR_K_MP4 = `${CDN}/hero_web_4k_v2.mp4`;
-const QHD_MP4 = `${CDN}/hero_web_1440_v2.mp4`;
+// Apple/UHD path. HEVC + hvc1 is the preferred UHD path for Safari/WebKit.
+const HEVC_4K = `${CDN}/hero_web_4k_hevc.mp4`;
+const HEVC_QHD = `${CDN}/hero_web_1440_hevc.mp4`;
 
-// Keep the proven sharp media as the safety net.
+// Optional H.264 UHD path for non-Apple browsers that explicitly report
+// smooth support through MediaCapabilities.
+const AVC_4K = `${CDN}/hero_web_4k_v2.mp4`;
+const AVC_QHD = `${CDN}/hero_web_1440_v2.mp4`;
+
+// Proven safety net. These are the assets that already work reliably on iPhone.
 const PREMIUM_HLS = `${CDN}/hero_hls/1080p/playlist.m3u8`;
 const MASTER_HLS = `${CDN}/hero_hls/master.m3u8`;
 const FALLBACK_MP4 = `${CDN}/hero_web_v3.mp4`;
@@ -21,7 +25,24 @@ type NetworkInformationLike = {
   saveData?: boolean;
 };
 
-type PlaybackMode = "fourk" | "qhd" | "premium" | "adaptive" | "mp4";
+type PlaybackMode =
+  | "hevc4k"
+  | "hevcqhd"
+  | "avc4k"
+  | "avcqhd"
+  | "premium"
+  | "adaptive"
+  | "mp4";
+
+type CapabilityResult = {
+  supported?: boolean;
+  smooth?: boolean;
+  powerEfficient?: boolean;
+};
+
+type MediaCapabilitiesLike = {
+  decodingInfo?: (config: unknown) => Promise<CapabilityResult>;
+};
 
 export default function HeroVideoController() {
   useEffect(() => {
@@ -37,6 +58,7 @@ export default function HeroVideoController() {
     let removeListeners: (() => void) | null = null;
     let mode: PlaybackMode = "premium";
     let fatalCount = 0;
+    let sourceToken = 0;
     let attemptBaselineTime = 0;
     let hasAdvanced = false;
 
@@ -48,13 +70,11 @@ export default function HeroVideoController() {
       effectiveType === "slow-2g" ||
       effectiveType === "2g";
 
-    // Do not spend 4K bandwidth on a display that cannot benefit from it.
-    // iPhones/Retina displays still qualify because DPR is included.
     const physicalMaxDimension =
       Math.max(window.innerWidth, window.innerHeight) *
       Math.max(1, window.devicePixelRatio || 1);
-    const prefers4K = physicalMaxDimension >= 2200;
-    const prefersQHD = physicalMaxDimension >= 1400;
+    const wants4K = physicalMaxDimension >= 2200;
+    const wantsQHD = physicalMaxDimension >= 1400;
 
     const clearStartupTimer = () => {
       if (startupTimer !== null) {
@@ -111,36 +131,60 @@ export default function HeroVideoController() {
       el.addEventListener("loadedmetadata", restore);
     };
 
-    const fallbackFrom = (failedMode: PlaybackMode, resumeAt = 0) => {
+    function fallbackFrom(failedMode: PlaybackMode, resumeAt = 0) {
       if (disposed || !video || mode !== failedMode) return;
-      if (failedMode === "fourk") startQHD(resumeAt);
-      else if (failedMode === "qhd") startPremium1080(resumeAt);
+
+      if (failedMode === "hevc4k") startHevcQHD(resumeAt);
+      else if (failedMode === "hevcqhd") startPremium1080(resumeAt);
+      else if (failedMode === "avc4k") startAvcQHD(resumeAt);
+      else if (failedMode === "avcqhd") startPremium1080(resumeAt);
       else if (failedMode === "premium") startAdaptive(resumeAt);
       else if (failedMode === "adaptive") startFallbackMp4(resumeAt);
-    };
+    }
 
-    const playWithRecovery = (expectedMode: PlaybackMode) => {
+    const playWithRecovery = (expectedMode: PlaybackMode, token: number) => {
       if (!video || disposed || document.visibilityState === "hidden") return;
       setFlags(video);
+
       let result: Promise<void> | undefined;
       try {
         result = video.play();
       } catch {
-        fallbackFrom(expectedMode, video.currentTime || 0);
+        if (token === sourceToken) {
+          fallbackFrom(expectedMode, video.currentTime || 0);
+        }
         return;
       }
+
       result?.catch(() => {
-        if (!disposed && video && mode === expectedMode) {
+        if (
+          !disposed &&
+          video &&
+          token === sourceToken &&
+          mode === expectedMode
+        ) {
           fallbackFrom(expectedMode, video.currentTime || 0);
         }
       });
     };
 
-    const armProgressWatchdog = (expectedMode: PlaybackMode, delayMs: number) => {
+    const armProgressWatchdog = (
+      expectedMode: PlaybackMode,
+      token: number,
+      delayMs: number
+    ) => {
       clearStartupTimer();
       startupTimer = window.setTimeout(() => {
         startupTimer = null;
-        if (disposed || !video || mode !== expectedMode || hasAdvanced) return;
+        if (
+          disposed ||
+          !video ||
+          token !== sourceToken ||
+          mode !== expectedMode ||
+          hasAdvanced
+        ) {
+          return;
+        }
         fallbackFrom(expectedMode, video.currentTime || 0);
       }, delayMs);
     };
@@ -152,9 +196,12 @@ export default function HeroVideoController() {
       watchdogMs = 0
     ) => {
       if (!video || disposed) return;
+
       clearStartupTimer();
       clearStallTimer();
       destroyHls();
+
+      const token = ++sourceToken;
       mode = nextMode;
       video.dataset.heroMode = mode;
       hasAdvanced = false;
@@ -162,12 +209,14 @@ export default function HeroVideoController() {
       setFlags(video);
       restoreTimeWhenReady(resumeAt);
       video.src = src;
+
       try {
         video.load();
       } catch {}
-      playWithRecovery(nextMode);
+
+      playWithRecovery(nextMode, token);
       if (watchdogMs > 0 && nextMode !== "mp4") {
-        armProgressWatchdog(nextMode, watchdogMs);
+        armProgressWatchdog(nextMode, token, watchdogMs);
       }
     };
 
@@ -181,9 +230,12 @@ export default function HeroVideoController() {
       resumeAt = 0
     ) => {
       if (!video || disposed) return;
+
       clearStartupTimer();
       clearStallTimer();
       destroyHls();
+
+      const token = ++sourceToken;
       mode = nextMode;
       video.dataset.heroMode = mode;
       hasAdvanced = false;
@@ -211,16 +263,20 @@ export default function HeroVideoController() {
 
       hls.attachMedia(el);
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        if (!disposed) hls?.loadSource(source);
+        if (!disposed && token === sourceToken) hls?.loadSource(source);
       });
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (disposed) return;
+        if (disposed || token !== sourceToken) return;
         restoreTimeWhenReady(resumeAt);
-        playWithRecovery(nextMode);
-        armProgressWatchdog(nextMode, nextMode === "premium" ? 4500 : 5500);
+        playWithRecovery(nextMode, token);
+        armProgressWatchdog(
+          nextMode,
+          token,
+          nextMode === "premium" ? 4500 : 5500
+        );
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (!hls || disposed || !data.fatal) return;
+        if (!hls || disposed || token !== sourceToken || !data.fatal) return;
         fatalCount += 1;
 
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR && fatalCount <= 1) {
@@ -263,13 +319,100 @@ export default function HeroVideoController() {
       }
     }
 
-    function startQHD(resumeAt = 0) {
-      startDirectSource(QHD_MP4, "qhd", resumeAt, 3200);
+    function startHevcQHD(resumeAt = 0) {
+      startDirectSource(HEVC_QHD, "hevcqhd", resumeAt, 3200);
     }
 
-    function startFourK(resumeAt = 0) {
-      startDirectSource(FOUR_K_MP4, "fourk", resumeAt, 3200);
+    function startHevc4K(resumeAt = 0) {
+      startDirectSource(HEVC_4K, "hevc4k", resumeAt, 3200);
     }
+
+    function startAvcQHD(resumeAt = 0) {
+      startDirectSource(AVC_QHD, "avcqhd", resumeAt, 3200);
+    }
+
+    function startAvc4K(resumeAt = 0) {
+      startDirectSource(AVC_4K, "avc4k", resumeAt, 3200);
+    }
+
+    const avcCapability = async (
+      width: number,
+      height: number,
+      bitrate: number,
+      codec: string
+    ) => {
+      const caps = (navigator as any).mediaCapabilities as
+        | MediaCapabilitiesLike
+        | undefined;
+      if (!caps?.decodingInfo) return false;
+
+      try {
+        const result = await caps.decodingInfo({
+          type: "file",
+          video: {
+            contentType: `video/mp4; codecs="${codec}"`,
+            width,
+            height,
+            bitrate,
+            framerate: 30,
+          },
+        });
+        return Boolean(result.supported && result.smooth !== false);
+      } catch {
+        return false;
+      }
+    };
+
+    const chooseInitialSource = async () => {
+      if (!video || disposed) return;
+
+      if (explicitlyConstrained) {
+        startAdaptive();
+        return;
+      }
+
+      // Safari/WebKit and any browser with HEVC support get the proper UHD
+      // codec. If HEVC isn't reported as playable, we do not attempt it.
+      const hevcSupport = video.canPlayType('video/mp4; codecs="hvc1"');
+      if (hevcSupport) {
+        if (wants4K) startHevc4K();
+        else if (wantsQHD) startHevcQHD();
+        else startPremium1080();
+        return;
+      }
+
+      // On other platforms, only use the uploaded H.264 UHD files after the
+      // browser explicitly reports smooth decode support. No guessing.
+      if (wants4K) {
+        const can4K = await avcCapability(
+          3840,
+          2160,
+          15_200_000,
+          "avc1.640033"
+        );
+        if (disposed || !video) return;
+        if (can4K) {
+          startAvc4K();
+          return;
+        }
+      }
+
+      if (wantsQHD) {
+        const canQHD = await avcCapability(
+          2560,
+          1440,
+          10_100_000,
+          "avc1.640032"
+        );
+        if (disposed || !video) return;
+        if (canQHD) {
+          startAvcQHD();
+          return;
+        }
+      }
+
+      startPremium1080();
+    };
 
     const stopLegacyVideo = () => {
       if (!legacyVideo) return;
@@ -382,7 +525,8 @@ export default function HeroVideoController() {
 
       const onVisibility = () => {
         if (document.visibilityState === "visible" && video) {
-          playWithRecovery(mode);
+          const token = sourceToken;
+          playWithRecovery(mode, token);
         }
       };
 
@@ -401,10 +545,7 @@ export default function HeroVideoController() {
         document.removeEventListener("visibilitychange", onVisibility);
       };
 
-      if (explicitlyConstrained) startAdaptive();
-      else if (prefers4K) startFourK();
-      else if (prefersQHD) startQHD();
-      else startPremium1080();
+      void chooseInitialSource();
     };
 
     mount();
