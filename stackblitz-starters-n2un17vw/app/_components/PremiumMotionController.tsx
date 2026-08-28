@@ -10,8 +10,6 @@ const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
 export default function PremiumMotionController() {
   useEffect(() => {
-    // Keep this pass deliberately scoped to the homepage. Other routes retain
-    // their existing movement until they are reviewed individually.
     if (window.location.pathname !== "/") return;
 
     const reduceMotion = window.matchMedia?.(
@@ -25,13 +23,10 @@ export default function PremiumMotionController() {
     let headerLastTime = performance.now();
     let headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
     let headerProgress = headerTarget;
-    let enforcingHeader = false;
 
     const root = document.documentElement;
     const originalScrollTo = window.scrollTo.bind(window);
 
-    // Refine only programmatic smooth scrolling. Natural wheel, trackpad and
-    // touch scrolling remain completely native, preserving platform physics.
     const premiumScrollTo = (
       xOrOptions?: number | ScrollToOptions,
       y?: number
@@ -67,8 +62,6 @@ export default function PremiumMotionController() {
         return;
       }
 
-      // Slightly longer for long jumps, but never sluggish. The curve gives a
-      // quick departure followed by a long, controlled luxury-style settle.
       const duration = Math.min(760, Math.max(560, 560 + Math.abs(delta) * 0.08));
       const startTime = performance.now();
 
@@ -84,8 +77,6 @@ export default function PremiumMotionController() {
         if (t < 1) scrollRaf = requestAnimationFrame(step);
         else {
           scrollRaf = null;
-          // Pin the exact destination so different browser rounding never
-          // leaves a section a pixel or two off its intended resting point.
           originalScrollTo({
             top: destination,
             left: xOrOptions.left ?? 0,
@@ -96,23 +87,16 @@ export default function PremiumMotionController() {
       scrollRaf = requestAnimationFrame(step);
     };
 
-    // Preserve the native overloads while intercepting only object-form
-    // behavior:'smooth' calls made by the homepage navigation/CTA.
     window.scrollTo = premiumScrollTo as typeof window.scrollTo;
 
     const writeHeaderProgress = () => {
-      enforcingHeader = true;
       root.style.setProperty("--hdrProg", headerProgress.toFixed(4));
-      enforcingHeader = false;
     };
 
     const headerTick = (now: number) => {
       if (disposed) return;
       const dt = Math.min(50, Math.max(0, now - headerLastTime));
       headerLastTime = now;
-
-      // Time-based exponential damping. This has the same physical response on
-      // 60 Hz, 90 Hz, 120 Hz and 144 Hz screens, unlike a fixed per-frame lerp.
       const alpha = 1 - Math.exp(-dt / HEADER_TAU_MS);
       headerProgress += (headerTarget - headerProgress) * alpha;
 
@@ -141,25 +125,6 @@ export default function PremiumMotionController() {
     window.addEventListener("resize", onScroll, { passive: true });
     writeHeaderProgress();
 
-    // The homepage still contains its older header-progress writer. Rather than
-    // rewriting that large component in this motion-only pass, keep the final
-    // CSS variable value synchronized to the time-based controller above.
-    const headerStyleObserver = new MutationObserver(() => {
-      if (disposed || enforcingHeader) return;
-      const existing = Number.parseFloat(
-        root.style.getPropertyValue("--hdrProg") || "0"
-      );
-      if (Math.abs(existing - headerProgress) > 0.0005) {
-        writeHeaderProgress();
-      }
-    });
-    headerStyleObserver.observe(root, {
-      attributes: true,
-      attributeFilter: ["style"],
-    });
-
-    // Extremely restrained one-time section entrances. Nothing changes size,
-    // layout, color, typography or spacing; this is purely compositing motion.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
     const revealTargets = sections.slice(1);
     const revealed = new WeakSet<Element>();
@@ -200,7 +165,6 @@ export default function PremiumMotionController() {
       window.removeEventListener("resize", onScroll);
       if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
       if (headerRaf !== null) cancelAnimationFrame(headerRaf);
-      headerStyleObserver.disconnect();
       revealObserver.disconnect();
     };
   }, []);
