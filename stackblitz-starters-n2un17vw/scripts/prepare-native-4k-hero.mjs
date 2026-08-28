@@ -10,7 +10,7 @@ source = source
   )
   .replace(
     'const HERO_VIDEO_VERSION = "20260517-direct-mp4";',
-    'const HERO_VIDEO_VERSION = "20260828-native-4k";'
+    'const HERO_VIDEO_VERSION = "20260828-premium-1080";'
   );
 
 const effectStart =
@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="https://vosko-cdn.b-cdn.net/hero_web_4k_hevc.mp4"
+              src="https://vosko-cdn.b-cdn.net/hero_web_1080_premium_v1.mp4"
               autoPlay
               muted
               loop
@@ -62,13 +62,13 @@ source =
 if (source.includes("https://cdn.voskopulence.com")) {
   throw new Error("Expired custom CDN hostname still present");
 }
-if (!source.includes("hero_web_4k_hevc.mp4")) {
-  throw new Error("Native HEVC hero source missing");
+if (!source.includes("hero_web_1080_premium_v1.mp4")) {
+  throw new Error("Premium 1080 hero source missing");
 }
 
 await writeFile(pagePath, source);
-console.log("NATIVE_4K_HERO_PREPARED", {
-  source: "hero_web_4k_hevc.mp4",
+console.log("PREMIUM_1080_HERO_PREPARED", {
+  source: "hero_web_1080_premium_v1.mp4",
   legacyPlaybackEffectRemoved: true,
   controllerIndependent: true,
 });
