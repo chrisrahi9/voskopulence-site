@@ -14,6 +14,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://vosko-cdn.b-cdn.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//vosko-cdn.b-cdn.net" />
         <link
           href="https://fonts.googleapis.com/css2?family=Sarina&family=League+Spartan:wght@300;400;600&display=swap"
           rel="stylesheet"
