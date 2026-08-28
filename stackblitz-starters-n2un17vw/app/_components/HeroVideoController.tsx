@@ -3,34 +3,30 @@
 import { useEffect } from "react";
 import Hls from "hls.js";
 
-// Use Bunny's own hostname until the custom cdn.voskopulence.com certificate is renewed.
 const CDN = "https://vosko-cdn.b-cdn.net";
+const PRIMARY_MP4 = `${CDN}/hero_web_v3.mp4?v=20260828-fast-1080`;
 const PREMIUM_HLS = `${CDN}/hero_hls/1080p/playlist.m3u8`;
 const MASTER_HLS = `${CDN}/hero_hls/master.m3u8`;
-const PREMIUM_MP4 = `${CDN}/hero_web_v3.mp4`;
-const POSTER = `${CDN}/hero_poster.jpg`;
+const POSTER = `${CDN}/hero_poster.jpg?v=20260828-fast-1080`;
 
 type NetworkInformationLike = {
   effectiveType?: string;
   saveData?: boolean;
 };
 
-type PlaybackMode = "premium" | "adaptive" | "mp4";
+type PlaybackMode = "mp4" | "premium" | "adaptive";
 
 export default function HeroVideoController() {
   useEffect(() => {
     let disposed = false;
-    let hls: Hls | null = null;
     let video: HTMLVideoElement | null = null;
-    let legacyVideo: HTMLVideoElement | null = null;
+    let hls: Hls | null = null;
     let mountTimer: number | null = null;
-    let startupTimer: number | null = null;
     let stallTimer: number | null = null;
-    let legacyGuardTimer: number | null = null;
-    let legacyObserver: MutationObserver | null = null;
-    let mode: PlaybackMode = "premium";
-    let hasPlayed = false;
-    let fatalCount = 0;
+    let sourceToken = 0;
+    let mode: PlaybackMode = "mp4";
+    let hasAdvanced = false;
+    let mp4RecoveryUsed = false;
 
     const connection = (navigator as any)
       .connection as NetworkInformationLike | undefined;
@@ -39,13 +35,6 @@ export default function HeroVideoController() {
       Boolean(connection?.saveData) ||
       effectiveType === "slow-2g" ||
       effectiveType === "2g";
-
-    const clearStartupTimer = () => {
-      if (startupTimer !== null) {
-        window.clearTimeout(startupTimer);
-        startupTimer = null;
-      }
-    };
 
     const clearStallTimer = () => {
       if (stallTimer !== null) {
@@ -59,7 +48,6 @@ export default function HeroVideoController() {
         hls?.destroy();
       } catch {}
       hls = null;
-      fatalCount = 0;
     };
 
     const setFlags = (el: HTMLVideoElement) => {
@@ -75,18 +63,25 @@ export default function HeroVideoController() {
       el.setAttribute("loop", "");
       el.setAttribute("playsinline", "");
       el.setAttribute("webkit-playsinline", "");
+      el.style.opacity = "1";
+      el.style.visibility = "visible";
     };
 
-    const reveal = () => {
-      if (!video || disposed) return;
-      video.style.opacity = "1";
-    };
-
-    const play = () => {
+    const play = (expectedMode: PlaybackMode, token: number) => {
       if (!video || disposed || document.visibilityState === "hidden") return;
       setFlags(video);
-      const result = video.play();
-      result?.catch(() => {});
+      let result: Promise<void> | undefined;
+      try {
+        result = video.play();
+      } catch {
+        if (token === sourceToken) fallbackFrom(expectedMode, video.currentTime || 0);
+        return;
+      }
+      result?.catch(() => {
+        if (!disposed && video && token === sourceToken && mode === expectedMode) {
+          fallbackFrom(expectedMode, video.currentTime || 0);
+        }
+      });
     };
 
     const restoreTimeWhenReady = (resumeAt: number) => {
@@ -102,20 +97,34 @@ export default function HeroVideoController() {
       el.addEventListener("loadedmetadata", restore);
     };
 
-    const startMp4 = (resumeAt = 0) => {
+    const startDirect = (
+      src: string,
+      nextMode: "mp4" | "premium" | "adaptive",
+      resumeAt = 0,
+      forceReload = true
+    ) => {
       if (!video || disposed) return;
-      mode = "mp4";
-      video.dataset.heroMode = mode;
-      clearStartupTimer();
       clearStallTimer();
       destroyHls();
+      const token = ++sourceToken;
+      mode = nextMode;
+      hasAdvanced = false;
+      video.dataset.heroMode = mode;
       setFlags(video);
       restoreTimeWhenReady(resumeAt);
-      video.src = PREMIUM_MP4;
-      try {
-        video.load();
-      } catch {}
-      play();
+
+      const normalizedCurrent = video.currentSrc || video.src || "";
+      const samePrimary =
+        nextMode === "mp4" &&
+        normalizedCurrent.includes("vosko-cdn.b-cdn.net/hero_web_v3.mp4");
+
+      if (!samePrimary || forceReload) {
+        video.src = src;
+        try {
+          video.load();
+        } catch {}
+      }
+      play(nextMode, token);
     };
 
     const startHlsJs = (
@@ -124,21 +133,17 @@ export default function HeroVideoController() {
       resumeAt = 0
     ) => {
       if (!video || disposed) return;
+      clearStallTimer();
       destroyHls();
+      const token = ++sourceToken;
       mode = nextMode;
+      hasAdvanced = false;
       video.dataset.heroMode = mode;
       const el = video;
+      setFlags(el);
 
       hls = new Hls({
-        // Premium mode contains only 1080p, so there is no low rendition to
-        // choose accidentally. Adaptive mode is entered only after actual
-        // startup/buffering trouble or an explicit Save-Data/2G signal.
-        abrEwmaDefaultEstimate:
-          nextMode === "adaptive"
-            ? explicitlyConstrained
-              ? 2_500_000
-              : 5_000_000
-            : 20_000_000,
+        abrEwmaDefaultEstimate: nextMode === "adaptive" ? 5_000_000 : 20_000_000,
         abrBandWidthFactor: 0.9,
         abrBandWidthUpFactor: 0.8,
         capLevelToPlayerSize: false,
@@ -153,226 +158,135 @@ export default function HeroVideoController() {
 
       hls.attachMedia(el);
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        if (!disposed) hls?.loadSource(source);
+        if (!disposed && token === sourceToken) hls?.loadSource(source);
       });
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (disposed) return;
+        if (disposed || token !== sourceToken) return;
         restoreTimeWhenReady(resumeAt);
-        play();
+        play(nextMode, token);
       });
-      hls.on(Hls.Events.LEVEL_SWITCHED, reveal);
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (!hls || disposed || !data.fatal) return;
-        fatalCount += 1;
-
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && fatalCount <= 1) {
-          try {
-            hls.startLoad(-1);
-            return;
-          } catch {}
-        }
-
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && fatalCount <= 1) {
-          try {
-            hls.recoverMediaError();
-            return;
-          } catch {}
-        }
-
-        const resume = el.currentTime || resumeAt || 0;
-        if (mode === "premium") startAdaptive(resume);
-        else startMp4(resume);
+        if (disposed || token !== sourceToken || !data.fatal) return;
+        fallbackFrom(nextMode, el.currentTime || resumeAt || 0);
       });
     };
 
-    const startAdaptive = (resumeAt = 0) => {
-      if (!video || disposed || mode === "adaptive") return;
-      clearStartupTimer();
-      clearStallTimer();
-      hasPlayed = false;
-      mode = "adaptive";
-      video.dataset.heroMode = mode;
-
+    function startPremiumHls(resumeAt = 0) {
+      if (!video || disposed) return;
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        destroyHls();
-        setFlags(video);
-        restoreTimeWhenReady(resumeAt);
-        video.src = MASTER_HLS;
-        try {
-          video.load();
-        } catch {}
-        play();
+        startDirect(PREMIUM_HLS, "premium", resumeAt, true);
+      } else if (Hls.isSupported()) {
+        startHlsJs(PREMIUM_HLS, "premium", resumeAt);
+      } else if (!mp4RecoveryUsed) {
+        mp4RecoveryUsed = true;
+        startDirect(PRIMARY_MP4, "mp4", resumeAt, true);
+      }
+    }
+
+    function startAdaptive(resumeAt = 0) {
+      if (!video || disposed) return;
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        startDirect(MASTER_HLS, "adaptive", resumeAt, true);
       } else if (Hls.isSupported()) {
         startHlsJs(MASTER_HLS, "adaptive", resumeAt);
-      } else {
-        startMp4(resumeAt);
+      } else if (!mp4RecoveryUsed) {
+        mp4RecoveryUsed = true;
+        startDirect(PRIMARY_MP4, "mp4", resumeAt, true);
       }
-    };
+    }
 
-    const startPremium = () => {
-      if (!video || disposed) return;
-      clearStartupTimer();
-      clearStallTimer();
-      hasPlayed = false;
-      mode = "premium";
-      video.dataset.heroMode = mode;
-
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        destroyHls();
-        setFlags(video);
-        video.src = PREMIUM_HLS;
-        try {
-          video.load();
-        } catch {}
-        play();
-      } else if (Hls.isSupported()) {
-        startHlsJs(PREMIUM_HLS, "premium");
-      } else {
-        startMp4();
-        return;
+    function fallbackFrom(failedMode: PlaybackMode, resumeAt = 0) {
+      if (!video || disposed || mode !== failedMode) return;
+      if (failedMode === "mp4") startPremiumHls(resumeAt);
+      else if (failedMode === "premium") startAdaptive(resumeAt);
+      else if (!mp4RecoveryUsed) {
+        mp4RecoveryUsed = true;
+        startDirect(PRIMARY_MP4, "mp4", resumeAt, true);
       }
-
-      // Premium-first: do not downgrade because of a guessed connection speed.
-      // Only open the adaptive ladder if 1080p has not actually started.
-      startupTimer = window.setTimeout(() => {
-        startupTimer = null;
-        if (
-          disposed ||
-          !video ||
-          mode !== "premium" ||
-          hasPlayed
-        ) {
-          return;
-        }
-        startAdaptive(video.currentTime || 0);
-      }, 5000);
-    };
-
-    const stopLegacyVideo = () => {
-      if (!legacyVideo) return;
-      try {
-        legacyVideo.pause();
-      } catch {}
-      legacyVideo.preload = "none";
-      legacyVideo.removeAttribute("autoplay");
-      legacyVideo.removeAttribute("src");
-      legacyVideo.querySelectorAll("source").forEach((source) => {
-        source.removeAttribute("src");
-      });
-      try {
-        legacyVideo.load();
-      } catch {}
-    };
-
-    const quarantineLegacyVideo = () => {
-      if (!legacyVideo) return;
-      stopLegacyVideo();
-      legacyVideo.style.opacity = "0";
-      legacyVideo.style.visibility = "hidden";
-      legacyVideo.style.pointerEvents = "none";
-
-      // The old page effect can try to restore its source. Cancel that race.
-      legacyObserver = new MutationObserver(() => {
-        if (!disposed && legacyVideo?.getAttribute("src")) stopLegacyVideo();
-      });
-      legacyObserver.observe(legacyVideo, {
-        attributes: true,
-        attributeFilter: ["src", "autoplay", "preload"],
-        subtree: true,
-      });
-
-      const started = Date.now();
-      const guard = () => {
-        if (disposed || !legacyVideo) return;
-        stopLegacyVideo();
-        if (Date.now() - started < 5000) {
-          legacyGuardTimer = window.setTimeout(guard, 250);
-        }
-      };
-      guard();
-    };
+    }
 
     const mount = () => {
       if (disposed) return;
-      legacyVideo = document.querySelector(
+      video = document.querySelector(
         "section video[aria-hidden='true']"
       ) as HTMLVideoElement | null;
 
-      if (!legacyVideo?.parentElement) {
-        mountTimer = window.setTimeout(mount, 50);
+      if (!video) {
+        mountTimer = window.setTimeout(mount, 30);
         return;
       }
 
-      const parent = legacyVideo.parentElement;
-      quarantineLegacyVideo();
-
-      video = document.createElement("video");
-      video.dataset.adaptiveHero = "true";
-      video.dataset.heroMode = "starting";
-      video.className =
-        "absolute inset-0 w-full h-full object-cover pointer-events-none";
-      video.style.opacity = "0";
-      video.style.transition = "opacity 650ms ease";
-      video.style.willChange = "opacity";
-      video.style.backfaceVisibility = "hidden";
-      video.style.transform = "translateZ(0)";
-      video.setAttribute("aria-hidden", "true");
-      video.disablePictureInPicture = true;
-      video.disableRemotePlayback = true;
       setFlags(video);
-      parent.insertBefore(video, legacyVideo.nextSibling);
+      video.dataset.adaptiveHero = "true";
+      mode = "mp4";
+      video.dataset.heroMode = mode;
 
       const onPlaying = () => {
-        hasPlayed = true;
-        clearStartupTimer();
+        hasAdvanced = true;
         clearStallTimer();
-        reveal();
+        if (video) video.style.opacity = "1";
+      };
+
+      const onTimeUpdate = () => {
+        if (!video || disposed) return;
+        if (video.currentTime >= 0.06) {
+          hasAdvanced = true;
+          clearStallTimer();
+          video.style.opacity = "1";
+        }
       };
 
       const onWaiting = () => {
-        if (!video || disposed || !hasPlayed || mode !== "premium") return;
+        if (!video || disposed || !hasAdvanced) return;
         clearStallTimer();
+        const stalledMode = mode;
         const resumeAt = video.currentTime || 0;
         stallTimer = window.setTimeout(() => {
           stallTimer = null;
           if (
             !disposed &&
             video &&
-            mode === "premium" &&
+            mode === stalledMode &&
             video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
           ) {
-            startAdaptive(resumeAt);
+            fallbackFrom(stalledMode, resumeAt);
           }
-        }, 1400);
+        }, stalledMode === "adaptive" ? 3500 : 1800);
       };
 
       const onError = () => {
         if (!video || disposed) return;
-        const resumeAt = video.currentTime || 0;
-        if (mode === "premium") startAdaptive(resumeAt);
-        else if (mode === "adaptive") startMp4(resumeAt);
+        fallbackFrom(mode, video.currentTime || 0);
       };
 
       const onVisibility = () => {
-        if (document.visibilityState === "visible") play();
+        if (document.visibilityState === "visible" && video) {
+          play(mode, sourceToken);
+        }
       };
 
-      video.addEventListener("loadeddata", reveal);
-      video.addEventListener("canplay", reveal);
       video.addEventListener("playing", onPlaying);
+      video.addEventListener("timeupdate", onTimeUpdate);
       video.addEventListener("waiting", onWaiting);
       video.addEventListener("stalled", onWaiting);
       video.addEventListener("error", onError);
       document.addEventListener("visibilitychange", onVisibility);
 
-      if (explicitlyConstrained) startAdaptive();
-      else startPremium();
+      if (explicitlyConstrained) {
+        startAdaptive(video.currentTime || 0);
+      } else {
+        // Preserve the server-rendered MP4 request. Do not call load() again;
+        // this is what lets Safari start fetching before React hydrates.
+        const token = ++sourceToken;
+        mode = "mp4";
+        video.dataset.heroMode = mode;
+        play(mode, token);
+      }
 
       return () => {
         if (!video) return;
-        video.removeEventListener("loadeddata", reveal);
-        video.removeEventListener("canplay", reveal);
         video.removeEventListener("playing", onPlaying);
+        video.removeEventListener("timeupdate", onTimeUpdate);
         video.removeEventListener("waiting", onWaiting);
         video.removeEventListener("stalled", onWaiting);
         video.removeEventListener("error", onError);
@@ -380,19 +294,14 @@ export default function HeroVideoController() {
       };
     };
 
-    const cleanupListeners = mount();
+    const cleanup = mount();
 
     return () => {
       disposed = true;
       if (mountTimer !== null) window.clearTimeout(mountTimer);
-      if (legacyGuardTimer !== null) window.clearTimeout(legacyGuardTimer);
-      clearStartupTimer();
       clearStallTimer();
-      cleanupListeners?.();
-      legacyObserver?.disconnect();
+      cleanup?.();
       destroyHls();
-      video?.remove();
-      if (legacyVideo) legacyVideo.style.visibility = "";
     };
   }, []);
 
