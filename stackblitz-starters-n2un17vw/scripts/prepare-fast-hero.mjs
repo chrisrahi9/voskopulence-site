@@ -15,6 +15,10 @@ source = source
   .replace(
     'object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none',
     'object-cover opacity-100 transition-opacity duration-[450ms] pointer-events-none'
+  )
+  .replace(
+    'alt="Mediterranean Rosemary Bar"\n              className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"',
+    'alt="Mediterranean Rosemary Bar"\n              loading="lazy"\n              decoding="async"\n              className="w-72 sm:w-80 lg:w-96 h-auto drop-shadow-xl rounded-2xl"'
   );
 
 const startMarker =
@@ -46,4 +50,5 @@ console.log("FAST_HERO_PREPARED", {
   bunnyOrigin: "https://vosko-cdn.b-cdn.net",
   legacyPlaybackEffectRemoved: true,
   serverRenderedMp4VisibleImmediately: true,
+  belowFoldSpotlightDeferred: true,
 });
