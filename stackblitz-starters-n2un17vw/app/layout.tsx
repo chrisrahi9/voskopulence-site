@@ -2,7 +2,6 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ScrollToTop from "./_components/ScrollToTop";
-import HeroVideoController from "./_components/HeroVideoController";
 import PremiumMotionController from "./_components/PremiumMotionController";
 
 export const metadata: Metadata = {
@@ -14,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://vosko-cdn.b-cdn.net" />
         <link
           href="https://fonts.googleapis.com/css2?family=Sarina&family=League+Spartan:wght@300;400;600&display=swap"
           rel="stylesheet"
@@ -22,12 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        {/* Android & general */}
         <meta name="theme-color" content="#004642" />
-        {/* Optional: per color scheme */}
         <meta name="theme-color" content="#004642" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#004642" media="(prefers-color-scheme: dark)" />
-        {/* iOS hints */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
@@ -36,7 +33,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <ScrollToTop />
         </Suspense>
-        <HeroVideoController />
         <PremiumMotionController />
         {children}
       </body>
