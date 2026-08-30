@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node scripts/prepare-native-4k-hero.mjs && node scripts/prepare-site-polish.mjs && next build",
+    "build": "node scripts/prepare-native-4k-hero.mjs && node scripts/prepare-site-polish.mjs && node scripts/prepare-logo-spacing.mjs && next build",
     "start": "next start"
   },
   "dependencies": {
