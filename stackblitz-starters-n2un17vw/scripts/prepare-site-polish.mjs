@@ -7,7 +7,7 @@ const pageFiles = [
   "contact/page.tsx",
   "sustainability/page.tsx",
 ];
-const DIRECT_LOGO = "https://cdn.voskopulence.com/logo_improved.svg";
+const DIRECT_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
 
 function replaceAllExisting(source, from, to) {
   if (!source.includes(from)) return source;
@@ -65,7 +65,8 @@ for (const file of pageFiles) {
   source = addSmoothMenuLifecycle(source, file);
 
   // Keep the logo independent of the /media proxy and generated build assets.
-  // The original SVG remains the single source of truth while we refine it.
+  // This is the same Bunny origin that successfully served the source SVG in
+  // the earlier logo preparation builds.
   source = replaceAllExisting(
     source,
     'src={asset("/logo_improved.svg")}',
