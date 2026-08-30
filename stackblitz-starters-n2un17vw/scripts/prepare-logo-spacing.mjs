@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const CDN_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
 const WORDMARK_SHIFT = -70;
+const EMBLEM_Y_SHIFT = -3.1;
 const projectRoot = new URL("../", import.meta.url);
 const publicDir = new URL("public/", projectRoot);
 const outputLogo = new URL("public/logo_spaced.svg", projectRoot);
@@ -29,6 +30,15 @@ svg = svg.replace(
   `       transform="translate(${WORDMARK_SHIFT},0)"\n${path5Id}`
 );
 
+const originalEmblemTransform = 'transform="translate(1.5000001e-5)"';
+if (!svg.includes(originalEmblemTransform)) {
+  throw new Error("Voskopulence emblem group (g4) transform not found");
+}
+svg = svg.replace(
+  originalEmblemTransform,
+  `transform="translate(1.5000001e-5,${EMBLEM_Y_SHIFT})"`
+);
+
 await mkdir(publicDir, { recursive: true });
 await writeFile(outputLogo, svg, "utf8");
 
@@ -46,6 +56,7 @@ for (const file of pageFiles) {
 console.log("LOGO_SPACING_PREPARED", {
   source: CDN_LOGO,
   wordmarkShift: WORDMARK_SHIFT,
-  direction: "left",
-  effect: "increased horizontal emblem gap",
+  emblemYShift: EMBLEM_Y_SHIFT,
+  horizontalEffect: "increased horizontal emblem gap",
+  verticalEffect: "aligned emblem base with wordmark",
 });
