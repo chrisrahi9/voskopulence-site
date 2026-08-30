@@ -81,3 +81,47 @@ header,
 @media (min-resolution: 2dppx)   { :root { --hairline: 0.5px; } }
 @media (min-resolution: 3dppx)   { :root { --hairline: 0.3334px; } }
 @media (min-resolution: 4dppx)   { :root { --hairline: 0.25px; } }
+
+/* ------------------------------------------------------------------
+   Emblem balance test
+   - keep the wordmark at its current size/weight
+   - make only the upper emblem ~3% larger
+   - add a very small alpha-edge spread (~6% perceived line weight)
+   - load the artwork directly from the CDN so this visual test does not
+     depend on the currently unreliable /media proxy route
+   ------------------------------------------------------------------ */
+header div:has(> img[alt="Voskopulence"]) {
+  position: absolute;
+}
+
+header div:has(> img[alt="Voskopulence"]) > img[alt="Voskopulence"] {
+  opacity: 0;
+}
+
+/* Original logo/wordmark, unchanged. */
+header div:has(> img[alt="Voskopulence"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("https://cdn.voskopulence.com/logo_improved.svg") center / contain no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Enhanced emblem only. The wordmark remains the untouched ::after layer. */
+header div:has(> img[alt="Voskopulence"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("https://cdn.voskopulence.com/logo_improved.svg") center / contain no-repeat;
+  transform: scale(1.03);
+  transform-origin: 50% 28%;
+  clip-path: inset(0 0 48% 0);
+  filter:
+    drop-shadow(0.30px 0 0 rgba(255,255,255,0.96))
+    drop-shadow(-0.30px 0 0 rgba(255,255,255,0.96))
+    drop-shadow(0 0.30px 0 rgba(255,255,255,0.96))
+    drop-shadow(0 -0.30px 0 rgba(255,255,255,0.96));
+  pointer-events: none;
+  z-index: 2;
+}
