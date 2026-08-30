@@ -7,6 +7,7 @@ const pageFiles = [
   "contact/page.tsx",
   "sustainability/page.tsx",
 ];
+const DIRECT_LOGO = "https://cdn.voskopulence.com/logo_improved.svg";
 
 function replaceAllExisting(source, from, to) {
   if (!source.includes(from)) return source;
@@ -63,6 +64,14 @@ for (const file of pageFiles) {
   let source = await readFile(url, "utf8");
   source = addSmoothMenuLifecycle(source, file);
 
+  // Keep the logo independent of the /media proxy and generated build assets.
+  // The original SVG remains the single source of truth while we refine it.
+  source = replaceAllExisting(
+    source,
+    'src={asset("/logo_improved.svg")}',
+    `src="${DIRECT_LOGO}"`
+  );
+
   if (file === "page.tsx") {
     const motionStart = "  // === Ultra-smooth header progress ===\n";
     const motionEnd = "  // Smooth scroll to first next section\n";
@@ -94,4 +103,5 @@ console.log("SITE_POLISH_PREPARED", {
   smoothMenuLifecycle: true,
   singleHomepageHeaderWriter: true,
   spotlightDeferred: true,
+  logoSource: DIRECT_LOGO,
 });
