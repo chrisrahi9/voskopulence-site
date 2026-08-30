@@ -24,7 +24,8 @@ html, body {
   50%     { transform: scale(1.05); }
 }
 
-html, body { overflow-x: hidden; }
+/* Clip accidental horizontal overflow without turning body into a scroll container. */
+html, body { overflow-x: clip; }
 
 html.curtain-open,
 body.curtain-open {
@@ -37,9 +38,9 @@ html, body { background-color: #ffffff; }
 
 @media (hover: none) and (pointer: coarse) {
   html, body { background-color: #004642 !important; }
+  /* Keep touch overscroll contained on the root only; never trap desktop trackpad/wheel input on body. */
+  html { overscroll-behavior-y: contain; }
 }
-
-html, body { overscroll-behavior-y: contain; }
 
 header,
 .fixed-header {
