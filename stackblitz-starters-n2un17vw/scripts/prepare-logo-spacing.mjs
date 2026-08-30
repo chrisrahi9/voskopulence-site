@@ -3,6 +3,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 const CDN_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
 const WORDMARK_SHIFT = -70;
 const EMBLEM_Y_SHIFT = -3.1;
+const WORDMARK_SCALE = 1.03;
+const WORDMARK_ANCHOR_X = 922;
+const WORDMARK_CENTER_Y = 564;
+const WORDMARK_STROKE = 1.0;
 const projectRoot = new URL("../", import.meta.url);
 const publicDir = new URL("public/", projectRoot);
 const outputLogo = new URL("public/logo_spaced.svg", projectRoot);
@@ -27,7 +31,7 @@ if (!svg.includes(path5Id)) {
 
 svg = svg.replace(
   path5Id,
-  `       transform="translate(${WORDMARK_SHIFT},0)"\n${path5Id}`
+  `       stroke="#ffffff"\n       stroke-width="${WORDMARK_STROKE}"\n       stroke-linejoin="round"\n       transform="translate(${WORDMARK_SHIFT},0) translate(${WORDMARK_ANCHOR_X},${WORDMARK_CENTER_Y}) scale(${WORDMARK_SCALE}) translate(${-WORDMARK_ANCHOR_X},${-WORDMARK_CENTER_Y})"\n${path5Id}`
 );
 
 const originalEmblemTransform = 'transform="translate(1.5000001e-5)"';
@@ -57,6 +61,9 @@ console.log("LOGO_SPACING_PREPARED", {
   source: CDN_LOGO,
   wordmarkShift: WORDMARK_SHIFT,
   emblemYShift: EMBLEM_Y_SHIFT,
-  horizontalEffect: "increased horizontal emblem gap",
-  verticalEffect: "aligned emblem base with wordmark",
+  wordmarkScale: WORDMARK_SCALE,
+  wordmarkStroke: WORDMARK_STROKE,
+  horizontalEffect: "preserved approved emblem gap",
+  verticalEffect: "preserved approved emblem alignment",
+  refinement: "slightly larger and more confident wordmark",
 });
