@@ -3,6 +3,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 const CDN_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
 const WORDMARK_SHIFT = -70;
 const EMBLEM_Y_SHIFT = -3.1;
+const EMBLEM_SCALE = 1.03;
+const EMBLEM_STROKE = 0.6;
 const WORDMARK_SCALE = 1.03;
 const WORDMARK_ANCHOR_X = 922;
 const WORDMARK_CENTER_Y = 564;
@@ -40,7 +42,7 @@ if (!svg.includes(originalEmblemTransform)) {
 }
 svg = svg.replace(
   originalEmblemTransform,
-  `transform="translate(1.5000001e-5,${EMBLEM_Y_SHIFT})"`
+  `transform="translate(1.5000001e-5)" style="transform-box:fill-box;transform-origin:center;transform:translateY(${EMBLEM_Y_SHIFT}px) scale(${EMBLEM_SCALE});stroke:#ffffff;stroke-width:${EMBLEM_STROKE}px;stroke-linejoin:round;paint-order:stroke fill"`
 );
 
 await mkdir(publicDir, { recursive: true });
@@ -61,9 +63,11 @@ console.log("LOGO_SPACING_PREPARED", {
   source: CDN_LOGO,
   wordmarkShift: WORDMARK_SHIFT,
   emblemYShift: EMBLEM_Y_SHIFT,
+  emblemScale: EMBLEM_SCALE,
+  emblemStroke: EMBLEM_STROKE,
   wordmarkScale: WORDMARK_SCALE,
   wordmarkStroke: WORDMARK_STROKE,
   horizontalEffect: "preserved approved emblem gap",
   verticalEffect: "preserved approved emblem alignment",
-  refinement: "slightly larger and more confident wordmark",
+  refinement: "wordmark unchanged; emblem about 3% larger and subtly heavier",
 });
