@@ -75,15 +75,12 @@ function redesignHome(source) {
 
           <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 border-y border-[#004642]/20">
             {[
-              ["Rosemary", "Herbal · aromatic"],
-              ["Fig", "Soft · sun-ripened"],
-              ["Cedar", "Dry · grounding"],
-              ["Lemon", "Bright · coastal"],
-            ].map(([name, note], index) => (
-              <div
-                key={name}
-                className={\`py-8 sm:py-10 ${index % 2 ? "pl-6 border-l border-[#004642]/16" : "pr-6"} ${index > 1 ? "border-t lg:border-t-0 border-[#004642]/16" : ""} ${index === 2 ? "lg:border-l lg:pl-6" : ""}\`}
-              >
+              { name: "Rosemary", note: "Herbal · aromatic", cls: "py-8 sm:py-10 pr-6" },
+              { name: "Fig", note: "Soft · sun-ripened", cls: "py-8 sm:py-10 pl-6 border-l border-[#004642]/16" },
+              { name: "Cedar", note: "Dry · grounding", cls: "py-8 sm:py-10 pr-6 border-t lg:border-t-0 lg:border-l lg:pl-6 border-[#004642]/16" },
+              { name: "Lemon", note: "Bright · coastal", cls: "py-8 sm:py-10 pl-6 border-l border-t lg:border-t-0 border-[#004642]/16" },
+            ].map(({ name, note, cls }) => (
+              <div key={name} className={cls}>
                 <p className="heading-editorial text-3xl sm:text-4xl">{name}</p>
                 <p className="mt-2 text-[0.68rem] uppercase tracking-[0.18em] text-[#70685d]">{note}</p>
               </div>
@@ -154,7 +151,7 @@ function redesignHome(source) {
           <h2 className="mt-5 heading-editorial text-4xl sm:text-6xl leading-[0.95] text-[#004642]">
             Be there when the first batch leaves the lab.
           </h2>
-          <p className="mt-6 mx-auto max-w-xl text-sm sm:text-base leading-relaxed text-neutral-650 text-neutral-700">
+          <p className="mt-6 mx-auto max-w-xl text-sm sm:text-base leading-relaxed text-neutral-700">
             Voskopulence is currently pre-launch. Explore the bars and join the waitlist for the formula that fits your ritual.
           </p>
           <a href="/shop" className="mt-8 inline-flex items-center justify-center rounded-full bg-[#004642] px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white transition-transform hover:-translate-y-0.5">
@@ -268,7 +265,10 @@ ${cosmosAnchor}`;
     'className="mt-10 rounded-3xl bg-[#fffaf3] border border-[#e8d7b8] p-6 lg:p-7"',
     'className="mt-14 bg-[#fbf8f2] border-y border-[#d9c8aa] px-6 py-9 lg:px-10"'
   );
-  source = source.replace('className="mt-10 space-y-5 text-sm text-neutral-800"', 'className="mt-14 divide-y divide-[#004642]/14 border-y border-[#004642]/14 text-sm text-neutral-800 [&>div]:py-6"');
+  source = source.replace(
+    'className="mt-10 space-y-5 text-sm text-neutral-800"',
+    'className="mt-14 divide-y divide-[#004642]/14 border-y border-[#004642]/14 text-sm text-neutral-800 [&>div]:py-6"'
+  );
   source = source.replaceAll("info@voskopulence.com", "hello@voskopulence.com");
 
   source = replaceRegexRequired(
