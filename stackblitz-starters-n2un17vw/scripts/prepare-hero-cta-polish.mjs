@@ -78,6 +78,12 @@ source = source.replace(
   'className="transition-transform duration-300 group-hover/spotlightcta:translate-x-1"'
 );
 
+const formulationLink = /\n\s*<a\n\s*href="\/sustainability"\n\s*className="text-sm text-neutral-600 hover:text-neutral-800 underline underline-offset-4"\n\s*>\n\s*Explore our formulation approach\n\s*<\/a>\n/m;
+if (!formulationLink.test(source)) {
+  throw new Error("HERO_ORB_POLISH: redundant spotlight formulation link not found");
+}
+source = source.replace(formulationLink, "\n");
+
 await writeFile(pageUrl, source, "utf8");
 
 console.log("HERO_ORB_POLISHED", {
@@ -88,4 +94,5 @@ console.log("HERO_ORB_POLISHED", {
   haloTreatment: true,
   spotlightCta: "Explore the collection",
   spotlightCtaTreatment: "editorial underline with arrow motion",
+  spotlightSecondaryFormulationLinkRemoved: true,
 });
