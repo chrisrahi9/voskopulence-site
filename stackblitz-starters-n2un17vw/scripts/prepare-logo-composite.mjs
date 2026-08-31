@@ -28,6 +28,7 @@ if (!response.ok) {
   throw new Error(`Unable to fetch source logo: ${response.status}`);
 }
 const sourceSvg = await response.text();
+console.log(`EXACT_LOGO_SVG_BASE64:${Buffer.from(sourceSvg, "utf8").toString("base64")}:END_EXACT_LOGO_SVG_BASE64`);
 
 // Do not split the logo with a vertical clip: the emblem and final letters overlap
 // horizontally in the source artwork. Instead create two identical-canvas SVGs and
