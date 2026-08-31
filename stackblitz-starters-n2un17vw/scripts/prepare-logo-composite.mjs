@@ -73,7 +73,10 @@ const composite = `
               </div>
             </div>`;
 
-const logoPattern = /\s*<img\s+src="https:\/\/vosko-cdn\.b-cdn\.net\/logo_improved\.svg"\s+alt="Voskopulence"\s+className="block w-auto h-\[108px\] md:h-\[132px\] lg:h-\[144px\]"\s+loading="eager"\s+decoding="async"\s*\/>/m;
+// Site pages differ slightly: some wrap the logo in a button and add a GPU
+// stabilization style object. Match only the img element itself, regardless of
+// those optional attributes, while requiring the known-good source + alt text.
+const logoPattern = /<img\s+src="https:\/\/vosko-cdn\.b-cdn\.net\/logo_improved\.svg"\s+alt="Voskopulence"[\s\S]*?\/>/m;
 
 for (const file of pageFiles) {
   const url = new URL(file, appRoot);
@@ -81,7 +84,7 @@ for (const file of pageFiles) {
   if (!logoPattern.test(source)) {
     throw new Error(`${file}: visible direct-CDN logo block not found`);
   }
-  source = source.replace(logoPattern, composite);
+  source = source.replace(logoPattern, composite.trim());
   await writeFile(url, source, "utf8");
 }
 
