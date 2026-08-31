@@ -56,6 +56,28 @@ if (!source.includes("Discover the bar")) {
 }
 source = source.replace("Discover the bar", "Explore the collection");
 
+const oldSpotlightCtaClass = `className="inline-flex items-center gap-3 rounded-full border-2 border-[#004642]
+                           px-7 py-3 text-[#004642] text-[1.05rem] font-semibold tracking-[0.04em]
+                           whitespace-nowrap hover:bg-[#004642] hover:text-white transition-all duration-300
+                           shadow-[0_0_10px_rgba(140,154,145,0.35)] hover:shadow-[0_0_16px_rgba(140,154,145,0.5)]
+                           ring-1 ring-[#8C9A91]/30 hover:ring-[#8C9A91]/50 hover:[transform:translateY(-1px)]
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C9A91]/60"`;
+
+const newSpotlightCtaClass = `className="group/spotlightcta inline-flex items-center gap-3 pb-1.5
+                           text-[0.72rem] sm:text-xs font-semibold uppercase tracking-[0.2em] text-[#004642]
+                           border-b border-[#004642]/55 hover:border-[#004642]
+                           transition-[border-color,opacity] duration-300 hover:opacity-75
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#004642]/25 focus-visible:ring-offset-4"`;
+
+if (!source.includes(oldSpotlightCtaClass)) {
+  throw new Error("HERO_ORB_POLISH: spotlight CTA styling not found");
+}
+source = source.replace(oldSpotlightCtaClass, newSpotlightCtaClass);
+source = source.replace(
+  'className="transition-transform duration-300"',
+  'className="transition-transform duration-300 group-hover/spotlightcta:translate-x-1"'
+);
+
 await writeFile(pageUrl, source, "utf8");
 
 console.log("HERO_ORB_POLISHED", {
@@ -65,4 +87,5 @@ console.log("HERO_ORB_POLISHED", {
   touchHoldInteractionPreserved: true,
   haloTreatment: true,
   spotlightCta: "Explore the collection",
+  spotlightCtaTreatment: "editorial underline with arrow motion",
 });
