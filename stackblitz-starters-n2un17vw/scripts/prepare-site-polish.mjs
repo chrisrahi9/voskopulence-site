@@ -8,6 +8,7 @@ const pageFiles = [
   "sustainability/page.tsx",
 ];
 const DIRECT_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
+// Known-good visible logo source. Keep stable branch on this asset while refinements are tested elsewhere.
 
 function replaceAllExisting(source, from, to) {
   if (!source.includes(from)) return source;
