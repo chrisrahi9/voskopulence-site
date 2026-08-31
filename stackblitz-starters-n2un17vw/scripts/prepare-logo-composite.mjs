@@ -28,12 +28,6 @@ if (!response.ok) {
   throw new Error(`Unable to fetch source logo: ${response.status}`);
 }
 const sourceSvg = await response.text();
-const exactLogoBase64 = Buffer.from(sourceSvg, "utf8").toString("base64");
-for (let i = 0; i < exactLogoBase64.length; i += 900) {
-  const index = String(i / 900).padStart(3, "0");
-  console.log(`EXACT_LOGO_CHUNK_${index}:${exactLogoBase64.slice(i, i + 900)}`);
-}
-console.log(`EXACT_LOGO_CHUNKS_DONE:${Math.ceil(exactLogoBase64.length / 900)}`);
 
 // Do not split the logo with a vertical clip: the emblem and final letters overlap
 // horizontally in the source artwork. Instead create two identical-canvas SVGs and
