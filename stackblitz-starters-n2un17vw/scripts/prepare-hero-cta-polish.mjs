@@ -51,6 +51,11 @@ source = source.replace(
                     ${'${isLongPress && showArrow ? "opacity-100" : "opacity-0"}'}`
 );
 
+if (!source.includes("Discover the bar")) {
+  throw new Error("HERO_ORB_POLISH: spotlight CTA not found");
+}
+source = source.replace("Discover the bar", "Explore the collection");
+
 await writeFile(pageUrl, source, "utf8");
 
 console.log("HERO_ORB_POLISHED", {
@@ -59,4 +64,5 @@ console.log("HERO_ORB_POLISHED", {
   desktopHoverMorph: "dot-to-chevron",
   touchHoldInteractionPreserved: true,
   haloTreatment: true,
+  spotlightCta: "Explore the collection",
 });
