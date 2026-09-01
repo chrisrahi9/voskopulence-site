@@ -8,7 +8,8 @@ const assets = [
     id: "thyme",
     dataParts: [
       "../product-assets/thyme-v4.00.b64",
-      "../product-assets/thyme-v4.01.b64",
+      "../product-assets/thyme-v4.01a.b64",
+      "../product-assets/thyme-v4.01b.b64",
       "../product-assets/thyme-v4.02.b64",
     ],
     output: "../public/product-thyme-rosemary.webp",
