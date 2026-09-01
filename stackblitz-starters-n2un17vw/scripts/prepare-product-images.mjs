@@ -7,7 +7,7 @@ const shopUrl = new URL("../app/shop/page.tsx", import.meta.url);
 const assets = [
   {
     id: "thyme",
-    data: "../product-assets/thyme-rosemary.00.b64",
+    data: "../product-assets/thyme-v3.b64",
     output: "../public/product-thyme-rosemary.webp",
     from: 'img: "/Thyme_sea.png"',
     to: 'img: "/product-thyme-rosemary.webp"',
