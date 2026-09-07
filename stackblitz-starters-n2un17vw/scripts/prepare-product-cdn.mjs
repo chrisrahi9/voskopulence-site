@@ -17,79 +17,66 @@ const products = [
   {
     label: "thyme",
     old: 'img: "/Thyme_sea.png",',
-    base: "product-thyme-rosemary",
+    remote: `${CDN}/products/product-thyme-rosemary.png`,
     local: "/products-live/product-thyme-rosemary.png",
     filename: "product-thyme-rosemary.png",
   },
   {
     label: "fig",
     old: 'img: "/true-cedar.png",',
-    base: "true-cedar",
-    local: `/products-live/true-cedar.png?v=${PRODUCT_ASSET_VERSION}`,
+    remote: `${CDN}/products/true-cedar.png`,
+    local: "/products-live/true-cedar.png",
     filename: "true-cedar.png",
   },
   {
     label: "lemon",
     old: 'img: "/Lemon_sea.png",',
-    base: "product-lemon-seabreeze",
+    remote: `${CDN}/products/product-lemon-seabreeze.png`,
     local: "/products-live/product-lemon-seabreeze.png",
     filename: "product-lemon-seabreeze.png",
   },
 ];
 
-function candidateUrls(base) {
-  const paths = [
-    `${CDN}/products/${base}.png`,
-    `${CDN}/products/${base}.png.png`,
-    `${CDN}/products/${base}`,
-    `${CDN}/products/${base}.PNG`,
-    `${CDN}/Products/${base}.png`,
-    `${CDN}/${base}.png`,
-  ];
-  return paths.map((url) => `${url}?v=${encodeURIComponent(PRODUCT_ASSET_VERSION)}`);
-}
+async function fetchVerifiedImage(product) {
+  const url = `${product.remote}?v=${encodeURIComponent(PRODUCT_ASSET_VERSION)}`;
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      accept: "image/png,image/*;q=0.8,*/*;q=0.5",
+      "cache-control": "no-cache, no-store, max-age=0",
+      pragma: "no-cache",
+      "user-agent": "Voskopulence-Vercel-Build/1.0",
+    },
+  });
 
-async function fetchFirstImage(product) {
-  const attempted = [];
-  for (const url of candidateUrls(product.base)) {
-    const response = await fetch(url, {
-      cache: "no-store",
-      headers: {
-        accept: "image/png,image/*;q=0.8,*/*;q=0.5",
-        "cache-control": "no-cache, no-store, max-age=0",
-        pragma: "no-cache",
-        "user-agent": "Voskopulence-Vercel-Build/1.0",
-      },
-    });
+  console.log("PRODUCT_CDN_PROBE", {
+    label: product.label,
+    url,
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    age: response.headers.get("age"),
+    etag: response.headers.get("etag"),
+    lastModified: response.headers.get("last-modified"),
+  });
 
-    attempted.push(`${url} -> ${response.status}`);
-    console.log("PRODUCT_CDN_PROBE", {
-      label: product.label,
-      url,
-      status: response.status,
-      contentType: response.headers.get("content-type"),
-      age: response.headers.get("age"),
-      etag: response.headers.get("etag"),
-      lastModified: response.headers.get("last-modified"),
-    });
-
-    if (!response.ok) continue;
-
-    const bytes = Buffer.from(await response.arrayBuffer());
-    const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-    if (bytes.length >= 10000 && bytes.subarray(0, 8).equals(pngSignature)) {
-      console.log("PRODUCT_CDN_MATCH", { label: product.label, url, bytes: bytes.length });
-      return { url, bytes };
-    }
+  if (!response.ok) {
+    throw new Error(`PRODUCT_CDN: clean Bunny filename missing for ${product.label}: ${url} -> ${response.status}`);
   }
 
-  throw new Error(`PRODUCT_CDN: no valid image found for ${product.label}. Tried: ${attempted.join(" | ")}`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (bytes.length < 10000 || !bytes.subarray(0, 8).equals(pngSignature)) {
+    throw new Error(`PRODUCT_CDN: ${product.label} did not return a valid PNG from ${url}`);
+  }
+
+  console.log("PRODUCT_CDN_MATCH", { label: product.label, url, bytes: bytes.length });
+  return bytes;
 }
 
 await mkdir(publicProducts, { recursive: true });
 
 for (const product of products) {
-  const { bytes } = await fetchFirstImage(product);
+  const bytes = await fetchVerifiedImage(product);
   await writeFile(new URL(product.filename, publicProducts), bytes);
 }
 
@@ -111,4 +98,4 @@ source = replaceRequired(
 );
 
 await writeFile(shopUrl, source, "utf8");
-console.log("PRODUCT_CDN: Bunny product images fetched, verified, and mirrored; Fig & Cedar uses true-cedar creative");
+console.log("PRODUCT_CDN: clean Bunny filenames verified and mirrored; Fig & Cedar uses true-cedar creative");
