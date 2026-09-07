@@ -9,7 +9,7 @@ const targets = [
 ];
 
 const DESKTOP_NAV =
-  '<nav className="grow basis-0 hidden xl:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">';
+  '<nav className="grow basis-0 hidden xl:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1] translate-y-[2px]">';
 const MOBILE_NAV = '<nav className="grow grid place-items-center">';
 
 function getNavRange(source, openTag, file, label) {
@@ -46,7 +46,6 @@ for (const file of targets) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
 
-  // ----- Desktop: canonical order = Home, Shop, About, Sustainability, Contact -----
   let desktop = getNavRange(source, DESKTOP_NAV, file, "desktop");
   let desktopBlock = source.slice(desktop.start, desktop.end);
 
@@ -71,7 +70,6 @@ for (const file of targets) {
     );
   }
 
-  // ----- Mobile curtain: ensure About exists in the same canonical location. -----
   let mobile = getNavRange(source, MOBILE_NAV, file, "mobile");
   let mobileBlock = source.slice(mobile.start, mobile.end);
   if (!/>\s*About\s*</.test(mobileBlock)) {
@@ -89,7 +87,6 @@ for (const file of targets) {
     );
   }
 
-  // Fail the build if a future page edit silently drifts from the five-item nav.
   desktop = getNavRange(source, DESKTOP_NAV, file, "desktop");
   mobile = getNavRange(source, MOBILE_NAV, file, "mobile");
   const desktopFinal = source.slice(desktop.start, desktop.end);
@@ -109,6 +106,7 @@ for (const file of targets) {
 console.log("NAV_UNIFORMITY_PREPARED", {
   pages: targets,
   desktopBreakpoint: "xl",
+  desktopOpticalOffsetPx: 2,
   desktop: ["Home", "Shop", "About", "Sustainability", "Contact"],
   mobile: ["Home", "Shop", "About", "Sustainability", "Contact"],
   guardedAgainstFutureDrift: true,
