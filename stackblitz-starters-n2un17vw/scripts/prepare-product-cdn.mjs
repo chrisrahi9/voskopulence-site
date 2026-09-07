@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 const shopUrl = new URL("../app/shop/page.tsx", import.meta.url);
 const publicProducts = new URL("../public/products-live/", import.meta.url);
 const CDN = "https://vosko-cdn.b-cdn.net";
+const PRODUCT_ASSET_VERSION = process.env.VERCEL_GIT_COMMIT_SHA || `${Date.now()}`;
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return source;
@@ -24,7 +25,7 @@ const products = [
     label: "fig",
     old: 'img: "/Fig_sea.png",',
     base: "product-fig-cedar",
-    local: "/products-live/product-fig-cedar.png",
+    local: `/products-live/product-fig-cedar.png?v=${PRODUCT_ASSET_VERSION}`,
     filename: "product-fig-cedar.png",
   },
   {
@@ -37,13 +38,14 @@ const products = [
 ];
 
 function candidateUrls(base) {
-  return [
+  const paths = [
     `${CDN}/products/${base}.png`,
     `${CDN}/products/${base}.png.png`,
     `${CDN}/products/${base}.PNG`,
     `${CDN}/Products/${base}.png`,
     `${CDN}/${base}.png`,
   ];
+  return paths.map((url) => `${url}?v=${encodeURIComponent(PRODUCT_ASSET_VERSION)}`);
 }
 
 async function fetchFirstImage(product) {
@@ -53,6 +55,8 @@ async function fetchFirstImage(product) {
       cache: "no-store",
       headers: {
         accept: "image/png,image/*;q=0.8,*/*;q=0.5",
+        "cache-control": "no-cache, no-store, max-age=0",
+        pragma: "no-cache",
         "user-agent": "Voskopulence-Vercel-Build/1.0",
       },
     });
@@ -63,6 +67,9 @@ async function fetchFirstImage(product) {
       url,
       status: response.status,
       contentType: response.headers.get("content-type"),
+      age: response.headers.get("age"),
+      etag: response.headers.get("etag"),
+      lastModified: response.headers.get("last-modified"),
     });
 
     if (!response.ok) continue;
@@ -103,4 +110,4 @@ source = replaceRequired(
 );
 
 await writeFile(shopUrl, source, "utf8");
-console.log("PRODUCT_CDN: Bunny images found, verified, and mirrored into Vercel static assets");
+console.log("PRODUCT_CDN: Bunny images freshly fetched, verified, and mirrored into Vercel static assets");
