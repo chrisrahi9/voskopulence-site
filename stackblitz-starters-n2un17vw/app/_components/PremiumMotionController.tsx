@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const HEADER_DISTANCE = 120;
 const HEADER_TAU_MS = 90;
@@ -9,17 +10,23 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
 export default function PremiumMotionController() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    if (window.location.pathname !== "/") return;
+    // This controller lives in the root layout, so it survives client-side
+    // navigation. Re-run it whenever the pathname changes; otherwise entering
+    // Home from another page would leave the homepage without a header writer.
+    if (pathname !== "/") return;
 
     const reduceMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)"
     )?.matches;
-    if (reduceMotion) return;
 
     let disposed = false;
     let scrollRaf: number | null = null;
     let headerRaf: number | null = null;
+    let settleRaf: number | null = null;
+    let settleTimer: number | null = null;
     let headerLastTime = performance.now();
     let headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
     let headerProgress = headerTarget;
@@ -32,6 +39,7 @@ export default function PremiumMotionController() {
       y?: number
     ) => {
       if (
+        reduceMotion ||
         typeof xOrOptions !== "object" ||
         xOrOptions === null ||
         xOrOptions.behavior !== "smooth" ||
@@ -97,7 +105,7 @@ export default function PremiumMotionController() {
       if (disposed) return;
       const dt = Math.min(50, Math.max(0, now - headerLastTime));
       headerLastTime = now;
-      const alpha = 1 - Math.exp(-dt / HEADER_TAU_MS);
+      const alpha = reduceMotion ? 1 : 1 - Math.exp(-dt / HEADER_TAU_MS);
       headerProgress += (headerTarget - headerProgress) * alpha;
 
       if (Math.abs(headerTarget - headerProgress) < 0.0005) {
@@ -123,51 +131,71 @@ export default function PremiumMotionController() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
+    window.addEventListener("hashchange", onScroll, { passive: true });
+    window.addEventListener("popstate", onScroll, { passive: true });
     writeHeaderProgress();
+
+    // Next.js may perform the hash jump just after the route commits. Re-read
+    // scrollY on the next frame and once more after layout settles so /#about
+    // always gets the same fully functional header state as ordinary scrolling.
+    settleRaf = requestAnimationFrame(() => {
+      settleRaf = null;
+      onScroll();
+    });
+    settleTimer = window.setTimeout(() => {
+      settleTimer = null;
+      onScroll();
+    }, 140);
 
     const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
     const revealTargets = sections.slice(1);
     const revealed = new WeakSet<Element>();
 
-    const revealObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting || revealed.has(entry.target)) continue;
-          revealed.add(entry.target);
-          revealObserver.unobserve(entry.target);
+    const revealObserver = reduceMotion
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting || revealed.has(entry.target)) continue;
+              revealed.add(entry.target);
+              revealObserver?.unobserve(entry.target);
 
-          const el = entry.target as HTMLElement;
-          el.animate(
-            [
-              { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
-              { opacity: 1, transform: "translate3d(0, 0, 0)" },
-            ],
-            {
-              duration: 620,
-              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-              fill: "none",
+              const el = entry.target as HTMLElement;
+              el.animate(
+                [
+                  { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
+                  { opacity: 1, transform: "translate3d(0, 0, 0)" },
+                ],
+                {
+                  duration: 620,
+                  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                  fill: "none",
+                }
+              );
             }
-          );
-        }
-      },
-      {
-        threshold: 0.08,
-        rootMargin: "0px 0px -7% 0px",
-      }
-    );
+          },
+          {
+            threshold: 0.08,
+            rootMargin: "0px 0px -7% 0px",
+          }
+        );
 
-    revealTargets.forEach((section) => revealObserver.observe(section));
+    revealTargets.forEach((section) => revealObserver?.observe(section));
 
     return () => {
       disposed = true;
       window.scrollTo = originalScrollTo as typeof window.scrollTo;
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      window.removeEventListener("hashchange", onScroll);
+      window.removeEventListener("popstate", onScroll);
       if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
       if (headerRaf !== null) cancelAnimationFrame(headerRaf);
-      revealObserver.disconnect();
+      if (settleRaf !== null) cancelAnimationFrame(settleRaf);
+      if (settleTimer !== null) window.clearTimeout(settleTimer);
+      revealObserver?.disconnect();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
