@@ -129,23 +129,43 @@ export default function PremiumMotionController() {
       }
     };
 
+    const syncRoutePosition = () => {
+      if (disposed) return;
+
+      // When arriving from another page via /#about, Next.js can commit Home
+      // before its native hash jump has resolved. Resolve the destination
+      // ourselves after mount so the user always lands on About.
+      if (window.location.hash === "#about") {
+        const target = document.getElementById("about");
+        if (target) {
+          target.scrollIntoView({ behavior: "auto", block: "start" });
+        }
+      }
+
+      // Snap the header variable to the real post-navigation scroll position.
+      // Normal user scrolling remains smoothly interpolated by onScroll().
+      headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
+      headerProgress = headerTarget;
+      writeHeaderProgress();
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
-    window.addEventListener("hashchange", onScroll, { passive: true });
-    window.addEventListener("popstate", onScroll, { passive: true });
+    window.addEventListener("hashchange", syncRoutePosition, { passive: true });
+    window.addEventListener("popstate", syncRoutePosition, { passive: true });
     writeHeaderProgress();
 
-    // Next.js may perform the hash jump just after the route commits. Re-read
-    // scrollY on the next frame and once more after layout settles so /#about
-    // always gets the same fully functional header state as ordinary scrolling.
+    // Run once on the next paint and again after route/layout settling. This
+    // covers direct /#about loads, client-side navigation, browser back/forward
+    // and slower mobile layout without leaving --hdrProg in an old page state.
     settleRaf = requestAnimationFrame(() => {
       settleRaf = null;
-      onScroll();
+      syncRoutePosition();
     });
     settleTimer = window.setTimeout(() => {
       settleTimer = null;
-      onScroll();
-    }, 140);
+      syncRoutePosition();
+    }, 160);
 
     const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
     const revealTargets = sections.slice(1);
@@ -187,8 +207,8 @@ export default function PremiumMotionController() {
       window.scrollTo = originalScrollTo as typeof window.scrollTo;
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
-      window.removeEventListener("hashchange", onScroll);
-      window.removeEventListener("popstate", onScroll);
+      window.removeEventListener("hashchange", syncRoutePosition);
+      window.removeEventListener("popstate", syncRoutePosition);
       if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
       if (headerRaf !== null) cancelAnimationFrame(headerRaf);
       if (settleRaf !== null) cancelAnimationFrame(settleRaf);
