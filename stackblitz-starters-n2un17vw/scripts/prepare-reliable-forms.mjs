@@ -19,6 +19,26 @@ function replaceRegexRequired(source, pattern, to, label) {
   return source.replace(pattern, to);
 }
 
+function injectMarketingContext(source, endpointLine, label) {
+  if (source.includes("function getMarketingContext()")) return source;
+  if (!source.includes(endpointLine)) {
+    throw new Error(`RELIABLE_FORMS: ${label} endpoint anchor not found`);
+  }
+
+  const helper = `${endpointLine}\n\nfunction getMarketingContext() {\n  if (typeof window === "undefined") return {};\n  const params = new URLSearchParams(window.location.search);\n  return {\n    landingUrl: window.location.href.slice(0, 800),\n    referrer: document.referrer.slice(0, 800),\n    utmSource: (params.get("utm_source") || "").slice(0, 160),\n    utmMedium: (params.get("utm_medium") || "").slice(0, 160),\n    utmCampaign: (params.get("utm_campaign") || "").slice(0, 200),\n    utmContent: (params.get("utm_content") || "").slice(0, 200),\n    utmTerm: (params.get("utm_term") || "").slice(0, 200),\n  };\n}`;
+
+  return source.replace(endpointLine, helper);
+}
+
+function addContextToPayloads(source, label) {
+  if (source.includes("...getMarketingContext(),")) return source;
+  const marker = "          userAgent:";
+  if (!source.includes(marker)) {
+    throw new Error(`RELIABLE_FORMS: ${label} payload marker not found`);
+  }
+  return source.split(marker).join("          ...getMarketingContext(),\n" + marker);
+}
+
 let shop = await readFile(shopUrl, "utf8");
 let contact = await readFile(contactUrl, "utf8");
 
@@ -28,6 +48,12 @@ shop = replaceRequired(
   `// Same-origin Vercel proxy. It verifies the Google Apps Script response server-side.\nconst ANALYTICS_ENDPOINT = "/api/interest";`,
   "shop same-origin endpoint"
 );
+shop = injectMarketingContext(
+  shop,
+  'const ANALYTICS_ENDPOINT = "/api/interest";',
+  "shop"
+);
+shop = addContextToPayloads(shop, "shop");
 
 // Browser-side no-cors hides HTTP failures. The same-origin proxy makes it unnecessary.
 shop = shop.replace(/^[ \t]*mode:\s*"no-cors",\s*$/gm, "");
@@ -52,6 +78,12 @@ contact = replaceRequired(
   `const FORMS_ENDPOINT = "/api/contact";`,
   "contact same-origin endpoint"
 );
+contact = injectMarketingContext(
+  contact,
+  'const FORMS_ENDPOINT = "/api/contact";',
+  "contact"
+);
+contact = addContextToPayloads(contact, "contact");
 
 contact = replaceRequired(
   contact,
@@ -75,4 +107,13 @@ console.log("RELIABLE_FORMS_PREPARED", {
   waitlistSuccessVerified: true,
   contactSuccessVerified: true,
   directBrowserNoCorsRemoved: true,
+  lightweightCampaignContext: [
+    "landingUrl",
+    "referrer",
+    "utmSource",
+    "utmMedium",
+    "utmCampaign",
+    "utmContent",
+    "utmTerm",
+  ],
 });
