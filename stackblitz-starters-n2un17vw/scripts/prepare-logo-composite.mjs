@@ -13,6 +13,15 @@ const DIRECT_LOGO = "https://vosko-cdn.b-cdn.net/logo_improved.svg";
 const WORDMARK_ONLY = "/logo_wordmark_only.svg";
 const EMBLEM_ONLY = "/logo_emblem_only.svg";
 
+// Shared header-logo optical position. The combined wordmark + emblem reads
+// slightly high when mathematically centered, so every page uses the same
+// subtle downward correction inside the 64/72/80px header row.
+const HEADER_OPTICAL_Y_PX = 4;
+const HEADER_EXACT_CENTER_TRANSFORM =
+  '"translate3d(-50%, -50%, 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))"';
+const HEADER_OPTICAL_CENTER_TRANSFORM =
+  `"translate3d(-50%, calc(-50% + ${HEADER_OPTICAL_Y_PX}px), 0) scale(calc(1 - var(--hdrProg, 0) * 0.04))"`;
+
 // Previously agreed visual refinements, expressed against the original SVG canvas.
 const WORDMARK_SHIFT_PCT = -3.56493; // -70 SVG units
 const WORDMARK_SCALE = 1.03;
@@ -89,6 +98,24 @@ const logoPattern = /<img\s+src="https:\/\/vosko-cdn\.b-cdn\.net\/logo_improved\
 for (const file of pageFiles) {
   const url = new URL(file, appRoot);
   let source = await readFile(url, "utf8");
+
+  // Home previously used exact geometric centering while the other pages used
+  // the optical correction. Normalize the parent transform before composing.
+  source = source.split(HEADER_EXACT_CENTER_TRANSFORM).join(HEADER_OPTICAL_CENTER_TRANSFORM);
+  if (!source.includes(HEADER_OPTICAL_CENTER_TRANSFORM)) {
+    throw new Error(`${file}: shared header optical-center transform not found`);
+  }
+
+  // Shop makes the centered logo clickable. Reset the button's intrinsic line
+  // box and spacing so it occupies exactly the same visual box as the static
+  // logo on the other pages.
+  if (file === "shop/page.tsx") {
+    source = source.replace(
+      'className="pointer-events-auto"',
+      'className="pointer-events-auto block p-0 m-0 border-0 bg-transparent leading-none"'
+    );
+  }
+
   if (!logoPattern.test(source)) {
     throw new Error(`${file}: visible direct-CDN logo block not found`);
   }
@@ -99,6 +126,9 @@ for (const file of pageFiles) {
 console.log("SEPARATED_LOGO_REFINEMENT_PREPARED", {
   source: DIRECT_LOGO,
   delivery: "separate same-canvas wordmark/emblem SVG layers; no clipping",
+  headerOpticalYPx: HEADER_OPTICAL_Y_PX,
+  headerPositionUniformAcrossPages: true,
+  shopButtonLineBoxNormalized: true,
   wordmarkShiftPct: WORDMARK_SHIFT_PCT,
   wordmarkScale: WORDMARK_SCALE,
   emblemScale: EMBLEM_SCALE,
