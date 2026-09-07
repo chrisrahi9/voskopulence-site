@@ -20,22 +20,18 @@ function addSmoothMenuLifecycle(source, file) {
     throw new Error(`${file}: menu state not found`);
   }
 
-  // Convert existing actions first; helpers are injected afterwards so their
-  // internal state setters remain direct.
   source = replaceAllExisting(source, "setMenuOpen(true)", "openMenu()");
   source = replaceAllExisting(source, "setMenuOpen(false)", "closeMenu()");
 
   const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    setMenuOpen(false);\n    window.setTimeout(() => setMenuRendered(false), 470);\n  };`;
   source = source.replace(stateLine, lifecycle);
 
-  // Keep the portal mounted while it animates out.
   const portalPattern = /(mounted\s*&&\s*\n\s*typeof document !== "undefined"\s*&&\s*\n\s*)menuOpen(\s*&&\s*\n\s*createPortal)/;
   if (!portalPattern.test(source)) {
     throw new Error(`${file}: mobile portal condition not found`);
   }
   source = source.replace(portalPattern, "$1menuRendered$2");
 
-  // Normal open/close now follows the same luxury easing as the swipe path.
   const opacityPattern = /opacity:\s*1,\s*\n\s*transition:\s*\n?\s*"opacity 420ms cubic-bezier\(\.22,1,\.36,1\)",/;
   if (opacityPattern.test(source)) {
     source = source.replace(
@@ -44,7 +40,6 @@ function addSmoothMenuLifecycle(source, file) {
     );
   }
 
-  // Only the menu panel has this exact transform declaration in these pages.
   const panelTransform = 'transform: "translateX(0%)",\n                transition:\n                  "transform 460ms cubic-bezier(.22,1,.36,1)",';
   if (!source.includes(panelTransform)) {
     throw new Error(`${file}: curtain transform not found`);
@@ -58,9 +53,6 @@ function addSmoothMenuLifecycle(source, file) {
 }
 
 function protectHeaderSpacing(source) {
-  // Five links plus the centered wordmark are too tight near the old lg
-  // breakpoint. Keep the hamburger experience until xl so the brand mark
-  // always has intentional negative space and never competes with the nav.
   source = replaceAllExisting(
     source,
     "rounded-full lg:hidden relative z-[1]",
@@ -81,7 +73,7 @@ function protectHeaderSpacing(source) {
 
 function alignMobileBurger(source, file) {
   const base = "rounded-full xl:hidden relative z-[1] hover:bg-white/10";
-  const aligned = "rounded-full xl:hidden relative z-[1] translate-y-[4px] hover:bg-white/10";
+  const aligned = "rounded-full xl:hidden relative z-[1] translate-y-[5px] hover:bg-white/10";
 
   if (source.includes(aligned)) return source;
   if (!source.includes(base)) {
@@ -97,7 +89,6 @@ for (const file of pageFiles) {
   source = protectHeaderSpacing(source);
   source = alignMobileBurger(source, file);
 
-  // Keep the logo independent of the /media proxy and generated build assets.
   source = replaceAllExisting(
     source,
     'src={asset("/logo_improved.svg")}',
@@ -117,8 +108,6 @@ for (const file of pageFiles) {
       "  // Header progress is owned by PremiumMotionController.\n\n" +
       source.slice(end);
 
-    // Home had the same green progression as the other pages but omitted the
-    // backdrop blur/saturation layer, producing a subtle page-to-page mismatch.
     const homeHeaderStyle = `          style={{\n            background: hasCap`;
     const uniformHeaderStyle = `          style={{\n            backdropFilter:\n              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",\n            WebkitBackdropFilter:\n              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",\n            background: hasCap`;
     if (source.includes(homeHeaderStyle)) {
@@ -147,7 +136,7 @@ console.log("SITE_POLISH_PREPARED", {
   uniformHeaderBlur: true,
   desktopNavBreakpoint: "xl",
   compactDesktopOverlapGuard: true,
-  mobileBurgerOpticalOffsetPx: 4,
+  mobileBurgerOpticalOffsetPx: 5,
   spotlightDeferred: true,
   logoSource: DIRECT_LOGO,
 });
