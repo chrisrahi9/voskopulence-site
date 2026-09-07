@@ -54,8 +54,6 @@ function addSmoothMenuLifecycle(source, file) {
     'transform: menuOpen ? "translateX(0%)" : "translateX(-100%)",\n                transition:\n                  "transform 460ms cubic-bezier(.22,1,.36,1)",'
   );
 
-  // The swipe-close path already animates the panel directly. Calling
-  // closeMenu afterwards schedules the final unmount without an abrupt cut.
   return source;
 }
 
@@ -65,8 +63,6 @@ for (const file of pageFiles) {
   source = addSmoothMenuLifecycle(source, file);
 
   // Keep the logo independent of the /media proxy and generated build assets.
-  // This is the same Bunny origin that successfully served the source SVG in
-  // the earlier logo preparation builds.
   source = replaceAllExisting(
     source,
     'src={asset("/logo_improved.svg")}',
@@ -86,6 +82,16 @@ for (const file of pageFiles) {
       "  // Header progress is owned by PremiumMotionController.\n\n" +
       source.slice(end);
 
+    // Home had the same green progression as the other pages but omitted the
+    // backdrop blur/saturation layer, producing a subtle page-to-page mismatch.
+    const homeHeaderStyle = `          style={{\n            background: hasCap`;
+    const uniformHeaderStyle = `          style={{\n            backdropFilter:\n              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",\n            WebkitBackdropFilter:\n              "blur(calc(var(--hdrProg, 0) * 12px)) saturate(calc(1 + var(--hdrProg, 0) * 0.5))",\n            background: hasCap`;
+    if (source.includes(homeHeaderStyle)) {
+      source = source.replace(homeHeaderStyle, uniformHeaderStyle);
+    } else if (!source.includes("WebkitBackdropFilter:")) {
+      throw new Error("homepage: header background style not found");
+    }
+
     const spotlightNeedle = 'src={asset("/Spotlight_pic.png")}\n              alt="Mediterranean Rosemary Bar"';
     if (!source.includes(spotlightNeedle)) {
       throw new Error("homepage: spotlight image not found");
@@ -103,6 +109,7 @@ console.log("SITE_POLISH_PREPARED", {
   pages: pageFiles,
   smoothMenuLifecycle: true,
   singleHomepageHeaderWriter: true,
+  uniformHeaderBlur: true,
   spotlightDeferred: true,
   logoSource: DIRECT_LOGO,
 });
