@@ -79,11 +79,23 @@ function protectHeaderSpacing(source) {
   return source;
 }
 
+function alignMobileBurger(source, file) {
+  const base = "rounded-full xl:hidden relative z-[1] hover:bg-white/10";
+  const aligned = "rounded-full xl:hidden relative z-[1] translate-y-[4px] hover:bg-white/10";
+
+  if (source.includes(aligned)) return source;
+  if (!source.includes(base)) {
+    throw new Error(`${file}: mobile burger alignment target not found`);
+  }
+  return source.replace(base, aligned);
+}
+
 for (const file of pageFiles) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
   source = addSmoothMenuLifecycle(source, file);
   source = protectHeaderSpacing(source);
+  source = alignMobileBurger(source, file);
 
   // Keep the logo independent of the /media proxy and generated build assets.
   source = replaceAllExisting(
@@ -135,6 +147,7 @@ console.log("SITE_POLISH_PREPARED", {
   uniformHeaderBlur: true,
   desktopNavBreakpoint: "xl",
   compactDesktopOverlapGuard: true,
+  mobileBurgerOpticalOffsetPx: 4,
   spotlightDeferred: true,
   logoSource: DIRECT_LOGO,
 });
