@@ -11,6 +11,14 @@ function replaceRequired(source, from, to, label) {
   return source.replace(from, to);
 }
 
+function replaceRegexRequired(source, pattern, to, label) {
+  if (source.includes(to)) return source;
+  if (!pattern.test(source)) {
+    throw new Error(`RELIABLE_FORMS: ${label} not found`);
+  }
+  return source.replace(pattern, to);
+}
+
 let shop = await readFile(shopUrl, "utf8");
 let contact = await readFile(contactUrl, "utf8");
 
@@ -21,7 +29,8 @@ shop = replaceRequired(
   "shop same-origin endpoint"
 );
 
-shop = shop.replace('          mode: "no-cors",\n', "");
+// Browser-side no-cors hides HTTP failures. The same-origin proxy makes it unnecessary.
+shop = shop.replace(/^[ \t]*mode:\s*"no-cors",\s*$/gm, "");
 
 shop = replaceRequired(
   shop,
@@ -30,10 +39,10 @@ shop = replaceRequired(
   "waitlist response capture"
 );
 
-shop = replaceRequired(
+shop = replaceRegexRequired(
   shop,
-  `        headers: { "Content-Type": "application/json" },\n      });\n\n      setWaitlistStatus("sent");`,
-  `        headers: { "Content-Type": "application/json" },\n      });\n\n      if (!response.ok) {\n        throw new Error("Waitlist submission was not accepted");\n      }\n\n      setWaitlistStatus("sent");`,
+  /headers:\s*\{\s*"Content-Type":\s*"application\/json"\s*\},\s*\n\s*\}\);\s*\n\s*setWaitlistStatus\("sent"\);/,
+  `headers: { "Content-Type": "application/json" },\n      });\n\n      if (!response.ok) {\n        throw new Error("Waitlist submission was not accepted");\n      }\n\n      setWaitlistStatus("sent");`,
   "waitlist status verification"
 );
 
@@ -50,11 +59,11 @@ contact = replaceRequired(
   `      const response = await fetch(FORMS_ENDPOINT, {`,
   "contact response capture"
 );
-contact = contact.replace('        mode: "no-cors",\n', "");
-contact = replaceRequired(
+contact = contact.replace(/^[ \t]*mode:\s*"no-cors",\s*$/gm, "");
+contact = replaceRegexRequired(
   contact,
-  `      });\n\n      setStatus("sent");\n      form.reset();`,
-  `      });\n\n      if (!response.ok) {\n        throw new Error("Contact submission was not accepted");\n      }\n\n      setStatus("sent");\n      form.reset();`,
+  /\}\);\s*\n\s*setStatus\("sent"\);\s*\n\s*form\.reset\(\);/,
+  `});\n\n      if (!response.ok) {\n        throw new Error("Contact submission was not accepted");\n      }\n\n      setStatus("sent");\n      form.reset();`,
   "contact status verification"
 );
 
