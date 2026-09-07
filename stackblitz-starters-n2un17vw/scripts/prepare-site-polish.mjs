@@ -57,10 +57,33 @@ function addSmoothMenuLifecycle(source, file) {
   return source;
 }
 
+function protectHeaderSpacing(source) {
+  // Five links plus the centered wordmark are too tight near the old lg
+  // breakpoint. Keep the hamburger experience until xl so the brand mark
+  // always has intentional negative space and never competes with the nav.
+  source = replaceAllExisting(
+    source,
+    "rounded-full lg:hidden relative z-[1]",
+    "rounded-full xl:hidden relative z-[1]"
+  );
+  source = replaceAllExisting(
+    source,
+    "grow basis-0 hidden lg:flex justify-end items-center",
+    "grow basis-0 hidden xl:flex justify-end items-center"
+  );
+  source = replaceAllExisting(
+    source,
+    'className="lg:hidden fixed inset-0 z-[12000]"',
+    'className="xl:hidden fixed inset-0 z-[12000]"'
+  );
+  return source;
+}
+
 for (const file of pageFiles) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
   source = addSmoothMenuLifecycle(source, file);
+  source = protectHeaderSpacing(source);
 
   // Keep the logo independent of the /media proxy and generated build assets.
   source = replaceAllExisting(
@@ -110,6 +133,8 @@ console.log("SITE_POLISH_PREPARED", {
   smoothMenuLifecycle: true,
   singleHomepageHeaderWriter: true,
   uniformHeaderBlur: true,
+  desktopNavBreakpoint: "xl",
+  compactDesktopOverlapGuard: true,
   spotlightDeferred: true,
   logoSource: DIRECT_LOGO,
 });
