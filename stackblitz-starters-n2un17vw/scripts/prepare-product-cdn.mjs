@@ -23,10 +23,10 @@ const products = [
   },
   {
     label: "fig",
-    old: 'img: "/Fig_sea.png",',
-    base: "product-fig-cedar",
-    local: `/products-live/product-fig-cedar.png?v=${PRODUCT_ASSET_VERSION}`,
-    filename: "product-fig-cedar.png",
+    old: 'img: "/true-cedar.png",',
+    base: "true-cedar",
+    local: `/products-live/true-cedar.png?v=${PRODUCT_ASSET_VERSION}`,
+    filename: "true-cedar.png",
   },
   {
     label: "lemon",
@@ -36,12 +36,6 @@ const products = [
     filename: "product-lemon-seabreeze.png",
   },
 ];
-
-const spotlight = {
-  label: "true-cedar",
-  base: "true-cedar",
-  filename: "true-cedar.png",
-};
 
 function candidateUrls(base) {
   const paths = [
@@ -99,14 +93,6 @@ for (const product of products) {
   await writeFile(new URL(product.filename, publicProducts), bytes);
 }
 
-// The homepage Spotlight uses its own latest editorial Fig & Cedar image.
-// Keep it separate from the shop card so changing the Spotlight creative does
-// not silently replace the product-card art.
-{
-  const { bytes } = await fetchFirstImage(spotlight);
-  await writeFile(new URL(spotlight.filename, publicProducts), bytes);
-}
-
 let source = await readFile(shopUrl, "utf8");
 for (const product of products) {
   source = replaceRequired(
@@ -125,4 +111,4 @@ source = replaceRequired(
 );
 
 await writeFile(shopUrl, source, "utf8");
-console.log("PRODUCT_CDN: Bunny product images and true-cedar Spotlight image freshly fetched, verified, and mirrored into Vercel static assets");
+console.log("PRODUCT_CDN: Bunny product images fetched, verified, and mirrored; Fig & Cedar uses true-cedar creative");
