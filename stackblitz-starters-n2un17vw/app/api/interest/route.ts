@@ -15,6 +15,10 @@ function jsonError(message: string, status: number) {
   );
 }
 
+function cleanField(value: unknown, max: number) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
 
@@ -24,7 +28,6 @@ export async function POST(request: Request) {
     return jsonError("Invalid request body", 400);
   }
 
-  // Invisible honeypot: bots often populate fields that humans never see.
   if (typeof body.website === "string" && body.website.trim()) {
     return NextResponse.json(
       { ok: true },
@@ -35,22 +38,29 @@ export async function POST(request: Request) {
   const event = body.event === "waitlist" ? "waitlist" : body.event === "click" ? "click" : null;
   if (!event) return jsonError("Unsupported event", 400);
 
-  const product = typeof body.product === "string" ? body.product.trim().slice(0, 160) : "";
+  const product = cleanField(body.product, 160);
   if (!product) return jsonError("Product is required", 400);
 
   const payload: Record<string, string> = {
     event,
     product,
-    page: typeof body.page === "string" ? body.page.slice(0, 300) : "/shop",
+    page: cleanField(body.page, 300) || "/shop",
+    landingUrl: cleanField(body.landingUrl, 800),
+    referrer: cleanField(body.referrer, 800),
+    utmSource: cleanField(body.utmSource, 160),
+    utmMedium: cleanField(body.utmMedium, 160),
+    utmCampaign: cleanField(body.utmCampaign, 200),
+    utmContent: cleanField(body.utmContent, 200),
+    utmTerm: cleanField(body.utmTerm, 200),
     userAgent:
-      typeof body.userAgent === "string"
-        ? body.userAgent.slice(0, 500)
-        : request.headers.get("user-agent")?.slice(0, 500) ?? "",
+      cleanField(body.userAgent, 500) ||
+      request.headers.get("user-agent")?.slice(0, 500) ||
+      "",
   };
 
   if (event === "waitlist") {
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!EMAIL_RE.test(email) || email.length > 254) {
+    const email = cleanField(body.email, 254).toLowerCase();
+    if (!EMAIL_RE.test(email)) {
       return jsonError("A valid email address is required", 400);
     }
     payload.email = email;
