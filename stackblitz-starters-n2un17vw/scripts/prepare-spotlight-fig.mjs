@@ -3,9 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 const pageUrl = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pageUrl, "utf8");
 
-const version = process.env.VERCEL_GIT_COMMIT_SHA || `${Date.now()}`;
 const oldSrc = 'src={asset("/Spotlight_pic.png")}';
-const newSrc = `src="/products-live/true-cedar.png?v=${version}"`;
+const newSrc = 'src="/products-live/true-cedar.png"';
 
 if (source.includes(oldSrc)) {
   source = source.replace(oldSrc, newSrc);
@@ -27,4 +26,4 @@ source = source.replace(
 );
 
 await writeFile(pageUrl, source, "utf8");
-console.log("SPOTLIGHT_FIG: using freshly mirrored true-cedar Bunny image with versioned URL");
+console.log("SPOTLIGHT_FIG: using freshly mirrored true-cedar Bunny image");
