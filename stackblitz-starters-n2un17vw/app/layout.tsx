@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   },
   description:
     "Mediterranean-inspired solid shampoo and conditioner bars developed with naturally derived ingredients and considered formulation principles.",
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: "Voskopulence — Mediterranean Solid Haircare",
     description:
@@ -71,6 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${leagueSpartan.variable} ${cormorant.variable} ${sarina.variable}`}
     >
       <head>
+        <link rel="preconnect" href="https://cdn.voskopulence.com" />
         <link rel="preconnect" href="https://vosko-cdn.b-cdn.net" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
