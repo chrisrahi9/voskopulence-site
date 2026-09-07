@@ -9,7 +9,7 @@ const targets = [
 ];
 
 const DESKTOP_NAV =
-  '<nav className="grow basis-0 hidden lg:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">';
+  '<nav className="grow basis-0 hidden xl:flex justify-end items-center gap-6 text-sm lg:text-base relative z-[1]">';
 const MOBILE_NAV = '<nav className="grow grid place-items-center">';
 
 function getNavRange(source, openTag, file, label) {
@@ -108,6 +108,7 @@ for (const file of targets) {
 
 console.log("NAV_UNIFORMITY_PREPARED", {
   pages: targets,
+  desktopBreakpoint: "xl",
   desktop: ["Home", "Shop", "About", "Sustainability", "Contact"],
   mobile: ["Home", "Shop", "About", "Sustainability", "Contact"],
   guardedAgainstFutureDrift: true,
