@@ -3,12 +3,13 @@ import { readFile, writeFile } from "node:fs/promises";
 const pageUrl = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pageUrl, "utf8");
 
+const version = process.env.VERCEL_GIT_COMMIT_SHA || `${Date.now()}`;
 const oldSrc = 'src={asset("/Spotlight_pic.png")}';
-const newSrc = 'src="/products-live/product-fig-cedar.png"';
+const newSrc = `src="/products-live/product-fig-cedar.png?v=${version}"`;
 
 if (source.includes(oldSrc)) {
   source = source.replace(oldSrc, newSrc);
-} else if (!source.includes(newSrc)) {
+} else if (!source.includes("/products-live/product-fig-cedar.png")) {
   throw new Error("SPOTLIGHT_FIG: existing Spotlight image source not found");
 }
 
@@ -26,4 +27,4 @@ source = source.replace(
 );
 
 await writeFile(pageUrl, source, "utf8");
-console.log("SPOTLIGHT_FIG: using mirrored Bunny Fig & Cedar product image and matching spotlight copy");
+console.log("SPOTLIGHT_FIG: using freshly mirrored Bunny Fig & Cedar image with versioned URL");
