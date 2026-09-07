@@ -17,8 +17,8 @@ source = source.replace(
   'alt="Fig & Cedar Nourishing Bar"'
 );
 source = source.replace(
-  ">Mediterranean Rosemary Bar</h3>",
-  ">Fig & Cedar Nourishing Bar</h3>"
+  "Mediterranean Rosemary Bar",
+  "Fig & Cedar Nourishing Bar"
 );
 source = source.replace(
   "A concentrated shampoo bar built around rosemary and mint, with a fresh herbal character inspired by the Mediterranean coast.",
