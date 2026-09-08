@@ -82,7 +82,7 @@ footer = replaceRegexRequired(
 
 footer = replaceRegexRequired(
   footer,
-  /Botanical shampoo and conditioner bars developed with naturally derived ingredients, considered formulation principles and a lower-waste format\./,
+  /Botanical shampoo and conditioner bars developed with naturally derived ingredients,\s*considered formulation principles and a lower-waste format\./,
   "Our first collection explores botanical solid haircare through considered formulation, a lower-waste format and a distinctly Mediterranean point of view.",
   "footer copy"
 );
