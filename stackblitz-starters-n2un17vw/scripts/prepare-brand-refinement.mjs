@@ -4,85 +4,85 @@ const homeUrl = new URL("../app/page.tsx", import.meta.url);
 const footerUrl = new URL("../app/_components/SiteFooter.tsx", import.meta.url);
 const shopUrl = new URL("../app/shop/page.tsx", import.meta.url);
 
-function replaceRequired(source, from, to, label) {
-  if (!source.includes(from)) throw new Error(`BRAND_REFINEMENT: ${label} not found`);
-  return source.replace(from, to);
+function replaceRegexRequired(source, pattern, to, label) {
+  if (!pattern.test(source)) throw new Error(`BRAND_REFINEMENT: ${label} not found`);
+  return source.replace(pattern, to);
 }
 
 let home = await readFile(homeUrl, "utf8");
 let footer = await readFile(footerUrl, "utf8");
 let shop = await readFile(shopUrl, "utf8");
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  "Solid shampoo & conditioner bars inspired by Mediterranean botanicals and developed toward COSMOS-style formulation principles.",
+  /Solid shampoo\s*&(?:amp;)?\s*conditioner bars inspired by Mediterranean botanicals and developed toward COSMOS-style formulation principles\./,
   "Botanical rituals shaped by the Mediterranean, beginning with concentrated solid haircare.",
   "hero positioning"
 );
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  "A Mediterranean vocabulary for hair and scalp.",
+  /A Mediterranean vocabulary for hair and scalp\./,
   "A Mediterranean vocabulary, distilled.",
   "botanical heading"
 );
 
-home = replaceRequired(home, ">About us</h2>", ">The house</h2>", "about heading");
+home = replaceRegexRequired(home, />\s*About us\s*<\/h2>/, ">The house</h2>", "about heading");
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  "Founded in 2024, Voskopulence explores a quieter approach to haircare: concentrated solid formulas, naturally derived ingredients and botanical profiles shaped by the Mediterranean. We are building each bar with an emphasis on thoughtful formulation, lower-waste packaging and a sensory ritual that feels considered rather than excessive.",
+  /Founded in 2024, Voskopulence explores a quieter approach to haircare:[\s\S]*?rather than excessive\./,
   "Voskopulence is a Mediterranean house of botanical rituals. Our first chapter takes form in concentrated solid haircare, where considered formulation, lower-waste design and a distinctive botanical palette come together in a quieter kind of luxury.",
   "house copy"
 );
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  '<p className="luxury-kicker text-[#777065]">The first collection</p>',
+  /<p className="luxury-kicker text-\[#777065\]">\s*The first collection\s*<\/p>/,
   '<p className="luxury-kicker text-[#777065]">The first chapter</p>',
   "final band kicker"
 );
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  "Be there when the first batch leaves the lab.",
+  /Be there when the first batch leaves the lab\./,
   "The story begins with hair.",
   "final band heading"
 );
 
-home = replaceRequired(
+home = replaceRegexRequired(
   home,
-  "Voskopulence is currently pre-launch. Explore the bars and join the waitlist for the formula that fits your ritual.",
+  /Voskopulence is currently pre-launch\. Explore the bars and join the waitlist for the formula that fits your ritual\./,
   "Three solid formulas introduce the world of Voskopulence. Explore the collection and join the waitlist for first availability.",
   "final band copy"
 );
 
-home = replaceRequired(home, "Explore the first collection", "Discover the first collection", "final CTA");
+home = replaceRegexRequired(home, /Explore the first collection/, "Discover the first collection", "final CTA");
 
-shop = replaceRequired(
+shop = replaceRegexRequired(
   shop,
-  "A first collection of concentrated shampoo and conditioner bars, each shaped around a different hair ritual and the same Mediterranean sensibility.",
+  /A first collection of concentrated shampoo and conditioner bars, each shaped around a different hair ritual and the same Mediterranean sensibility\./,
   "The first chapter of Voskopulence: three concentrated formulas shaped around distinct hair rituals and one Mediterranean sensibility.",
   "shop introduction"
 );
 
-footer = replaceRequired(
+footer = replaceRegexRequired(
   footer,
-  "Mediterranean haircare · Pre-launch",
+  /Mediterranean haircare · Pre-launch/,
   "A Mediterranean house · Pre-launch",
   "footer kicker"
 );
 
-footer = replaceRequired(
+footer = replaceRegexRequired(
   footer,
-  "Rituals inspired by the coast, concentrated into solid form.",
+  /Rituals inspired by the coast, concentrated into solid form\./,
   "A world of Mediterranean rituals, beginning in solid form.",
   "footer heading"
 );
 
-footer = replaceRequired(
+footer = replaceRegexRequired(
   footer,
-  "Botanical shampoo and conditioner bars developed with naturally derived ingredients, considered formulation principles and a lower-waste format.",
+  /Botanical shampoo and conditioner bars developed with naturally derived ingredients, considered formulation principles and a lower-waste format\./,
   "Our first collection explores botanical solid haircare through considered formulation, a lower-waste format and a distinctly Mediterranean point of view.",
   "footer copy"
 );
