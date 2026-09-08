@@ -13,14 +13,24 @@ export default function ScrollToTop() {
     }
   }, []);
 
+  // On a cold load, never fight a real hash destination such as /#about.
+  // The browser / homepage motion controller owns hash positioning.
   useEffect(() => {
+    if (window.location.hash) return;
+
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    const t = setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 50);
-    return () => clearTimeout(t);
+    const t = window.setTimeout(() => {
+      if (!window.location.hash) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }
+    }, 50);
+
+    return () => window.clearTimeout(t);
   }, []);
 
+  // Normal route changes start at the top; hash routes keep their destination.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash) return;
+    if (window.location.hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname, search]);
 

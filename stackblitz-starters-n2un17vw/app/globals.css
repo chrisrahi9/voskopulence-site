@@ -1,34 +1,115 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root { --hairline: 1px; }
-/* Smooth fonts for luxe look */
-html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
-/* Voskopulence typography */
 :root {
-  --font-sans: 'League Spartan', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
-  --font-script: 'Sarina', cursive;
+  --hairline: 1px;
+  --vosko-green: #004642;
+  --vosko-green-deep: #003f3b;
+  --vosko-stone: #f3eee5;
+  --vosko-cream: #fbf8f2;
+  --vosko-sage: #8c9a91;
 }
 
-html, body {
+/* Smooth fonts for a restrained editorial finish. */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  --font-sans: var(--font-sans-next), system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-editorial: var(--font-editorial-next), Georgia, 'Times New Roman', serif;
+  --font-script: var(--font-script-next), cursive;
+}
+
+html,
+body {
   font-family: var(--font-sans);
-  font-weight: 300; /* Light by default */
+  font-weight: 300;
+  overflow-x: clip;
+  background-color: #ffffff;
 }
 
-/* helper classes */
-.heading-script { font-family: var(--font-script); font-weight: 400; }
-.text-sans     { font-family: var(--font-sans);   font-weight: 300; }
+.heading-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+}
+
+.heading-editorial {
+  font-family: var(--font-editorial);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.text-sans {
+  font-family: var(--font-sans);
+  font-weight: 300;
+}
+
+.luxury-kicker {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.footer-link {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.footer-link:hover {
+  opacity: 0.68;
+}
+
+.editorial-rule {
+  border-color: rgba(0, 70, 66, 0.18);
+}
+
+::selection {
+  color: #ffffff;
+  background: #004642;
+}
 
 @keyframes pulse-smooth {
-  0%,100% { transform: scale(1); }
-  50%     { transform: scale(1.05); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
 }
 
-html, body { overflow-x: hidden; }
+@keyframes hero-orb-halo {
+  0%, 100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  72% {
+    opacity: 0;
+    transform: scale(1.34);
+  }
+}
 
-/* When the curtain is open, darken the page background so Safari's bottom bar
-   shows the same tint instead of bright page content */
+.hero-orb::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  animation: hero-orb-halo 2.9s cubic-bezier(.22, 1, .36, 1) infinite;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-orb::after {
+    transition: transform 420ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease;
+  }
+
+  .hero-orb:hover::after {
+    animation: none;
+    opacity: 0.46;
+    transform: scale(1.2);
+  }
+}
+
 html.curtain-open,
 body.curtain-open {
   background-color: rgba(0, 70, 66, 0.75);
@@ -36,37 +117,32 @@ body.curtain-open {
   backdrop-filter: blur(24px);
 }
 
-/* default page bg for desktop */
-html, body { background-color: #ffffff; }
-
-/* iOS/Android touch devices: make overscroll background green */
 @media (hover: none) and (pointer: coarse) {
-  html, body { background-color: #004642 !important; }
+  html,
+  body {
+    background-color: #004642 !important;
+  }
+
+  html {
+    overscroll-behavior-y: contain;
+  }
 }
 
-
-/* Reduce scroll chaining / bounce revealing gaps on fast flicks */
-html, body { overscroll-behavior-y: contain; }
-
-/* (Optional) If you ever see a white lip at the very bottom when iOS toolbar appears,
-   uncomment this block to paint the bottom safe area solid green on every page. */
-/*
-html::after {
-  content: "";
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  height: env(safe-area-inset-bottom);
-  background: #004642;
-  opacity: 0.94;
-  pointer-events: none;
-  z-index: 2147483647;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
-*/
-/* --- Safari fixed-layer stability patch --- */
+
 header,
 .fixed-header {
   position: fixed;
-  transform: translate3d(0,0,0);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   will-change: opacity, transform;
@@ -74,10 +150,11 @@ header,
   isolation: isolate;
   z-index: 60;
 }
+
 @supports (-webkit-touch-callout: none) {
-  :root { --cap-alpha: 0.94; } /* optional */
+  :root { --cap-alpha: 0.94; }
 }
-:root { --hairline: 1px; }
-@media (min-resolution: 2dppx)   { :root { --hairline: 0.5px; } }
-@media (min-resolution: 3dppx)   { :root { --hairline: 0.3334px; } }
-@media (min-resolution: 4dppx)   { :root { --hairline: 0.25px; } }
+
+@media (min-resolution: 2dppx) { :root { --hairline: 0.5px; } }
+@media (min-resolution: 3dppx) { :root { --hairline: 0.3334px; } }
+@media (min-resolution: 4dppx) { :root { --hairline: 0.25px; } }
