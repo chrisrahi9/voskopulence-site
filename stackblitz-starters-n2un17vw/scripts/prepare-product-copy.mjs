@@ -5,11 +5,6 @@ let source = await readFile(shopUrl, "utf8");
 
 const replacements = [
   [
-    'id: "thyme",',
-    'id: "mint-rosemary",',
-    "mint and rosemary product id",
-  ],
-  [
     'name: "Mediterranean Thyme & Rosemary Bar",',
     'name: "Herbal Mint & Rosemary Shampoo Bar",',
     "mint and rosemary product name",
