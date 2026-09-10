@@ -104,10 +104,10 @@ body.curtain-open {
 [aria-label="Language selector"] { display: none !important; }
 
 /*
- * Keep the fixed header on a stable compositor layer. The seam guard is a
- * one-physical-pixel shadow painted by the header itself, so it cannot be
- * clipped by the header's paint containment. Its opacity follows --hdrProg,
- * matching the revealed header rather than creating a permanent strip.
+ * Keep the entire fixed-header backdrop as one painted surface. Adding one
+ * physical pixel to the header box lets its existing blurred/translucent
+ * background cover the Safari sub-pixel boundary itself, instead of painting
+ * a second translucent strip that can never composite identically.
  */
 header,
 .fixed-header {
@@ -118,7 +118,7 @@ header,
   contain: paint;
   isolation: isolate;
   z-index: 60;
-  box-shadow: 0 var(--hairline, 1px) 0 rgba(0, 70, 66, calc(var(--hdrProg, 0) * 0.94));
+  padding-bottom: var(--hairline, 1px);
 }
 
 header > .absolute.inset-0.pointer-events-none {
