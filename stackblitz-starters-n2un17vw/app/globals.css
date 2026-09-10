@@ -131,19 +131,22 @@ header > .absolute.inset-0.pointer-events-none {
   -webkit-backface-visibility: hidden;
 }
 
-/*
- * iOS/Safari renders a lighter band at the lower edge of a translucent
- * backdrop-filter layer. At 94% green opacity the blur is visually negligible,
- * so disable only that blur on coarse-touch WebKit and keep the exact same
- * opacity-driven green reveal. This removes the edge band instead of moving it.
- */
+/* iOS: keep the top safety cap, but make the revealed header truly opaque. */
 @supports (-webkit-touch-callout: none) {
   header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+    background:
+      linear-gradient(
+        to bottom,
+        #004642 0,
+        #004642 calc(5px + var(--hairline, 1px)),
+        rgba(0, 70, 66, var(--hdrProg, 0)) calc(5px + var(--hairline, 1px)),
+        rgba(0, 70, 66, var(--hdrProg, 0)) 100%
+      ) !important;
   }
 
-  :root { --cap-alpha: 0.94; }
+  :root { --cap-alpha: 1; }
 }
 
 #curtain-panel {
