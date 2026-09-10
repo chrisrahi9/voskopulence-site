@@ -42,23 +42,16 @@ export default function PremiumMotionController() {
         xOrOptions.behavior !== "smooth" ||
         typeof xOrOptions.top !== "number"
       ) {
-        if (typeof xOrOptions === "number") {
-          originalScrollTo(xOrOptions, y ?? 0);
-        } else if (xOrOptions) {
-          originalScrollTo(xOrOptions);
-        } else {
-          originalScrollTo(0, 0);
-        }
+        if (typeof xOrOptions === "number") originalScrollTo(xOrOptions, y ?? 0);
+        else if (xOrOptions) originalScrollTo(xOrOptions);
+        else originalScrollTo(0, 0);
         return;
       }
 
       if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
 
       const startY = window.scrollY;
-      const maxY = Math.max(
-        0,
-        document.documentElement.scrollHeight - window.innerHeight
-      );
+      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
       const destination = Math.min(maxY, Math.max(0, xOrOptions.top));
       const delta = destination - startY;
 
@@ -74,18 +67,11 @@ export default function PremiumMotionController() {
         if (disposed) return;
         const t = clamp01((now - startTime) / duration);
         const eased = easeOutQuart(t);
-        originalScrollTo({
-          top: startY + delta * eased,
-          left: xOrOptions.left ?? 0,
-        });
-
+        originalScrollTo({ top: startY + delta * eased, left: xOrOptions.left ?? 0 });
         if (t < 1) scrollRaf = requestAnimationFrame(step);
         else {
           scrollRaf = null;
-          originalScrollTo({
-            top: destination,
-            left: xOrOptions.left ?? 0,
-          });
+          originalScrollTo({ top: destination, left: xOrOptions.left ?? 0 });
         }
       };
 
@@ -104,21 +90,16 @@ export default function PremiumMotionController() {
       headerLastTime = now;
       const alpha = reduceMotion ? 1 : 1 - Math.exp(-dt / HEADER_TAU_MS);
       headerProgress += (headerTarget - headerProgress) * alpha;
-
-      if (Math.abs(headerTarget - headerProgress) < 0.0005) {
-        headerProgress = headerTarget;
-      }
-
+      if (Math.abs(headerTarget - headerProgress) < 0.0005) headerProgress = headerTarget;
       writeHeaderProgress();
-
-      if (headerProgress !== headerTarget) {
-        headerRaf = requestAnimationFrame(headerTick);
-      } else {
-        headerRaf = null;
-      }
+      if (headerProgress !== headerTarget) headerRaf = requestAnimationFrame(headerTick);
+      else headerRaf = null;
     };
 
     const onScroll = () => {
+      // iOS locks the page by making body fixed while the curtain is open.
+      // Ignore those synthetic scroll changes; they are not user scrolling.
+      if (document.body.style.position === "fixed") return;
       headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
       if (headerRaf === null) {
         headerLastTime = performance.now();
@@ -128,12 +109,9 @@ export default function PremiumMotionController() {
 
     const syncRoutePosition = () => {
       if (disposed) return;
-
       if (window.location.hash === "#about") {
-        const target = document.getElementById("about");
-        if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
+        document.getElementById("about")?.scrollIntoView({ behavior: "auto", block: "start" });
       }
-
       headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
       headerProgress = headerTarget;
       writeHeaderProgress();
@@ -157,32 +135,20 @@ export default function PremiumMotionController() {
     const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
     const revealTargets = sections.slice(1);
     const revealed = new WeakSet<Element>();
-
-    const revealObserver = reduceMotion
-      ? null
-      : new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (!entry.isIntersecting || revealed.has(entry.target)) continue;
-              revealed.add(entry.target);
-              revealObserver?.unobserve(entry.target);
-
-              const el = entry.target as HTMLElement;
-              el.animate(
-                [
-                  { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
-                  { opacity: 1, transform: "translate3d(0, 0, 0)" },
-                ],
-                {
-                  duration: 620,
-                  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-                  fill: "none",
-                }
-              );
-            }
-          },
-          { threshold: 0.08, rootMargin: "0px 0px -7% 0px" }
+    const revealObserver = reduceMotion ? null : new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting || revealed.has(entry.target)) continue;
+        revealed.add(entry.target);
+        revealObserver?.unobserve(entry.target);
+        (entry.target as HTMLElement).animate(
+          [
+            { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
+            { opacity: 1, transform: "translate3d(0, 0, 0)" },
+          ],
+          { duration: 620, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "none" }
         );
+      }
+    }, { threshold: 0.08, rootMargin: "0px 0px -7% 0px" });
 
     revealTargets.forEach((section) => revealObserver?.observe(section));
 
