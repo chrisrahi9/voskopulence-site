@@ -4,6 +4,7 @@ import { Cormorant_Garamond, League_Spartan, Sarina } from "next/font/google";
 import { Suspense } from "react";
 import ScrollToTop from "./_components/ScrollToTop";
 import PremiumMotionController from "./_components/PremiumMotionController";
+import LanguageController from "./_components/LanguageController";
 
 const leagueSpartan = League_Spartan({
   subsets: ["latin"],
@@ -70,7 +71,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="sv"
       className={`${leagueSpartan.variable} ${cormorant.variable} ${sarina.variable}`}
     >
       <head>
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollToTop />
         </Suspense>
         <PremiumMotionController />
+        <LanguageController />
         {children}
       </body>
     </html>
