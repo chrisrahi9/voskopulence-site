@@ -83,7 +83,6 @@ body {
   }
 }
 
-/* Prevent iOS from leaving a sticky hover circle on the burger after a swipe-close. */
 @media (hover: none), (pointer: coarse) {
   header button:hover {
     background-color: transparent !important;
@@ -114,31 +113,37 @@ body.curtain-open {
 
 [aria-label="Language selector"] { display: none !important; }
 
-/*
- * Safari can expose a fractional-pixel gap between a fixed header and the page.
- * Extend the actual backdrop element itself by one physical pixel. There is no
- * second tint, shadow, border or padding, so the extension composites exactly
- * like the rest of the header.
- */
 header,
 .fixed-header {
   position: fixed;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  contain: none !important;
+  contain: paint;
   isolation: isolate;
   z-index: 60;
-  padding-bottom: 0 !important;
   box-shadow: none !important;
-  overflow: visible !important;
 }
 
 header > .absolute.inset-0.pointer-events-none {
-  bottom: calc(-1 * var(--hairline, 1px)) !important;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/*
+ * iOS/Safari renders a lighter band at the lower edge of a translucent
+ * backdrop-filter layer. At 94% green opacity the blur is visually negligible,
+ * so disable only that blur on coarse-touch WebKit and keep the exact same
+ * opacity-driven green reveal. This removes the edge band instead of moving it.
+ */
+@supports (-webkit-touch-callout: none) {
+  header > .absolute.inset-0.pointer-events-none {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  :root { --cap-alpha: 0.94; }
 }
 
 #curtain-panel {
@@ -149,10 +154,6 @@ header > .absolute.inset-0.pointer-events-none {
 }
 
 #mobile-menu > button { will-change: opacity; }
-
-@supports (-webkit-touch-callout: none) {
-  :root { --cap-alpha: 0.94; }
-}
 
 @media (min-resolution: 2dppx) { :root { --hairline: 0.5px; } }
 @media (min-resolution: 3dppx) { :root { --hairline: 0.3334px; } }
