@@ -88,6 +88,20 @@ if (source.includes("Mediterranean Thyme & Rosemary Bar")) {
   throw new Error("PRODUCT_COPY: legacy thyme product name remains");
 }
 
+
+const priceMarker = 'data-planned-price="180"';
+if (!source.includes(priceMarker)) {
+  const anchor = '<p className="text-sm text-neutral-700">{bar.tagline}</p>';
+  if (source.split(anchor).length !== 2) {
+    throw new Error("PRODUCT_PRICE: expected one product-card tagline anchor");
+  }
+  source = source.replace(anchor, `<div data-planned-price="180" className="text-[#004642]">
+                    <p className="text-lg font-semibold">180 SEK <span className="text-sm font-normal">per bar</span></p>
+                    <p className="text-sm text-neutral-600">Planned price · Shipping additional</p>
+                  </div>
+                  ${anchor}`);
+}
+
 await writeFile(shopUrl, source, "utf8");
 
 console.log("PRODUCT_COPY_PREPARED", {
