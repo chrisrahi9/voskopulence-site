@@ -139,6 +139,11 @@ body.curtain-open {
   }
 }
 
+/* The route-level language navigation is the canonical selector. */
+[aria-label="Language selector"] {
+  display: none !important;
+}
+
 /*
  * Fixed-header compositing: keep the header and its backdrop on one GPU layer
  * and overlap the backdrop by one physical pixel. This seals Safari/iOS
