@@ -136,9 +136,9 @@ header > .absolute.inset-0.pointer-events-none {
 }
 
 /*
- * iOS: keep two independent surfaces. The main header fades with scroll, while
- * the very top safe-area backing is always solid brand green so Safari never
- * samples the moving page/video behind its rounded browser chrome.
+ * iOS: the top safe-area backing stays fully solid, while the main header is
+ * a single blur-free layer that fades up to 92% opacity. This keeps the top
+ * chrome stable without making the logo/burger strip feel visually too heavy.
  */
 @supports (-webkit-touch-callout: none) {
   .ios-browser-backing {
@@ -161,7 +161,7 @@ header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background: #004642 !important;
-    opacity: var(--hdrProg, 0) !important;
+    opacity: calc(var(--hdrProg, 0) * 0.92) !important;
   }
 
   header::after {
