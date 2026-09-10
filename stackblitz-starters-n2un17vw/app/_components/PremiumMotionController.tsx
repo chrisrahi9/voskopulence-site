@@ -3,6 +3,9 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+const HEADER_DISTANCE = 120;
+const HEADER_TAU_MS = 90;
+
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
@@ -18,9 +21,14 @@ export default function PremiumMotionController() {
 
     let disposed = false;
     let scrollRaf: number | null = null;
+    let headerRaf: number | null = null;
     let settleRaf: number | null = null;
     let settleTimer: number | null = null;
+    let headerLastTime = performance.now();
+    let headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
+    let headerProgress = headerTarget;
 
+    const root = document.documentElement;
     const originalScrollTo = window.scrollTo.bind(window);
 
     const premiumScrollTo = (
@@ -59,7 +67,7 @@ export default function PremiumMotionController() {
         return;
       }
 
-      const duration = Math.min(720, Math.max(500, 500 + Math.abs(delta) * 0.07));
+      const duration = Math.min(760, Math.max(560, 560 + Math.abs(delta) * 0.08));
       const startTime = performance.now();
 
       const step = (now: number) => {
@@ -71,9 +79,8 @@ export default function PremiumMotionController() {
           left: xOrOptions.left ?? 0,
         });
 
-        if (t < 1) {
-          scrollRaf = requestAnimationFrame(step);
-        } else {
+        if (t < 1) scrollRaf = requestAnimationFrame(step);
+        else {
           scrollRaf = null;
           originalScrollTo({
             top: destination,
@@ -87,16 +94,56 @@ export default function PremiumMotionController() {
 
     window.scrollTo = premiumScrollTo as typeof window.scrollTo;
 
-    const syncRoutePosition = () => {
+    const writeHeaderProgress = () => {
+      root.style.setProperty("--hdrProg", headerProgress.toFixed(4));
+    };
+
+    const headerTick = (now: number) => {
       if (disposed) return;
-      if (window.location.hash === "#about") {
-        const target = document.getElementById("about");
-        target?.scrollIntoView({ behavior: "auto", block: "start" });
+      const dt = Math.min(50, Math.max(0, now - headerLastTime));
+      headerLastTime = now;
+      const alpha = reduceMotion ? 1 : 1 - Math.exp(-dt / HEADER_TAU_MS);
+      headerProgress += (headerTarget - headerProgress) * alpha;
+
+      if (Math.abs(headerTarget - headerProgress) < 0.0005) {
+        headerProgress = headerTarget;
+      }
+
+      writeHeaderProgress();
+
+      if (headerProgress !== headerTarget) {
+        headerRaf = requestAnimationFrame(headerTick);
+      } else {
+        headerRaf = null;
       }
     };
 
+    const onScroll = () => {
+      headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
+      if (headerRaf === null) {
+        headerLastTime = performance.now();
+        headerRaf = requestAnimationFrame(headerTick);
+      }
+    };
+
+    const syncRoutePosition = () => {
+      if (disposed) return;
+
+      if (window.location.hash === "#about") {
+        const target = document.getElementById("about");
+        if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
+      }
+
+      headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
+      headerProgress = headerTarget;
+      writeHeaderProgress();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
     window.addEventListener("hashchange", syncRoutePosition, { passive: true });
     window.addEventListener("popstate", syncRoutePosition, { passive: true });
+    writeHeaderProgress();
 
     settleRaf = requestAnimationFrame(() => {
       settleRaf = null;
@@ -105,7 +152,7 @@ export default function PremiumMotionController() {
     settleTimer = window.setTimeout(() => {
       settleTimer = null;
       syncRoutePosition();
-    }, 140);
+    }, 160);
 
     const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
     const revealTargets = sections.slice(1);
@@ -120,23 +167,21 @@ export default function PremiumMotionController() {
               revealed.add(entry.target);
               revealObserver?.unobserve(entry.target);
 
-              (entry.target as HTMLElement).animate(
+              const el = entry.target as HTMLElement;
+              el.animate(
                 [
-                  { opacity: 0.96, transform: "translate3d(0, 10px, 0)" },
+                  { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
                   { opacity: 1, transform: "translate3d(0, 0, 0)" },
                 ],
                 {
-                  duration: 540,
+                  duration: 620,
                   easing: "cubic-bezier(0.22, 1, 0.36, 1)",
                   fill: "none",
                 }
               );
             }
           },
-          {
-            threshold: 0.08,
-            rootMargin: "0px 0px -7% 0px",
-          }
+          { threshold: 0.08, rootMargin: "0px 0px -7% 0px" }
         );
 
     revealTargets.forEach((section) => revealObserver?.observe(section));
@@ -144,9 +189,12 @@ export default function PremiumMotionController() {
     return () => {
       disposed = true;
       window.scrollTo = originalScrollTo as typeof window.scrollTo;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       window.removeEventListener("hashchange", syncRoutePosition);
       window.removeEventListener("popstate", syncRoutePosition);
       if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
+      if (headerRaf !== null) cancelAnimationFrame(headerRaf);
       if (settleRaf !== null) cancelAnimationFrame(settleRaf);
       if (settleTimer !== null) window.clearTimeout(settleTimer);
       revealObserver?.disconnect();
