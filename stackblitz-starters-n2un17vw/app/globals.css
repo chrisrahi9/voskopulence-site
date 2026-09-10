@@ -11,7 +11,6 @@
   --vosko-sage: #8c9a91;
 }
 
-/* Smooth fonts for a restrained editorial finish. */
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -31,21 +30,9 @@ body {
   background-color: #ffffff;
 }
 
-.heading-script {
-  font-family: var(--font-script);
-  font-weight: 400;
-}
-
-.heading-editorial {
-  font-family: var(--font-editorial);
-  font-weight: 500;
-  letter-spacing: -0.025em;
-}
-
-.text-sans {
-  font-family: var(--font-sans);
-  font-weight: 300;
-}
+.heading-script { font-family: var(--font-script); font-weight: 400; }
+.heading-editorial { font-family: var(--font-editorial); font-weight: 500; letter-spacing: -0.025em; }
+.text-sans { font-family: var(--font-sans); font-weight: 300; }
 
 .luxury-kicker {
   font-size: 0.68rem;
@@ -55,22 +42,11 @@ body {
   text-transform: uppercase;
 }
 
-.footer-link {
-  transition: opacity 180ms ease, transform 180ms ease;
-}
+.footer-link { transition: opacity 180ms ease, transform 180ms ease; }
+.footer-link:hover { opacity: 0.68; }
+.editorial-rule { border-color: rgba(0, 70, 66, 0.18); }
 
-.footer-link:hover {
-  opacity: 0.68;
-}
-
-.editorial-rule {
-  border-color: rgba(0, 70, 66, 0.18);
-}
-
-::selection {
-  color: #ffffff;
-  background: #004642;
-}
+::selection { color: #ffffff; background: #004642; }
 
 @keyframes pulse-smooth {
   0%, 100% { transform: scale(1); }
@@ -78,14 +54,8 @@ body {
 }
 
 @keyframes hero-orb-halo {
-  0%, 100% {
-    opacity: 0.42;
-    transform: scale(1);
-  }
-  72% {
-    opacity: 0;
-    transform: scale(1.34);
-  }
+  0%, 100% { opacity: 0.42; transform: scale(1); }
+  72% { opacity: 0; transform: scale(1.34); }
 }
 
 .hero-orb::after {
@@ -102,7 +72,6 @@ body {
   .hero-orb::after {
     transition: transform 420ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease;
   }
-
   .hero-orb:hover::after {
     animation: none;
     opacity: 0.46;
@@ -119,19 +88,12 @@ body.curtain-open {
 
 @media (hover: none) and (pointer: coarse) {
   html,
-  body {
-    background-color: #004642 !important;
-  }
-
-  html {
-    overscroll-behavior-y: contain;
-  }
+  body { background-color: #004642 !important; }
+  html { overscroll-behavior-y: contain; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -139,15 +101,13 @@ body.curtain-open {
   }
 }
 
-/* The route-level language navigation is the canonical selector. */
-[aria-label="Language selector"] {
-  display: none !important;
-}
+[aria-label="Language selector"] { display: none !important; }
 
 /*
- * Fixed-header compositing: keep the header and its backdrop on one GPU layer
- * and overlap the backdrop by one physical pixel. This seals Safari/iOS
- * sub-pixel gaps without needing a visibly coloured strip below the header.
+ * Keep the fixed header on a stable compositor layer. The seam guard is a
+ * one-physical-pixel shadow painted by the header itself, so it cannot be
+ * clipped by the header's paint containment. Its opacity follows --hdrProg,
+ * matching the revealed header rather than creating a permanent strip.
  */
 header,
 .fixed-header {
@@ -158,16 +118,15 @@ header,
   contain: paint;
   isolation: isolate;
   z-index: 60;
+  box-shadow: 0 var(--hairline, 1px) 0 rgba(0, 70, 66, calc(var(--hdrProg, 0) * 0.94));
 }
 
 header > .absolute.inset-0.pointer-events-none {
-  bottom: calc(-1 * var(--hairline, 1px));
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-/* Curtain gestures stay on the compositor and never fight vertical scrolling. */
 #curtain-panel {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
@@ -175,9 +134,7 @@ header > .absolute.inset-0.pointer-events-none {
   touch-action: pan-y;
 }
 
-#mobile-menu > button {
-  will-change: opacity;
-}
+#mobile-menu > button { will-change: opacity; }
 
 @supports (-webkit-touch-callout: none) {
   :root { --cap-alpha: 0.94; }
