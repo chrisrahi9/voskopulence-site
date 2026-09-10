@@ -49,17 +49,17 @@ export default function CurtainGestureController() {
       const now = performance.now();
       const dt = Math.max(1, now - lastTime);
       const instantaneous = (event.clientX - lastX) / dt;
-      velocity = velocity * 0.72 + instantaneous * 0.28;
+      velocity = velocity * 0.75 + instantaneous * 0.25;
       lastX = event.clientX;
       lastTime = now;
 
       const dx = event.clientX - startX;
       const width = Math.max(1, panel.getBoundingClientRect().width);
-      const resisted = Math.sign(dx) * Math.min(Math.abs(dx), width) * 0.92;
-      const progress = Math.min(1, Math.abs(resisted) / width);
+      const translated = Math.sign(dx) * Math.min(Math.abs(dx), width);
+      const progress = Math.min(1, Math.abs(translated) / width);
 
-      panel.style.transform = `translate3d(${resisted}px,0,0)`;
-      if (backdrop) backdrop.style.opacity = String(1 - progress * 0.55);
+      panel.style.transform = `translate3d(${translated}px,0,0)`;
+      if (backdrop) backdrop.style.opacity = String(1 - progress * 0.5);
     };
 
     const finish = (event: PointerEvent, cancelled = false) => {
@@ -75,42 +75,46 @@ export default function CurtainGestureController() {
         (Math.abs(dx) >= threshold || Math.abs(velocity) >= CLOSE_VELOCITY);
 
       currentPanel.style.transition =
-        "transform 360ms cubic-bezier(.22,1,.36,1)";
+        "transform 320ms cubic-bezier(.22,1,.36,1)";
 
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (shouldClose) {
-            const direction = dx === 0 ? 1 : Math.sign(dx);
-            currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
-            if (currentBackdrop) {
-              currentBackdrop.style.transition = "opacity 260ms ease";
-              currentBackdrop.style.opacity = "0";
-            }
+      if (shouldClose) {
+        const direction = dx === 0 ? 1 : Math.sign(dx);
+        currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
+        if (currentBackdrop) {
+          currentBackdrop.style.transition = "opacity 240ms ease";
+          currentBackdrop.style.opacity = "0";
+        }
 
-            window.setTimeout(() => {
-              const closeButton = currentPanel.querySelector(
-                'button[aria-label="Close menu"]'
-              ) as HTMLButtonElement | null;
-              closeButton?.click();
-            }, 250);
-          } else {
-            currentPanel.style.transform = "translate3d(0,0,0)";
-            if (currentBackdrop) {
-              currentBackdrop.style.transition = "opacity 260ms ease";
-              currentBackdrop.style.opacity = "1";
-            }
-          }
-        });
-      });
+        window.setTimeout(() => {
+          const closeButton = currentPanel.querySelector(
+            'button[aria-label="Close menu"]'
+          ) as HTMLButtonElement | null;
+          closeButton?.click();
+        }, 220);
+      } else {
+        currentPanel.style.transform = "translate3d(0,0,0)";
+        if (currentBackdrop) {
+          currentBackdrop.style.transition = "opacity 240ms ease";
+          currentBackdrop.style.opacity = "1";
+        }
+      }
 
       window.setTimeout(() => {
         currentPanel.style.willChange = "auto";
-      }, 420);
+      }, 360);
       reset();
     };
 
     const onPointerUp = (event: PointerEvent) => finish(event, false);
     const onPointerCancel = (event: PointerEvent) => finish(event, true);
+
+    // The original pages still contain legacy React touch handlers for the
+    // curtain. Stop those touch events before they bubble into React so this
+    // controller is the single owner of the panel transform during a swipe.
+    const suppressLegacyTouch = (event: TouchEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.("#curtain-panel")) event.stopPropagation();
+    };
 
     const onLanguageClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
@@ -126,6 +130,10 @@ export default function CurtainGestureController() {
     document.addEventListener("pointermove", onPointerMove, true);
     document.addEventListener("pointerup", onPointerUp, true);
     document.addEventListener("pointercancel", onPointerCancel, true);
+    document.addEventListener("touchstart", suppressLegacyTouch, true);
+    document.addEventListener("touchmove", suppressLegacyTouch, true);
+    document.addEventListener("touchend", suppressLegacyTouch, true);
+    document.addEventListener("touchcancel", suppressLegacyTouch, true);
     document.addEventListener("click", onLanguageClick, true);
 
     return () => {
@@ -133,6 +141,10 @@ export default function CurtainGestureController() {
       document.removeEventListener("pointermove", onPointerMove, true);
       document.removeEventListener("pointerup", onPointerUp, true);
       document.removeEventListener("pointercancel", onPointerCancel, true);
+      document.removeEventListener("touchstart", suppressLegacyTouch, true);
+      document.removeEventListener("touchmove", suppressLegacyTouch, true);
+      document.removeEventListener("touchend", suppressLegacyTouch, true);
+      document.removeEventListener("touchcancel", suppressLegacyTouch, true);
       document.removeEventListener("click", onLanguageClick, true);
     };
   }, []);
