@@ -77,6 +77,17 @@ body {
     opacity: 0.46;
     transform: scale(1.2);
   }
+
+  header button:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+  }
+}
+
+/* Prevent iOS from leaving a sticky hover circle on the burger after a swipe-close. */
+@media (hover: none), (pointer: coarse) {
+  header button:hover {
+    background-color: transparent !important;
+  }
 }
 
 html.curtain-open,
@@ -104,10 +115,10 @@ body.curtain-open {
 [aria-label="Language selector"] { display: none !important; }
 
 /*
- * Keep the entire fixed-header backdrop as one painted surface. Adding one
- * physical pixel to the header box lets its existing blurred/translucent
- * background cover the Safari sub-pixel boundary itself, instead of painting
- * a second translucent strip that can never composite identically.
+ * Safari can expose a fractional-pixel gap between a fixed header and the page.
+ * Extend the actual backdrop element itself by one physical pixel. There is no
+ * second tint, shadow, border or padding, so the extension composites exactly
+ * like the rest of the header.
  */
 header,
 .fixed-header {
@@ -115,13 +126,16 @@ header,
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  contain: paint;
+  contain: none !important;
   isolation: isolate;
   z-index: 60;
-  padding-bottom: var(--hairline, 1px);
+  padding-bottom: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
 header > .absolute.inset-0.pointer-events-none {
+  bottom: calc(-1 * var(--hairline, 1px)) !important;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
