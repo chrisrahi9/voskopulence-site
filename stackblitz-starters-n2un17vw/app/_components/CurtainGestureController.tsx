@@ -77,8 +77,6 @@ export default function CurtainGestureController() {
       currentPanel.style.transition =
         "transform 360ms cubic-bezier(.22,1,.36,1)";
 
-      // React's existing touch-end handler can write transform after pointerup.
-      // Apply the final state on the next paint so this controller wins cleanly.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (shouldClose) {
@@ -114,16 +112,28 @@ export default function CurtainGestureController() {
     const onPointerUp = (event: PointerEvent) => finish(event, false);
     const onPointerCancel = (event: PointerEvent) => finish(event, true);
 
+    const onLanguageClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const link = target?.closest?.('a[lang="sv"], a[lang="en"]') as HTMLAnchorElement | null;
+      if (!link) return;
+      const next = link.getAttribute("lang");
+      if (next === "sv" || next === "en") {
+        window.localStorage.setItem("voskopulence-language", next);
+      }
+    };
+
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("pointermove", onPointerMove, true);
     document.addEventListener("pointerup", onPointerUp, true);
     document.addEventListener("pointercancel", onPointerCancel, true);
+    document.addEventListener("click", onLanguageClick, true);
 
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("pointermove", onPointerMove, true);
       document.removeEventListener("pointerup", onPointerUp, true);
       document.removeEventListener("pointercancel", onPointerCancel, true);
+      document.removeEventListener("click", onLanguageClick, true);
     };
   }, []);
 
