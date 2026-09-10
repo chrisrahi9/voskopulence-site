@@ -86,6 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
+        <div className="ios-browser-backing" aria-hidden="true" />
         <Suspense fallback={null}>
           <ScrollToTop />
         </Suspense>
