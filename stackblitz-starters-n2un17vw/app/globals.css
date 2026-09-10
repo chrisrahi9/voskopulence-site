@@ -146,6 +146,19 @@ header > .absolute.inset-0.pointer-events-none {
       ) !important;
   }
 
+  header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #004642;
+    opacity: var(--hdrProg, 0);
+    pointer-events: none;
+    z-index: 2;
+  }
+
   :root { --cap-alpha: 1; }
 }
 
