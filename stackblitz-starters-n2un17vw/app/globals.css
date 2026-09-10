@@ -131,32 +131,17 @@ header > .absolute.inset-0.pointer-events-none {
   -webkit-backface-visibility: hidden;
 }
 
-/* iOS: keep the top safety cap, but make the revealed header truly opaque. */
+/* iOS: a single opaque green layer whose opacity alone follows scroll progress. */
 @supports (-webkit-touch-callout: none) {
   header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    background:
-      linear-gradient(
-        to bottom,
-        #004642 0,
-        #004642 calc(5px + var(--hairline, 1px)),
-        rgba(0, 70, 66, var(--hdrProg, 0)) calc(5px + var(--hairline, 1px)),
-        rgba(0, 70, 66, var(--hdrProg, 0)) 100%
-      ) !important;
+    background: #004642 !important;
+    opacity: var(--hdrProg, 0) !important;
   }
 
   header::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 4px;
-    background: #004642;
-    opacity: var(--hdrProg, 0);
-    pointer-events: none;
-    z-index: 2;
+    content: none !important;
   }
 
   :root { --cap-alpha: 1; }
