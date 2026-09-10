@@ -131,8 +131,32 @@ header > .absolute.inset-0.pointer-events-none {
   -webkit-backface-visibility: hidden;
 }
 
-/* iOS: a single opaque green layer whose opacity alone follows scroll progress. */
+.ios-browser-backing {
+  display: none;
+}
+
+/*
+ * iOS: keep two independent surfaces. The main header fades with scroll, while
+ * the very top safe-area backing is always solid brand green so Safari never
+ * samples the moving page/video behind its rounded browser chrome.
+ */
 @supports (-webkit-touch-callout: none) {
+  .ios-browser-backing {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 6px);
+    background: #004642;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
   header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
