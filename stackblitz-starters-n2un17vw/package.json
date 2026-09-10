@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node scripts/prepare-native-4k-hero.mjs && node scripts/prepare-site-polish.mjs && node scripts/prepare-home-nav.mjs && node scripts/prepare-logo-composite.mjs && node scripts/prepare-product-cdn.mjs && node scripts/prepare-luxury-redesign.mjs && node scripts/prepare-info-email.mjs && node scripts/prepare-shop-image-frames.mjs && node scripts/prepare-reliable-forms.mjs && node scripts/prepare-waitlist-modal.mjs && node scripts/prepare-spotlight-fig.mjs && node scripts/remove-spotlight-seam.mjs && node scripts/prepare-brand-refinement.mjs && node scripts/prepare-product-copy.mjs && node scripts/prepare-hero-cta-polish.mjs && node scripts/prepare-responsive-images.mjs && node scripts/check-premium-qa.mjs && node scripts/prepare-ios-cap-solid.mjs && node scripts/prepare-swedish.mjs && next build",
+    "build": "node scripts/prepare-native-4k-hero.mjs && node scripts/prepare-site-polish.mjs && node scripts/prepare-home-nav.mjs && node scripts/prepare-logo-composite.mjs && node scripts/prepare-product-cdn.mjs && node scripts/prepare-luxury-redesign.mjs && node scripts/prepare-info-email.mjs && node scripts/prepare-shop-image-frames.mjs && node scripts/prepare-reliable-forms.mjs && node scripts/prepare-waitlist-modal.mjs && node scripts/prepare-spotlight-fig.mjs && node scripts/remove-spotlight-seam.mjs && node scripts/prepare-brand-refinement.mjs && node scripts/prepare-product-copy.mjs && node scripts/prepare-hero-cta-polish.mjs && node scripts/prepare-responsive-images.mjs && node scripts/check-premium-qa.mjs && node scripts/prepare-swedish.mjs && node scripts/prepare-ios-cap-solid.mjs && next build",
     "start": "next start"
   },
   "dependencies": {
