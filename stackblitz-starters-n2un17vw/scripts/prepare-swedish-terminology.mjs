@@ -32,11 +32,15 @@ const replacements = [
   ["balsamkaka", "balsam bar"],
   ["Balsamkaka", "Balsam bar"],
 
-  // Replace only this specific literal-sounding sentence. Other uses of
+  // Replace only these specific literal-sounding sentences. Other uses of
   // "kapitel" remain untouched because they can work naturally in context.
   [
     "Botaniska ritualer med rötter i Medelhavet – med koncentrerad hårvård i fast form som första kapitel.",
     "Medelhavsinspirerad hårvård i fast form, med noggrant utvalda botaniska ingredienser.",
+  ],
+  [
+    "En värld av medelhavsinspirerade ritualer – med hårvård i fast form som första kapitel.",
+    "Medelhavsinspirerad hårvård i fast form, där botaniska ingredienser möter genomtänkta formuleringar.",
   ],
 ];
 
