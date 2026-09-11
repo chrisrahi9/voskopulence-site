@@ -153,9 +153,25 @@ header > .absolute.inset-0.pointer-events-none {
     background: #004642;
     opacity: 1;
     pointer-events: none;
-    /* Keep the solid iPhone browser/safe-area backing above the translucent
-       curtain, so opening/closing the menu cannot tint the curved top strip. */
     z-index: 14000;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Safari's collapsing bottom toolbar can sit below the CSS visual viewport.
+     Overscan the open curtain behind it so browser chrome never reveals the
+     underlying page/image at the bottom edge. */
+  #mobile-menu::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: -180px;
+    height: calc(180px + env(safe-area-inset-bottom, 0px));
+    background: #004642;
+    pointer-events: none;
+    z-index: 12000;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
