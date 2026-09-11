@@ -9,14 +9,16 @@ const pageDefinitions = [
   { source: "sustainability/page.tsx", target: "sv/sustainability/page.tsx", english: "/sustainability", swedish: "/sv/sustainability", depth: 2 },
 ];
 
+// Canonical Swedish copy. Edit the Swedish text in this file directly; there
+// is no separate terminology pass that silently rewrites it afterwards.
 const textTranslations = [
   ["Welcome to Voskopulence", "Välkommen till Voskopulence"],
-  ["Botanical rituals shaped by the Mediterranean, beginning with concentrated solid haircare.", "Botaniska ritualer med rötter i Medelhavet – med koncentrerad hårvård i fast form som första kapitel."],
+  ["Botanical rituals shaped by the Mediterranean, beginning with concentrated solid haircare.", "Medelhavsinspirerad hårvård i fast form, med noggrant utvalda botaniska ingredienser."],
   ["Discover the collection", "Upptäck kollektionen"],
   ["Explore the collection", "Utforska kollektionen"],
   ["Spotlight", "I fokus"],
-  ["Fig & Cedar Nourishing Bar", "Närande schampokaka med fikon & cederträ"],
-  ["A creamy nourishing shampoo bar where sun-ripened fig meets dry cedarwood, created for softer-feeling hair with a warm Mediterranean character.", "En krämigt vårdande schampokaka där solmoget fikon möter torrt cederträ – skapad för att ge håret en mjukare känsla och en varm, medelhavsinspirerad karaktär."],
+  ["Fig & Cedar Nourishing Bar", "Närande schampo bar med fikon & cederträ"],
+  ["A creamy nourishing shampoo bar where sun-ripened fig meets dry cedarwood, created for softer-feeling hair with a warm Mediterranean character.", "En krämigt vårdande schampo bar där solmoget fikon möter torrt cederträ – skapad för att ge håret en mjukare känsla och en varm, medelhavsinspirerad karaktär."],
   ["COSMOS-style formulation direction • Vegan-first • Concentrated format", "COSMOS-inspirerad formulering • Vegansk inriktning • Koncentrerat format"],
   ["The botanical palette", "Den botaniska paletten"],
   ["A Mediterranean vocabulary, distilled.", "Medelhavets botaniska språk, destillerat."],
@@ -101,7 +103,7 @@ const textTranslations = [
   ["Do the formulas contain sulfates or harsh detergents?", "Innehåller formuleringarna sulfater eller starka rengörande tensider?"],
   ["The bars are formulated with gentler, modern surfactants that are compatible with COSMOS-style guidelines, rather than traditional SLS/SLES. They are designed to cleanse effectively while remaining respectful of the scalp when used as directed.", "Produkterna formuleras med mildare, moderna tensider i linje med COSMOS-principerna, i stället för traditionella SLS/SLES. De är utvecklade för att rengöra effektivt utan att vara onödigt hårda mot hårbotten vid normal användning."],
   ["A Mediterranean house · Pre-launch", "Medelhavsinspirerad hårvård · Inför lansering"],
-  ["A world of Mediterranean rituals, beginning in solid form.", "En värld av medelhavsinspirerade ritualer – med hårvård i fast form som första kapitel."],
+  ["A world of Mediterranean rituals, beginning in solid form.", "Vårt första kapitel är hårvård i fast form, inspirerad av Medelhavet."],
   ["Our first collection explores botanical solid haircare through considered formulation, a lower-waste format and a distinctly Mediterranean point of view.", "Vår första kollektion förenar botaniskt inspirerad hårvård i fast form med genomtänkta formuleringar, mindre förpackningsavfall och en tydlig känsla av Medelhavet."],
   ["Discover", "Upptäck"],
   ["Product questions, ingredients and wholesale enquiries are welcome.", "Har du frågor om produkterna, ingredienserna eller återförsäljning? Hör gärna av dig."],
@@ -115,21 +117,21 @@ const textTranslations = [
 ];
 
 const stringTranslations = [
-  ["Herbal Mint & Rosemary Shampoo Bar", "Schampokaka med mynta & rosmarin"],
+  ["Herbal Mint & Rosemary Shampoo Bar", "Schampo bar med mynta & rosmarin"],
   ["A refreshing herbal cleanse with rosemary, wild mint and nettle for a light, revitalised finish.", "En fräsch, örtig rengöring med rosmarin, vild mynta och nässla som lämnar håret lätt och uppfriskat."],
   ["Normal to oily hair · Scalps prone to excess oil or buildup", "Normalt till fett hår · Hårbotten som lätt blir fet eller får produktrester"],
   ["Gently cleanses without leaving hair feeling stripped", "Rengör skonsamt utan att håret känns strävt eller uttorkat"],
   ["Helps roots feel fresh, light and balanced", "Hjälper hårrötterna att kännas fräscha, lätta och i balans"],
   ["Rich, creamy lather with an invigorating herbal scent", "Rikt, krämigt lödder med en uppiggande örtig doft"],
   ["Coconut oil, olive oil, castor oil, shea butter, wild mint essential oil, rosemary essential oil & nettle leaf powder", "Kokosolja, olivolja, ricinolja, sheasmör, eterisk olja av vild mynta, eterisk rosmarinolja och nässelpulver"],
-  ["Fig & Cedar Nourishing Shampoo Bar", "Närande schampokaka med fikon & cederträ"],
+  ["Fig & Cedar Nourishing Shampoo Bar", "Närande schampo bar med fikon & cederträ"],
   ["A creamy, comforting cleanse with a warm fig-and-cedar character for hair that benefits from extra softness.", "En krämig, vårdande rengöring med varm doftkaraktär av fikon och cederträ, för hår som mår bra av extra mjukhet."],
   ["Normal to dry hair · Frizz-prone lengths or dry-feeling ends", "Normalt till torrt hår · Längder som lätt blir frissiga eller toppar som känns torra"],
   ["Gently cleanses while helping preserve a soft, conditioned feel", "Rengör skonsamt och hjälper håret att behålla en mjuk, vårdad känsla"],
   ["Helps smooth frizz and improve manageability", "Hjälper till att dämpa friss och gör håret lättare att hantera"],
   ["Leaves hair supple with a warm, woody-fruity scent", "Lämnar håret mjukt och följsamt med en varm, träig och fruktig doft"],
   ["Fig extract, cedarwood, lavender, coconut oil, olive oil, castor oil & shea butter", "Fikonextrakt, cederträ, lavendel, kokosolja, olivolja, ricinolja och sheasmör"],
-  ["Lemon Sea Breeze Conditioner Bar", "Balsamkaka med citron & havsbris"],
+  ["Lemon Sea Breeze Conditioner Bar", "Balsam bar med citron & havsbris"],
   ["A lightweight solid conditioner with bright citrus and coastal freshness, created to soften and detangle after washing.", "Ett lätt balsam i fast form med frisk citrus och en känsla av havsbris, utvecklat för att mjukgöra och reda ut håret efter tvätt."],
   ["All hair types · Especially hair that tangles easily or needs lightweight softness", "Alla hårtyper · Särskilt för hår som lätt trasslar sig eller behöver mjukhet utan tyngd"],
   ["Helps detangle and improve combability", "Hjälper till att reda ut håret och gör det enklare att kamma igenom"],
@@ -233,7 +235,6 @@ for (const page of pageDefinitions) {
   let swedishSource = localiseRoutes(englishSource);
   swedishSource = translate(swedishSource);
   swedishSource = fixComponentImports(swedishSource, page.depth);
-  // Keep each language name linked to the matching page and mark Swedish as current.
   swedishSource = swedishSource
     .replaceAll(`href="/sv${page.english === "/" ? "" : page.english}" lang="en"`, `href="${page.english}" lang="en"`)
     .replaceAll(`href="${page.swedish}" lang="sv" className="hover:text-white text-white/70">Svenska</a>`, `href="${page.swedish}" lang="sv" className="hover:text-white text-white" aria-current="page">Svenska</a>`)
@@ -264,14 +265,14 @@ const metadataLayouts = {
 
 export const metadata: Metadata = {
   title: { default: "Voskopulence — Medelhavsinspirerad hårvård i fast form", template: "%s | Voskopulence" },
-  description: "Medelhavsinspirerade schampo- och balsamkakor med ingredienser av naturligt ursprung, genomtänkta formuleringar och ett koncentrerat format.",
+  description: "Medelhavsinspirerade schampo bars och balsam bars med ingredienser av naturligt ursprung, genomtänkta formuleringar och ett koncentrerat format.",
   alternates: { canonical: "/sv", languages: { "en": "/", "sv-SE": "/sv" } },
 };
 
 export default function SwedishLayout({ children }: { children: React.ReactNode }) { return children; }
 `,
   "sv/shop/layout.tsx": `import type { Metadata } from "next";
-export const metadata: Metadata = { title: "Kollektionen", description: "Upptäck Voskopulences första schampo- och balsamkakor, inspirerade av Medelhavets botaniska ingredienser.", alternates: { canonical: "/sv/shop", languages: { "en": "/shop", "sv-SE": "/sv/shop" } } };
+export const metadata: Metadata = { title: "Kollektionen", description: "Upptäck Voskopulences första schampo bars och balsam bars, inspirerade av Medelhavets botaniska ingredienser.", alternates: { canonical: "/sv/shop", languages: { "en": "/shop", "sv-SE": "/sv/shop" } } };
 export default function Layout({ children }: { children: React.ReactNode }) { return children; }
 `,
   "sv/contact/layout.tsx": `import type { Metadata } from "next";
