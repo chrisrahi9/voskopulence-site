@@ -32,9 +32,13 @@ export default function CurtainGestureController() {
       // intercepting the next finger gesture immediately.
       if (root) root.style.pointerEvents = "none";
 
+      // Mark this release so the later React cleanup clears only residual
+      // styles and never performs a second scrollTo(0, 0).
+      const body = document.body;
+      body.dataset.curtainGestureReleased = "true";
+
       // Mirror the page's iOS/non-iOS scroll unlock now instead of waiting for
       // React state to update at the end of the curtain animation.
-      const body = document.body;
       if (body.style.position === "fixed") {
         const y = Math.abs(parseInt(body.style.top || "0", 10)) || 0;
         body.style.position = "";
