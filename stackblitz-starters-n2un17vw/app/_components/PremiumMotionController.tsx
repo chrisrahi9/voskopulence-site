@@ -21,7 +21,9 @@ export default function PremiumMotionController() {
   }, [pathname]);
 
   useEffect(() => {
-    if (pathname !== "/") return;
+    // English and Swedish home pages share the same premium motion/header
+    // behavior. Other pages still use their local page-level header writer.
+    if (pathname !== "/" && pathname !== "/sv") return;
 
     const reduceMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)"
