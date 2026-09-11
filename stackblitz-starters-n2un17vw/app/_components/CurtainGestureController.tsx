@@ -27,6 +27,26 @@ export default function CurtainGestureController() {
       velocity = 0;
     };
 
+    const releasePageInteraction = (root: HTMLElement | null) => {
+      // The curtain can keep finishing its visual exit, but it must stop
+      // intercepting the next finger gesture immediately.
+      if (root) root.style.pointerEvents = "none";
+
+      // Mirror the page's iOS/non-iOS scroll unlock now instead of waiting for
+      // React state to update at the end of the curtain animation.
+      const body = document.body;
+      if (body.style.position === "fixed") {
+        const y = Math.abs(parseInt(body.style.top || "0", 10)) || 0;
+        body.style.position = "";
+        body.style.top = "";
+        body.style.left = "";
+        body.style.right = "";
+        body.style.width = "";
+        window.scrollTo(0, y);
+      }
+      body.style.overflow = "";
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== "touch") return;
       const target = event.target as Element | null;
@@ -43,7 +63,10 @@ export default function CurtainGestureController() {
       lastTime = performance.now();
       velocity = 0;
 
-      if (menuRoot) delete menuRoot.dataset.gestureClosing;
+      if (menuRoot) {
+        delete menuRoot.dataset.gestureClosing;
+        menuRoot.style.pointerEvents = "";
+      }
 
       panel.style.transition = "none";
       panel.style.willChange = "transform";
@@ -95,6 +118,10 @@ export default function CurtainGestureController() {
       if (shouldClose) {
         const direction = dx === 0 ? 1 : Math.sign(dx);
         if (currentMenuRoot) currentMenuRoot.dataset.gestureClosing = "true";
+
+        // Give interaction back to the document immediately. The curtain can
+        // continue its 320ms visual exit without creating a dead touch window.
+        releasePageInteraction(currentMenuRoot);
 
         currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
         if (currentBackdrop) {
