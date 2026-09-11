@@ -21,7 +21,7 @@ const textTranslations = [
   ["A creamy nourishing shampoo bar where sun-ripened fig meets dry cedarwood, created for softer-feeling hair with a warm Mediterranean character.", "En krämigt vårdande schampo bar där solmoget fikon möter torrt cederträ – skapad för att ge håret en mjukare känsla och en varm, medelhavsinspirerad karaktär."],
   ["COSMOS-style formulation direction • Vegan-first • Concentrated format", "COSMOS-inspirerad formulering • Vegansk inriktning • Koncentrerat format"],
   ["The botanical palette", "Den botaniska paletten"],
-  ["A Mediterranean vocabulary, distilled.", "Medelhavets botaniska språk, destillerat."],
+  ["A Mediterranean vocabulary, distilled.", "Medelhavets botaniska essens, koncentrerad."],
   ["Herbal · aromatic", "Örtig · aromatisk"],
   ["Soft · sun-ripened", "Mjuk · solmogen"],
   ["Dry · grounding", "Torr · jordnära"],
