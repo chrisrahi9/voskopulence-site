@@ -15,52 +15,23 @@ function replaceAllExisting(source, from, to) {
 }
 
 function hardenScrollUnlock(source, file) {
-  const oldUnlock = `function unlockScroll() {
-  if (isIOSDevice()) {
-    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
-
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-
-    window.scrollTo(0, y);
-
+  const markerGuard = `function unlockScroll() {
+  // The gesture controller may already have restored the exact scroll position
+  // so the closing animation can remain responsive. In that case this later
+  // React cleanup must only clear residual lock styles, never scroll again.
+  if (document.body.dataset.curtainGestureReleased === "true") {
+    delete document.body.dataset.curtainGestureReleased;
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.height = "";
+    document.body.style.overflow = "";
     return;
-  }
+  }`;
 
-  document.body.style.overflow = "";
-}`;
-
-  const newUnlock = `function unlockScroll() {
-  if (isIOSDevice()) {
-    // If the gesture controller already released the body, do nothing. This
-    // prevents the later React cleanup from reading an empty top value as 0
-    // and jumping the user back to the top of the page.
-    if (document.body.style.position !== "fixed") return;
-
-    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
-
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-
-    window.scrollTo(0, y);
-
-    return;
-  }
-
-  document.body.style.overflow = "";
-}`;
-
-  if (source.includes(newUnlock)) return source;
-  if (!source.includes(oldUnlock)) {
+  if (source.includes(markerGuard)) return source;
+  if (!source.includes("function unlockScroll() {")) {
     throw new Error(`${file}: scroll unlock function not found`);
   }
-  return source.replace(oldUnlock, newUnlock);
+  return source.replace("function unlockScroll() {", markerGuard);
 }
 
 function addSmoothMenuLifecycle(source, file) {
