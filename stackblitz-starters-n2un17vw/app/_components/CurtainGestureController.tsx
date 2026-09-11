@@ -5,7 +5,6 @@ import { useEffect } from "react";
 const CLOSE_DISTANCE = 72;
 const CLOSE_RATIO = 0.18;
 const CLOSE_VELOCITY = 0.45;
-const EXIT_MS = 280;
 
 export default function CurtainGestureController() {
   useEffect(() => {
@@ -28,84 +27,14 @@ export default function CurtainGestureController() {
       velocity = 0;
     };
 
-    const releasePageInteraction = (root: HTMLElement | null) => {
-      if (root) root.style.pointerEvents = "none";
-
-      const docEl = document.documentElement;
-      const body = document.body;
-      body.dataset.curtainGestureReleased = "true";
-
-      const lockedY =
-        body.style.position === "fixed"
-          ? Math.abs(parseInt(body.style.top || "0", 10)) || window.scrollY
-          : window.scrollY;
-
-      docEl.style.overflow = "";
-      docEl.style.height = "";
-      body.style.overflow = "";
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      window.scrollTo(0, lockedY);
-    };
-
-    const stripIds = (root: Element) => {
-      root.removeAttribute("id");
-      root.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-    };
-
-    const makeExitGhost = (
-      currentPanel: HTMLElement,
-      currentBackdrop: HTMLElement | null,
-      direction: number
-    ) => {
-      // Clone only the moving panel, not the whole React menu tree. Cloning the
-      // entire curtain at pointer-up was expensive enough to hitch iOS Safari.
-      const ghostRoot = document.createElement("div");
-      Object.assign(ghostRoot.style, {
-        position: "fixed",
-        inset: "0",
-        zIndex: "13000",
-        pointerEvents: "none",
-        overflow: "hidden",
-        contain: "strict",
-      });
-      ghostRoot.setAttribute("aria-hidden", "true");
-
-      const ghostBackdrop = document.createElement("div");
-      Object.assign(ghostBackdrop.style, {
-        position: "absolute",
-        inset: "0",
-        background: "rgba(0,70,66,0.70)",
-        opacity: currentBackdrop?.style.opacity || "1",
-        transition: "none",
-      });
-
-      const ghostPanel = currentPanel.cloneNode(true) as HTMLElement;
-      stripIds(ghostPanel);
-      ghostPanel.style.pointerEvents = "none";
-      ghostPanel.style.transform =
-        currentPanel.style.transform || "translate3d(0,0,0)";
-      ghostPanel.style.transition = "none";
-      ghostPanel.style.willChange = "transform";
-      ghostPanel.style.backfaceVisibility = "hidden";
-      ghostPanel.style.setProperty("-webkit-backface-visibility", "hidden");
-
-      ghostRoot.appendChild(ghostBackdrop);
-      ghostRoot.appendChild(ghostPanel);
-      document.body.appendChild(ghostRoot);
-
-      requestAnimationFrame(() => {
-        ghostPanel.style.transition =
-          `transform ${EXIT_MS}ms cubic-bezier(.22,1,.36,1)`;
-        ghostBackdrop.style.transition = "opacity 210ms ease";
-        ghostPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
-        ghostBackdrop.style.opacity = "0";
-      });
-
-      window.setTimeout(() => ghostRoot.remove(), EXIT_MS + 60);
+    const releaseScrollOnly = () => {
+      // All pages now use overflow/touch-action locking only. Releasing these
+      // styles does not reposition the document, so the live curtain can keep
+      // animating smoothly while the next page gesture becomes available.
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.height = "";
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -124,10 +53,7 @@ export default function CurtainGestureController() {
       lastTime = performance.now();
       velocity = 0;
 
-      if (menuRoot) {
-        delete menuRoot.dataset.gestureClosing;
-        menuRoot.style.pointerEvents = "";
-      }
+      if (menuRoot) delete menuRoot.dataset.gestureClosing;
 
       panel.style.transition = "none";
       panel.style.willChange = "transform";
@@ -170,37 +96,44 @@ export default function CurtainGestureController() {
         !cancelled &&
         (Math.abs(dx) >= threshold || Math.abs(velocity) >= CLOSE_VELOCITY);
 
+      currentPanel.style.transition =
+        "transform 320ms cubic-bezier(.22,1,.36,1)";
+
       if (shouldClose) {
         const direction = dx === 0 ? 1 : Math.sign(dx);
-
         if (currentMenuRoot) currentMenuRoot.dataset.gestureClosing = "true";
 
-        // The lightweight ghost is created before unlocking so it begins from
-        // exactly the finger-release frame, then the live menu is removed.
-        makeExitGhost(currentPanel, currentBackdrop, direction);
-        releasePageInteraction(currentMenuRoot);
+        // Make the page immediately scrollable without touching its position.
+        // The known-smooth live curtain animation continues independently.
+        releaseScrollOnly();
 
-        // The backdrop button is already the route's canonical close action,
-        // so this is language-independent and cannot fail on Swedish labels.
-        (currentBackdrop as HTMLButtonElement | null)?.click();
-      } else {
-        currentPanel.style.transition =
-          "transform 280ms cubic-bezier(.22,1,.36,1)";
-        currentPanel.style.transform = "translate3d(0,0,0)";
-
+        currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
         if (currentBackdrop) {
-          currentBackdrop.style.transition = "opacity 210ms ease";
+          currentBackdrop.style.transition = "opacity 240ms ease";
+          currentBackdrop.style.opacity = "0";
+        }
+
+        window.setTimeout(() => {
+          const closeButton = currentPanel.querySelector(
+            'button[aria-label="Close menu"], button[aria-label="Stäng meny"]'
+          ) as HTMLButtonElement | null;
+          closeButton?.click();
+        }, 300);
+      } else {
+        currentPanel.style.transform = "translate3d(0,0,0)";
+        if (currentBackdrop) {
+          currentBackdrop.style.transition = "opacity 240ms ease";
           currentBackdrop.style.opacity = "1";
           window.setTimeout(() => {
             currentBackdrop.style.removeProperty("-webkit-backdrop-filter");
             currentBackdrop.style.removeProperty("backdrop-filter");
-          }, 300);
+          }, 340);
         }
       }
 
       window.setTimeout(() => {
         currentPanel.style.willChange = "auto";
-      }, 320);
+      }, 360);
       reset();
     };
 
