@@ -42,30 +42,25 @@ for (const relative of targets) {
 
   let source = fs.readFileSync(file, "utf8");
 
-  // Add useLayoutEffect to the existing named React import without disturbing
-  // type-only React imports used for React.TouchEvent etc.
-  if (!source.includes("useLayoutEffect")) {
+  if (!/\buseLayoutEffect\b/.test(source.match(/^import[^\n]+from ["']react["'];/m)?.[0] || "")) {
     source = source.replace(
-      /import \{([^}]*\buseEffect\b[^}]*)\} from "react";/,
-      (_m, names) => {
+      /import\s+(React\s*,\s*)?\{([^}]*)\}\s+from\s+["']react["'];/,
+      (_m, reactPrefix = "", names) => {
         const list = names.split(",").map((v) => v.trim()).filter(Boolean);
         if (!list.includes("useLayoutEffect")) {
           const i = list.indexOf("useEffect");
-          list.splice(i + 1, 0, "useLayoutEffect");
+          list.splice(i >= 0 ? i + 1 : list.length, 0, "useLayoutEffect");
         }
-        return `import { ${list.join(", ")} } from "react";`;
+        return `import ${reactPrefix}{ ${list.join(", ")} } from "react";`;
       }
     );
   }
 
-  // The portal must exist before the first painted frame of a client-side route.
   source = source.replace(
     /useEffect\(\(\) => setHdrReady\(true\), \[\]\);/g,
     "useLayoutEffect(() => setHdrReady(true), []);"
   );
 
-  // Likewise, resolve the iOS cap before paint so the header never renders at
-  // capPx=0 and then jumps down by 5px one frame later.
   for (const block of capBlocks) {
     if (source.includes(block)) {
       source = source.replace(block, block.replace("useEffect(() => {", "useLayoutEffect(() => {"));
