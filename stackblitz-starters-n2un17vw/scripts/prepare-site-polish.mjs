@@ -70,7 +70,7 @@ function addSmoothMenuLifecycle(source, file) {
   source = replaceAllExisting(source, "setMenuOpen(true)", "openMenu()");
   source = replaceAllExisting(source, "setMenuOpen(false)", "closeMenu()");
 
-  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    const gestureClosing =\n      document.getElementById(\"mobile-menu\")?.dataset.gestureClosing === \"true\";\n\n    setMenuOpen(false);\n\n    // A completed swipe has already animated the curtain off-screen. Unmount\n    // it immediately instead of running the normal opposite-direction close.\n    if (gestureClosing) {\n      setMenuRendered(false);\n      return;\n    }\n\n    window.setTimeout(() => setMenuRendered(false), 470);\n  };`;
+  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    // iOS Safari clips fixed overlays to the visual viewport. Anchor the menu\n    // to the document at the current scroll position so its backdrop can paint\n    // beneath the translucent bottom browser controls.\n    document.documentElement.style.setProperty(\n      \"--curtain-scroll-y\",\n      \`${"${window.scrollY}px"}\`\n    );\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    const gestureClosing =\n      document.getElementById(\"mobile-menu\")?.dataset.gestureClosing === \"true\";\n\n    setMenuOpen(false);\n\n    const finishUnmount = () => {\n      setMenuRendered(false);\n      document.documentElement.style.removeProperty(\"--curtain-scroll-y\");\n    };\n\n    // A completed swipe has already animated the curtain off-screen. Unmount\n    // it immediately instead of running the normal opposite-direction close.\n    if (gestureClosing) {\n      finishUnmount();\n      return;\n    }\n\n    window.setTimeout(finishUnmount, 470);\n  };`;
   source = source.replace(stateLine, lifecycle);
 
   const portalPattern = /(mounted\s*&&\s*\n\s*typeof document !== "undefined"\s*&&\s*\n\s*)menuOpen(\s*&&\s*\n\s*createPortal)/;
@@ -192,6 +192,7 @@ for (const file of pageFiles) {
 console.log("SITE_POLISH_PREPARED", {
   pages: pageFiles,
   smoothMenuLifecycle: true,
+  documentAnchoredIOSCurtain: true,
   unifiedOverflowScrollLock: true,
   singleHomepageHeaderWriter: true,
   uniformHeaderBlur: true,
