@@ -159,9 +159,6 @@ header > .absolute.inset-0.pointer-events-none {
     -webkit-backface-visibility: hidden;
   }
 
-  /* Use Safari's large viewport for the real curtain itself. The browser's
-     bottom toolbar overlaps the visual viewport, so fixed inset:0 can end too
-     early. 100lvh keeps the actual backdrop/panel continuing behind chrome. */
   #mobile-menu {
     top: 0 !important;
     right: 0 !important;
@@ -182,6 +179,24 @@ header > .absolute.inset-0.pointer-events-none {
   #curtain-panel {
     height: 100% !important;
     min-height: 100% !important;
+  }
+
+  /* Safari's lower controls are translucent and sample the page underneath.
+     The curtain panel is intentionally translucent, so give the bottom chrome
+     its own solid in-menu backing rather than letting it sample hero/content. */
+  #mobile-menu::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(96px + env(safe-area-inset-bottom, 0px));
+    background: #004642;
+    pointer-events: none;
+    z-index: 12002;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 
   header > .absolute.inset-0.pointer-events-none {
