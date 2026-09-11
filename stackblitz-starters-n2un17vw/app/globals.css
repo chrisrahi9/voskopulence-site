@@ -159,13 +159,18 @@ header > .absolute.inset-0.pointer-events-none {
     -webkit-backface-visibility: hidden;
   }
 
+  /* Fixed layers are clipped to Safari's visual viewport. The menu is instead
+     anchored to the document at the current scroll position and deliberately
+     extends below the viewport, so Safari's translucent lower chrome samples
+     the curtain rather than the page beneath it. */
   #mobile-menu {
-    top: 0 !important;
+    position: absolute !important;
+    top: var(--curtain-scroll-y, 0px) !important;
     right: 0 !important;
     bottom: auto !important;
     left: 0 !important;
-    height: calc(100lvh + env(safe-area-inset-bottom, 0px)) !important;
-    min-height: calc(100lvh + env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(100dvh + 180px) !important;
+    min-height: calc(100dvh + 180px) !important;
     overflow: hidden;
   }
 
@@ -176,9 +181,13 @@ header > .absolute.inset-0.pointer-events-none {
     height: 100% !important;
   }
 
+  /* Keep the visible menu layout unchanged; only the translucent backdrop
+     overscans beneath Safari's controls. */
   #curtain-panel {
-    height: 100% !important;
-    min-height: 100% !important;
+    top: 0 !important;
+    bottom: auto !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
   }
 
   header > .absolute.inset-0.pointer-events-none {
