@@ -14,6 +14,53 @@ function replaceAllExisting(source, from, to) {
   return source.split(from).join(to);
 }
 
+function normalizeScrollLock(source, file) {
+  const start = source.indexOf("function lockScroll() {");
+  const unlockStart = source.indexOf("function unlockScroll() {", start);
+  if (start === -1 || unlockStart === -1) {
+    throw new Error(`${file}: scroll lock functions not found`);
+  }
+
+  const nextBoundaryCandidates = [
+    source.indexOf("\n\nexport default", unlockStart),
+    source.indexOf("\n\ntype ", unlockStart),
+    source.indexOf("\n\nconst ", unlockStart),
+  ].filter((value) => value !== -1);
+
+  if (!nextBoundaryCandidates.length) {
+    throw new Error(`${file}: scroll lock boundary not found`);
+  }
+
+  const end = Math.min(...nextBoundaryCandidates);
+  const unified = `function lockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+
+  // Keep the document at its natural scroll position. Fixing the body and
+  // restoring with scrollTo caused the iOS curtain-close hitch/jump.
+  docEl.style.overflow = "hidden";
+  body.style.overflow = "hidden";
+  body.style.touchAction = "none";
+}
+
+function unlockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+
+  docEl.style.overflow = "";
+  docEl.style.height = "";
+  body.style.overflow = "";
+  body.style.touchAction = "";
+  body.style.position = "";
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+  body.style.width = "";
+}`;
+
+  return source.slice(0, start) + unified + source.slice(end);
+}
+
 function addSmoothMenuLifecycle(source, file) {
   const stateLine = "const [menuOpen, setMenuOpen] = useState(false);";
   if (!source.includes(stateLine)) {
@@ -23,7 +70,7 @@ function addSmoothMenuLifecycle(source, file) {
   source = replaceAllExisting(source, "setMenuOpen(true)", "openMenu()");
   source = replaceAllExisting(source, "setMenuOpen(false)", "closeMenu()");
 
-  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    setMenuOpen(false);\n    window.setTimeout(() => setMenuRendered(false), 470);\n  };`;
+  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    // iOS Safari clips fixed overlays to the visual viewport. Anchor the menu\n    // to the document at the current scroll position so its backdrop can paint\n    // beneath the translucent bottom browser controls.\n    document.documentElement.style.setProperty(\n      \"--curtain-scroll-y\",\n      \`${"${window.scrollY}px"}\`\n    );\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    const gestureClosing =\n      document.getElementById(\"mobile-menu\")?.dataset.gestureClosing === \"true\";\n\n    setMenuOpen(false);\n\n    const finishUnmount = () => {\n      setMenuRendered(false);\n      document.documentElement.style.removeProperty(\"--curtain-scroll-y\");\n    };\n\n    // A completed swipe has already animated the curtain off-screen. Unmount\n    // it immediately instead of running the normal opposite-direction close.\n    if (gestureClosing) {\n      finishUnmount();\n      return;\n    }\n\n    window.setTimeout(finishUnmount, 470);\n  };`;
   source = source.replace(stateLine, lifecycle);
 
   const portalPattern = /(mounted\s*&&\s*\n\s*typeof document !== "undefined"\s*&&\s*\n\s*)menuOpen(\s*&&\s*\n\s*createPortal)/;
@@ -96,6 +143,7 @@ function alignDesktopNav(source, file) {
 for (const file of pageFiles) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
+  source = normalizeScrollLock(source, file);
   source = addSmoothMenuLifecycle(source, file);
   source = protectHeaderSpacing(source);
   source = alignMobileBurger(source, file);
@@ -144,6 +192,8 @@ for (const file of pageFiles) {
 console.log("SITE_POLISH_PREPARED", {
   pages: pageFiles,
   smoothMenuLifecycle: true,
+  documentAnchoredIOSCurtain: true,
+  unifiedOverflowScrollLock: true,
   singleHomepageHeaderWriter: true,
   uniformHeaderBlur: true,
   desktopNavBreakpoint: "xl",
