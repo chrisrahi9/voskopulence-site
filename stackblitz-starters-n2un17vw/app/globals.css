@@ -181,24 +181,6 @@ header > .absolute.inset-0.pointer-events-none {
     min-height: 100% !important;
   }
 
-  /* Safari's lower controls are translucent and sample the page underneath.
-     The curtain panel is intentionally translucent, so give the bottom chrome
-     its own solid in-menu backing rather than letting it sample hero/content. */
-  #mobile-menu::after {
-    content: "";
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(96px + env(safe-area-inset-bottom, 0px));
-    background: #004642;
-    pointer-events: none;
-    z-index: 12002;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-
   header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
