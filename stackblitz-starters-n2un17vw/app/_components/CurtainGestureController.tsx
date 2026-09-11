@@ -5,7 +5,7 @@ import { useEffect } from "react";
 const CLOSE_DISTANCE = 72;
 const CLOSE_RATIO = 0.18;
 const CLOSE_VELOCITY = 0.45;
-const EXIT_MS = 300;
+const EXIT_MS = 280;
 
 export default function CurtainGestureController() {
   useEffect(() => {
@@ -40,8 +40,6 @@ export default function CurtainGestureController() {
           ? Math.abs(parseInt(body.style.top || "0", 10)) || window.scrollY
           : window.scrollY;
 
-      // Every route now gets the same immediate release. Some pages lock only
-      // body; others lock both html and body.
       docEl.style.overflow = "";
       docEl.style.height = "";
       body.style.overflow = "";
@@ -50,9 +48,6 @@ export default function CurtainGestureController() {
       body.style.left = "";
       body.style.right = "";
       body.style.width = "";
-
-      // Restore the exact locked position once. The later React cleanup sees
-      // the marker above and must not issue another scrollTo.
       window.scrollTo(0, lockedY);
     };
 
@@ -62,54 +57,55 @@ export default function CurtainGestureController() {
     };
 
     const makeExitGhost = (
-      currentRoot: HTMLElement,
       currentPanel: HTMLElement,
       currentBackdrop: HTMLElement | null,
       direction: number
     ) => {
-      const ghost = currentRoot.cloneNode(true) as HTMLElement;
-      stripIds(ghost);
+      // Clone only the moving panel, not the whole React menu tree. Cloning the
+      // entire curtain at pointer-up was expensive enough to hitch iOS Safari.
+      const ghostRoot = document.createElement("div");
+      Object.assign(ghostRoot.style, {
+        position: "fixed",
+        inset: "0",
+        zIndex: "13000",
+        pointerEvents: "none",
+        overflow: "hidden",
+        contain: "strict",
+      });
+      ghostRoot.setAttribute("aria-hidden", "true");
 
-      ghost.setAttribute("aria-hidden", "true");
-      ghost.style.pointerEvents = "none";
-      ghost.style.zIndex = "13000";
-      ghost.style.contain = "paint";
-
-      const ghostPanel = ghost.querySelector("div.z-\\[12001\\]") as HTMLElement | null;
-      const ghostBackdrop = ghost.querySelector(":scope > button") as HTMLElement | null;
-
-      if (!ghostPanel) return null;
-
-      // Start exactly where the user's finger released the real panel.
-      const currentTransform = currentPanel.style.transform || "translate3d(0,0,0)";
-      ghostPanel.style.transform = currentTransform;
-      ghostPanel.style.transition = "none";
-      ghostPanel.style.willChange = "transform";
-
-      if (ghostBackdrop) {
-        ghostBackdrop.style.opacity = currentBackdrop?.style.opacity || "1";
-        ghostBackdrop.style.transition = "none";
-        ghostBackdrop.style.setProperty("-webkit-backdrop-filter", "none");
-        ghostBackdrop.style.setProperty("backdrop-filter", "none");
-      }
-
-      document.body.appendChild(ghost);
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          ghostPanel.style.transition =
-            `transform ${EXIT_MS}ms cubic-bezier(.22,1,.36,1)`;
-          ghostPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
-
-          if (ghostBackdrop) {
-            ghostBackdrop.style.transition = "opacity 220ms ease";
-            ghostBackdrop.style.opacity = "0";
-          }
-        });
+      const ghostBackdrop = document.createElement("div");
+      Object.assign(ghostBackdrop.style, {
+        position: "absolute",
+        inset: "0",
+        background: "rgba(0,70,66,0.70)",
+        opacity: currentBackdrop?.style.opacity || "1",
+        transition: "none",
       });
 
-      window.setTimeout(() => ghost.remove(), EXIT_MS + 80);
-      return ghost;
+      const ghostPanel = currentPanel.cloneNode(true) as HTMLElement;
+      stripIds(ghostPanel);
+      ghostPanel.style.pointerEvents = "none";
+      ghostPanel.style.transform =
+        currentPanel.style.transform || "translate3d(0,0,0)";
+      ghostPanel.style.transition = "none";
+      ghostPanel.style.willChange = "transform";
+      ghostPanel.style.backfaceVisibility = "hidden";
+      ghostPanel.style.setProperty("-webkit-backface-visibility", "hidden");
+
+      ghostRoot.appendChild(ghostBackdrop);
+      ghostRoot.appendChild(ghostPanel);
+      document.body.appendChild(ghostRoot);
+
+      requestAnimationFrame(() => {
+        ghostPanel.style.transition =
+          `transform ${EXIT_MS}ms cubic-bezier(.22,1,.36,1)`;
+        ghostBackdrop.style.transition = "opacity 210ms ease";
+        ghostPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
+        ghostBackdrop.style.opacity = "0";
+      });
+
+      window.setTimeout(() => ghostRoot.remove(), EXIT_MS + 60);
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -177,38 +173,34 @@ export default function CurtainGestureController() {
       if (shouldClose) {
         const direction = dx === 0 ? 1 : Math.sign(dx);
 
-        if (currentMenuRoot) {
-          currentMenuRoot.dataset.gestureClosing = "true";
-          makeExitGhost(currentMenuRoot, currentPanel, currentBackdrop, direction);
-        }
+        if (currentMenuRoot) currentMenuRoot.dataset.gestureClosing = "true";
 
-        // Release every route immediately, then remove the live menu right
-        // away. The inert ghost above finishes the visual close independently,
-        // so scrolling cannot fight the curtain compositor anymore.
+        // The lightweight ghost is created before unlocking so it begins from
+        // exactly the finger-release frame, then the live menu is removed.
+        makeExitGhost(currentPanel, currentBackdrop, direction);
         releasePageInteraction(currentMenuRoot);
 
-        const closeButton = currentPanel.querySelector(
-          'button[aria-label="Close menu"], button[aria-label="Stäng meny"]'
-        ) as HTMLButtonElement | null;
-        closeButton?.click();
+        // The backdrop button is already the route's canonical close action,
+        // so this is language-independent and cannot fail on Swedish labels.
+        (currentBackdrop as HTMLButtonElement | null)?.click();
       } else {
         currentPanel.style.transition =
-          "transform 300ms cubic-bezier(.22,1,.36,1)";
+          "transform 280ms cubic-bezier(.22,1,.36,1)";
         currentPanel.style.transform = "translate3d(0,0,0)";
 
         if (currentBackdrop) {
-          currentBackdrop.style.transition = "opacity 220ms ease";
+          currentBackdrop.style.transition = "opacity 210ms ease";
           currentBackdrop.style.opacity = "1";
           window.setTimeout(() => {
             currentBackdrop.style.removeProperty("-webkit-backdrop-filter");
             currentBackdrop.style.removeProperty("backdrop-filter");
-          }, 320);
+          }, 300);
         }
       }
 
       window.setTimeout(() => {
         currentPanel.style.willChange = "auto";
-      }, 340);
+      }, 320);
       reset();
     };
 
