@@ -28,6 +28,9 @@ export default function PremiumMotionController() {
     const reduceMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)"
     )?.matches;
+    const desktopFinePointer = window.matchMedia?.(
+      "(hover: hover) and (pointer: fine)"
+    )?.matches;
 
     let disposed = false;
     let scrollRaf: number | null = null;
@@ -149,10 +152,15 @@ export default function PremiumMotionController() {
         revealed.add(entry.target);
         revealObserver?.unobserve(entry.target);
         (entry.target as HTMLElement).animate(
-          [
-            { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
-            { opacity: 1, transform: "translate3d(0, 0, 0)" },
-          ],
+          desktopFinePointer
+            ? [
+                { opacity: 0.94 },
+                { opacity: 1 },
+              ]
+            : [
+                { opacity: 0.94, transform: "translate3d(0, 12px, 0)" },
+                { opacity: 1, transform: "translate3d(0, 0, 0)" },
+              ],
           { duration: 620, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "none" }
         );
       }
