@@ -40,7 +40,7 @@ const replacements = [
   ],
   [
     "En värld av medelhavsinspirerade ritualer – med hårvård i fast form som första kapitel.",
-    "Medelhavsinspirerad hårvård i fast form, där botaniska ingredienser möter genomtänkta formuleringar.",
+    "Vårt första kapitel är hårvård i fast form, inspirerad av Medelhavet.",
   ],
 ];
 
