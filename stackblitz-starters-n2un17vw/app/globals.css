@@ -81,6 +81,15 @@ body {
   header button:hover {
     background-color: rgba(255, 255, 255, 0.10);
   }
+
+  /* Keep desktop visually identical to the mobile header treatment: one
+     blur-free green layer that tops out at 92% opacity. */
+  header > .absolute.inset-0.pointer-events-none {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: #004642 !important;
+    opacity: calc(var(--hdrProg, 0) * 0.92) !important;
+  }
 }
 
 @media (hover: none), (pointer: coarse) {
