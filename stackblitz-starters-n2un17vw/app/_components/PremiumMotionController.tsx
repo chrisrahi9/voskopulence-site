@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
 const HEADER_DISTANCE = 120;
@@ -11,6 +11,14 @@ const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
 export default function PremiumMotionController() {
   const pathname = usePathname();
+
+  // Prevent one-frame header/seam flashes during client-side navigation. The
+  // root CSS variable is global and otherwise can briefly retain the previous
+  // page's value until the incoming page's scroll effect runs.
+  useLayoutEffect(() => {
+    const progress = clamp01(window.scrollY / HEADER_DISTANCE);
+    document.documentElement.style.setProperty("--hdrProg", progress.toFixed(4));
+  }, [pathname]);
 
   useEffect(() => {
     if (pathname !== "/") return;
@@ -97,8 +105,6 @@ export default function PremiumMotionController() {
     };
 
     const onScroll = () => {
-      // iOS locks the page by making body fixed while the curtain is open.
-      // Ignore those synthetic scroll changes; they are not user scrolling.
       if (document.body.style.position === "fixed") return;
       headerTarget = clamp01(window.scrollY / HEADER_DISTANCE);
       if (headerRaf === null) {
