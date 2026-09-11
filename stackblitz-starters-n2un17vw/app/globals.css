@@ -82,8 +82,6 @@ body {
     background-color: rgba(255, 255, 255, 0.10);
   }
 
-  /* Keep desktop visually identical to the mobile header treatment: one
-     blur-free green layer that tops out at 92% opacity. */
   header > .absolute.inset-0.pointer-events-none {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -144,11 +142,6 @@ header > .absolute.inset-0.pointer-events-none {
   display: none;
 }
 
-/*
- * iOS: the top safe-area backing stays fully solid, while the main header is
- * a single blur-free layer that fades up to 92% opacity. This keeps the top
- * chrome stable without making the logo/burger strip feel visually too heavy.
- */
 @supports (-webkit-touch-callout: none) {
   .ios-browser-backing {
     display: block;
@@ -160,7 +153,9 @@ header > .absolute.inset-0.pointer-events-none {
     background: #004642;
     opacity: 1;
     pointer-events: none;
-    z-index: 9998;
+    /* Keep the solid iPhone browser/safe-area backing above the translucent
+       curtain, so opening/closing the menu cannot tint the curved top strip. */
+    z-index: 14000;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
