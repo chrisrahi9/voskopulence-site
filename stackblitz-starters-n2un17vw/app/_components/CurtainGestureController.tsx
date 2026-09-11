@@ -15,12 +15,14 @@ export default function CurtainGestureController() {
     let lastTime = 0;
     let velocity = 0;
     let panel: HTMLElement | null = null;
+    let menuRoot: HTMLElement | null = null;
     let backdrop: HTMLElement | null = null;
 
     const reset = () => {
       active = false;
       pointerId = null;
       panel = null;
+      menuRoot = null;
       backdrop = null;
       velocity = 0;
     };
@@ -34,13 +36,25 @@ export default function CurtainGestureController() {
       active = true;
       pointerId = event.pointerId;
       panel = nextPanel;
-      backdrop = document.querySelector("#mobile-menu > button") as HTMLElement | null;
+      menuRoot = nextPanel.closest("#mobile-menu") as HTMLElement | null;
+      backdrop = menuRoot?.querySelector(":scope > button") as HTMLElement | null;
       startX = event.clientX;
       lastX = event.clientX;
       lastTime = performance.now();
       velocity = 0;
+
+      if (menuRoot) delete menuRoot.dataset.gestureClosing;
+
       panel.style.transition = "none";
       panel.style.willChange = "transform";
+
+      // Backdrop-filter + a moving transformed text layer can produce a thin
+      // compositor/tile seam on iOS. Keep the same green backdrop while the
+      // finger is moving, but temporarily remove only the blur operation.
+      if (backdrop) {
+        backdrop.style.setProperty("-webkit-backdrop-filter", "none");
+        backdrop.style.setProperty("backdrop-filter", "none");
+      }
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -66,6 +80,7 @@ export default function CurtainGestureController() {
       if (!active || event.pointerId !== pointerId || !panel) return;
 
       const currentPanel = panel;
+      const currentMenuRoot = menuRoot;
       const currentBackdrop = backdrop;
       const dx = event.clientX - startX;
       const width = Math.max(1, currentPanel.getBoundingClientRect().width);
@@ -79,6 +94,8 @@ export default function CurtainGestureController() {
 
       if (shouldClose) {
         const direction = dx === 0 ? 1 : Math.sign(dx);
+        if (currentMenuRoot) currentMenuRoot.dataset.gestureClosing = "true";
+
         currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
         if (currentBackdrop) {
           currentBackdrop.style.transition = "opacity 240ms ease";
@@ -86,16 +103,26 @@ export default function CurtainGestureController() {
         }
 
         window.setTimeout(() => {
+          // Swedish generation localises this aria-label, so support both
+          // language variants. The data flag tells closeMenu that the swipe
+          // has already animated the panel away and it should unmount directly.
           const closeButton = currentPanel.querySelector(
-            'button[aria-label="Close menu"]'
+            'button[aria-label="Close menu"], button[aria-label="Stäng meny"]'
           ) as HTMLButtonElement | null;
           closeButton?.click();
-        }, 220);
+        }, 300);
       } else {
         currentPanel.style.transform = "translate3d(0,0,0)";
         if (currentBackdrop) {
           currentBackdrop.style.transition = "opacity 240ms ease";
           currentBackdrop.style.opacity = "1";
+
+          // Restore the normal blurred curtain only after the panel has settled,
+          // keeping the blur out of the transformed swipe frames on iOS.
+          window.setTimeout(() => {
+            currentBackdrop.style.removeProperty("-webkit-backdrop-filter");
+            currentBackdrop.style.removeProperty("backdrop-filter");
+          }, 340);
         }
       }
 
