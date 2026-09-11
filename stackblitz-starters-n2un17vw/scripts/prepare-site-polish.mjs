@@ -14,6 +14,55 @@ function replaceAllExisting(source, from, to) {
   return source.split(from).join(to);
 }
 
+function hardenScrollUnlock(source, file) {
+  const oldUnlock = `function unlockScroll() {
+  if (isIOSDevice()) {
+    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+
+    window.scrollTo(0, y);
+
+    return;
+  }
+
+  document.body.style.overflow = "";
+}`;
+
+  const newUnlock = `function unlockScroll() {
+  if (isIOSDevice()) {
+    // If the gesture controller already released the body, do nothing. This
+    // prevents the later React cleanup from reading an empty top value as 0
+    // and jumping the user back to the top of the page.
+    if (document.body.style.position !== "fixed") return;
+
+    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+
+    window.scrollTo(0, y);
+
+    return;
+  }
+
+  document.body.style.overflow = "";
+}`;
+
+  if (source.includes(newUnlock)) return source;
+  if (!source.includes(oldUnlock)) {
+    throw new Error(`${file}: scroll unlock function not found`);
+  }
+  return source.replace(oldUnlock, newUnlock);
+}
+
 function addSmoothMenuLifecycle(source, file) {
   const stateLine = "const [menuOpen, setMenuOpen] = useState(false);";
   if (!source.includes(stateLine)) {
@@ -96,6 +145,7 @@ function alignDesktopNav(source, file) {
 for (const file of pageFiles) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
+  source = hardenScrollUnlock(source, file);
   source = addSmoothMenuLifecycle(source, file);
   source = protectHeaderSpacing(source);
   source = alignMobileBurger(source, file);
@@ -144,7 +194,7 @@ for (const file of pageFiles) {
 console.log("SITE_POLISH_PREPARED", {
   pages: pageFiles,
   smoothMenuLifecycle: true,
-  swipeCloseImmediateUnmount: true,
+  idempotentScrollUnlock: true,
   singleHomepageHeaderWriter: true,
   uniformHeaderBlur: true,
   desktopNavBreakpoint: "xl",
