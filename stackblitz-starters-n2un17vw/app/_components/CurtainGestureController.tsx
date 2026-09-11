@@ -27,10 +27,10 @@ export default function CurtainGestureController() {
       velocity = 0;
     };
 
-    const releaseScrollOnly = () => {
-      // All pages now use overflow/touch-action locking only. Releasing these
-      // styles does not reposition the document, so the live curtain can keep
-      // animating smoothly while the next page gesture becomes available.
+    const releaseScrollOnly = (root: HTMLElement | null) => {
+      // Make the page available to the next finger gesture immediately, while
+      // allowing the curtain's own transform to finish on the compositor.
+      if (root) root.style.pointerEvents = "none";
       document.documentElement.style.overflow = "";
       document.documentElement.style.height = "";
       document.body.style.overflow = "";
@@ -53,7 +53,10 @@ export default function CurtainGestureController() {
       lastTime = performance.now();
       velocity = 0;
 
-      if (menuRoot) delete menuRoot.dataset.gestureClosing;
+      if (menuRoot) {
+        delete menuRoot.dataset.gestureClosing;
+        menuRoot.style.pointerEvents = "";
+      }
 
       panel.style.transition = "none";
       panel.style.willChange = "transform";
@@ -103,22 +106,38 @@ export default function CurtainGestureController() {
         const direction = dx === 0 ? 1 : Math.sign(dx);
         if (currentMenuRoot) currentMenuRoot.dataset.gestureClosing = "true";
 
-        // Make the page immediately scrollable without touching its position.
-        // The known-smooth live curtain animation continues independently.
-        releaseScrollOnly();
+        releaseScrollOnly(currentMenuRoot);
 
+        let closed = false;
+        const finishClose = () => {
+          if (closed) return;
+          closed = true;
+          currentPanel.removeEventListener("transitionend", onTransitionEnd);
+          const closeButton = currentPanel.querySelector(
+            'button[aria-label="Close menu"], button[aria-label="Stäng meny"]'
+          ) as HTMLButtonElement | null;
+          closeButton?.click();
+        };
+        const onTransitionEnd = (transitionEvent: TransitionEvent) => {
+          if (
+            transitionEvent.target === currentPanel &&
+            transitionEvent.propertyName === "transform"
+          ) {
+            finishClose();
+          }
+        };
+
+        currentPanel.addEventListener("transitionend", onTransitionEnd);
         currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
+
         if (currentBackdrop) {
           currentBackdrop.style.transition = "opacity 240ms ease";
           currentBackdrop.style.opacity = "0";
         }
 
-        window.setTimeout(() => {
-          const closeButton = currentPanel.querySelector(
-            'button[aria-label="Close menu"], button[aria-label="Stäng meny"]'
-          ) as HTMLButtonElement | null;
-          closeButton?.click();
-        }, 300);
+        // Safari occasionally omits transitionend if a frame is interrupted.
+        // This fires only after the nominal 320ms animation has fully elapsed.
+        window.setTimeout(finishClose, 380);
       } else {
         currentPanel.style.transform = "translate3d(0,0,0)";
         if (currentBackdrop) {
@@ -133,7 +152,7 @@ export default function CurtainGestureController() {
 
       window.setTimeout(() => {
         currentPanel.style.willChange = "auto";
-      }, 360);
+      }, 400);
       reset();
     };
 
