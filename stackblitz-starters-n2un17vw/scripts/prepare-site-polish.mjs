@@ -14,24 +14,51 @@ function replaceAllExisting(source, from, to) {
   return source.split(from).join(to);
 }
 
-function hardenScrollUnlock(source, file) {
-  const markerGuard = `function unlockScroll() {
-  // The gesture controller may already have restored the exact scroll position
-  // so the closing animation can remain responsive. In that case this later
-  // React cleanup must only clear residual lock styles, never scroll again.
-  if (document.body.dataset.curtainGestureReleased === "true") {
-    delete document.body.dataset.curtainGestureReleased;
-    document.documentElement.style.overflow = "";
-    document.documentElement.style.height = "";
-    document.body.style.overflow = "";
-    return;
-  }`;
-
-  if (source.includes(markerGuard)) return source;
-  if (!source.includes("function unlockScroll() {")) {
-    throw new Error(`${file}: scroll unlock function not found`);
+function normalizeScrollLock(source, file) {
+  const start = source.indexOf("function lockScroll() {");
+  const unlockStart = source.indexOf("function unlockScroll() {", start);
+  if (start === -1 || unlockStart === -1) {
+    throw new Error(`${file}: scroll lock functions not found`);
   }
-  return source.replace("function unlockScroll() {", markerGuard);
+
+  const nextBoundaryCandidates = [
+    source.indexOf("\n\nexport default", unlockStart),
+    source.indexOf("\n\ntype ", unlockStart),
+    source.indexOf("\n\nconst ", unlockStart),
+  ].filter((value) => value !== -1);
+
+  if (!nextBoundaryCandidates.length) {
+    throw new Error(`${file}: scroll lock boundary not found`);
+  }
+
+  const end = Math.min(...nextBoundaryCandidates);
+  const unified = `function lockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+
+  // Keep the document at its natural scroll position. Fixing the body and
+  // restoring with scrollTo caused the iOS curtain-close hitch/jump.
+  docEl.style.overflow = "hidden";
+  body.style.overflow = "hidden";
+  body.style.touchAction = "none";
+}
+
+function unlockScroll() {
+  const docEl = document.documentElement;
+  const body = document.body;
+
+  docEl.style.overflow = "";
+  docEl.style.height = "";
+  body.style.overflow = "";
+  body.style.touchAction = "";
+  body.style.position = "";
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+  body.style.width = "";
+}`;
+
+  return source.slice(0, start) + unified + source.slice(end);
 }
 
 function addSmoothMenuLifecycle(source, file) {
@@ -43,7 +70,7 @@ function addSmoothMenuLifecycle(source, file) {
   source = replaceAllExisting(source, "setMenuOpen(true)", "openMenu()");
   source = replaceAllExisting(source, "setMenuOpen(false)", "closeMenu()");
 
-  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    const gestureClosing =\n      document.getElementById(\"mobile-menu\")?.dataset.gestureClosing === \"true\";\n\n    setMenuOpen(false);\n\n    // A completed swipe has already animated the curtain off-screen. Unmount\n    // it immediately instead of running the normal opposite-direction close\n    // transition, which also releases the page scroll lock without a pause.\n    if (gestureClosing) {\n      setMenuRendered(false);\n      return;\n    }\n\n    window.setTimeout(() => setMenuRendered(false), 470);\n  };`;
+  const lifecycle = `${stateLine}\n  const [menuRendered, setMenuRendered] = useState(false);\n\n  const openMenu = () => {\n    setMenuRendered(true);\n    requestAnimationFrame(() => {\n      requestAnimationFrame(() => setMenuOpen(true));\n    });\n  };\n\n  const closeMenu = () => {\n    const gestureClosing =\n      document.getElementById(\"mobile-menu\")?.dataset.gestureClosing === \"true\";\n\n    setMenuOpen(false);\n\n    // A completed swipe has already animated the curtain off-screen. Unmount\n    // it immediately instead of running the normal opposite-direction close.\n    if (gestureClosing) {\n      setMenuRendered(false);\n      return;\n    }\n\n    window.setTimeout(() => setMenuRendered(false), 470);\n  };`;
   source = source.replace(stateLine, lifecycle);
 
   const portalPattern = /(mounted\s*&&\s*\n\s*typeof document !== "undefined"\s*&&\s*\n\s*)menuOpen(\s*&&\s*\n\s*createPortal)/;
@@ -116,7 +143,7 @@ function alignDesktopNav(source, file) {
 for (const file of pageFiles) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
-  source = hardenScrollUnlock(source, file);
+  source = normalizeScrollLock(source, file);
   source = addSmoothMenuLifecycle(source, file);
   source = protectHeaderSpacing(source);
   source = alignMobileBurger(source, file);
@@ -165,7 +192,7 @@ for (const file of pageFiles) {
 console.log("SITE_POLISH_PREPARED", {
   pages: pageFiles,
   smoothMenuLifecycle: true,
-  idempotentScrollUnlock: true,
+  unifiedOverflowScrollLock: true,
   singleHomepageHeaderWriter: true,
   uniformHeaderBlur: true,
   desktopNavBreakpoint: "xl",
