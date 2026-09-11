@@ -34,7 +34,7 @@ const textTranslations = [
   ["Travel-ready", "Redo för resan"],
   ["Small, solid and easy to pack without liquid limits.", "Liten, fast och enkel att packa – utan begränsningar för vätskor."],
   ["Read our formulation philosophy", "Läs om vår formuleringsfilosofi"],
-  ["The house", "Vårt universum"],
+  ["The house", "The house"],
   ["Voskopulence is a Mediterranean house of botanical rituals. Our first chapter takes form in concentrated solid haircare, where considered formulation, lower-waste design and a distinctive botanical palette come together in a quieter kind of luxury.", "Voskopulence är ett medelhavsinspirerat varumärke där botaniska ritualer möter genomtänkt formgivning. Vårt första kapitel är koncentrerad hårvård i fast form, där noggrant utvecklade formuleringar, mindre förpackningsavfall och en distinkt botanisk palett förenas i en lågmäld form av lyx."],
   ["The first chapter", "Det första kapitlet"],
   ["The story begins with hair.", "Berättelsen börjar med håret."],
