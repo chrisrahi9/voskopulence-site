@@ -61,9 +61,14 @@ export default function CurtainGestureController() {
       panel.style.transition = "none";
       panel.style.willChange = "transform";
 
+      // Keep the backdrop visually unchanged while the panel is being dragged.
+      // The drag remains tactile, but the underlying page no longer fades in
+      // and the blur no longer toggles in and out between gesture states.
       if (backdrop) {
-        backdrop.style.setProperty("-webkit-backdrop-filter", "none");
-        backdrop.style.setProperty("backdrop-filter", "none");
+        backdrop.style.transition = "none";
+        backdrop.style.opacity = "1";
+        backdrop.style.removeProperty("-webkit-backdrop-filter");
+        backdrop.style.removeProperty("backdrop-filter");
       }
     };
 
@@ -80,10 +85,9 @@ export default function CurtainGestureController() {
       const dx = event.clientX - startX;
       const width = Math.max(1, panel.getBoundingClientRect().width);
       const translated = Math.sign(dx) * Math.min(Math.abs(dx), width);
-      const progress = Math.min(1, Math.abs(translated) / width);
 
       panel.style.transform = `translate3d(${translated}px,0,0)`;
-      if (backdrop) backdrop.style.opacity = String(1 - progress * 0.5);
+      // Intentionally do not fade the backdrop with drag progress.
     };
 
     const finish = (event: PointerEvent, cancelled = false) => {
@@ -130,6 +134,7 @@ export default function CurtainGestureController() {
         currentPanel.addEventListener("transitionend", onTransitionEnd);
         currentPanel.style.transform = `translate3d(${direction * 105}%,0,0)`;
 
+        // Only fade the backdrop once the close has actually been accepted.
         if (currentBackdrop) {
           currentBackdrop.style.transition = "opacity 240ms ease";
           currentBackdrop.style.opacity = "0";
@@ -141,12 +146,8 @@ export default function CurtainGestureController() {
       } else {
         currentPanel.style.transform = "translate3d(0,0,0)";
         if (currentBackdrop) {
-          currentBackdrop.style.transition = "opacity 240ms ease";
+          currentBackdrop.style.transition = "none";
           currentBackdrop.style.opacity = "1";
-          window.setTimeout(() => {
-            currentBackdrop.style.removeProperty("-webkit-backdrop-filter");
-            currentBackdrop.style.removeProperty("backdrop-filter");
-          }, 340);
         }
       }
 
