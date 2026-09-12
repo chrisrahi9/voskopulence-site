@@ -4,7 +4,7 @@ const pagePath = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pagePath, "utf8");
 
 const HERO_FILE = "hero_web_v6_3.mp4";
-const HERO_VERSION = "20260912-v6-3-loop-crop";
+const HERO_VERSION = "20260912-v6-3-overlap-loop";
 
 source = source
   .replace(
@@ -22,112 +22,259 @@ source = source
   .replace(
     'const heroPosterSrc = heroDirectAsset("/hero_poster.jpg");',
     'const heroPosterSrc = "";'
+  )
+  .replace(
+    '  const videoRef = useRef<HTMLVideoElement | null>(null);',
+    '  const videoRef = useRef<HTMLVideoElement | null>(null);\n  const loopVideoRef = useRef<HTMLVideoElement | null>(null);'
   );
 
-// For this preview, keep the proven Safari/iOS recovery controller but use the
-// matching Bunny MP4 instead of the old HLS playlist, which still contains the
-// previous hero footage. The final production version will get fresh v6_3 HLS.
-source = source.replace(
-  "    const shouldUseNativeHls = isiOS || isSafariDesktop;",
-  [
-    "    // v6_3 refinement preview: same source on all browsers until the new",
-    "    // adaptive v6_3 HLS renditions are uploaded.",
-    "    const shouldUseNativeHls = false;",
-  ].join("\n")
-);
-
-// We handle the loop just before the physical end so the browser never performs
-// a visually abrupt native end->start cut.
-source = source
-  .replace("      v.loop = true;", "      v.loop = false;")
-  .replace('      v.setAttribute("loop", "");', '      v.removeAttribute("loop");')
-  .replace("              loop\n", "");
-
-const restartStart = source.indexOf("    const restart = () => {");
-const restartEnd = source.indexOf("\n\n    const manualLoopIfNearEnd = () => {", restartStart);
-if (restartStart === -1 || restartEnd === -1) {
-  throw new Error("Hero restart block not found");
+const effectStart =
+  "  // Use native HLS on iOS/Safari and direct MP4 everywhere else.\n  useEffect(() => {";
+const effectEnd =
+  "  }, [heroMp4Src, heroPosterSrc, heroHlsSrc, heroHlsIos1080Src]);\n";
+const effectStartIndex = source.indexOf(effectStart);
+const effectEndIndex = source.indexOf(effectEnd, effectStartIndex);
+if (effectStartIndex === -1 || effectEndIndex === -1) {
+  throw new Error("Hero playback effect markers not found");
 }
-const smoothRestart = `    const restart = () => {
-      if (destroyed) return;
-      try {
-        v.currentTime = 0;
-      } catch {}
-      play();
+
+const overlapEffect = `  // Seamless v6_3 preview: the bridge video starts before the primary video ends,
+  // then both streams are synchronized while the primary is reset underneath it.
+  // This prevents a blank/white frame from ever being exposed during the loop.
+  useEffect(() => {
+    const primary = videoRef.current;
+    const bridge = loopVideoRef.current;
+    if (!primary || !bridge) return;
+
+    let destroyed = false;
+    let isHeroVisible = true;
+    let crossing = false;
+    let handoffTimer: number | null = null;
+    let bridgeResetTimer: number | null = null;
+    let recoveryTimer: number | null = null;
+
+    const clearTimers = () => {
+      if (handoffTimer != null) window.clearTimeout(handoffTimer);
+      if (bridgeResetTimer != null) window.clearTimeout(bridgeResetTimer);
+      if (recoveryTimer != null) window.clearTimeout(recoveryTimer);
+      handoffTimer = null;
+      bridgeResetTimer = null;
+      recoveryTimer = null;
+    };
+
+    const configure = (v: HTMLVideoElement) => {
+      v.loop = false;
+      v.defaultMuted = true;
+      v.muted = true;
+      v.autoplay = false;
+      v.playsInline = true;
+      v.preload = "auto";
+      v.removeAttribute("loop");
+      v.setAttribute("muted", "");
+      v.setAttribute("playsinline", "");
+      v.setAttribute("webkit-playsinline", "");
+      if (v.src !== heroMp4Src && v.currentSrc !== heroMp4Src) {
+        v.src = heroMp4Src;
+        try { v.load(); } catch {}
+      }
+    };
+
+    configure(primary);
+    configure(bridge);
+    bridge.style.opacity = "0";
+    bridge.style.transition = "none";
+
+    const playPrimary = () => {
+      if (destroyed || !isHeroVisible || document.visibilityState === "hidden") return;
+      configure(primary);
+      const p = primary.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    };
+
+    const reveal = () => revealHeroVideo(primary);
+
+    const startOverlap = () => {
+      if (
+        destroyed || crossing || !isHeroVisible ||
+        !Number.isFinite(primary.duration) || primary.duration <= 1 ||
+        primary.duration - primary.currentTime > 0.78
+      ) return;
+
+      crossing = true;
+      configure(bridge);
+      try { bridge.currentTime = 0.03; } catch {}
+      bridge.style.transition = "none";
+      bridge.style.opacity = "0";
+
+      const bridgePlay = bridge.play?.();
+      if (bridgePlay && typeof bridgePlay.catch === "function") {
+        bridgePlay.catch(() => { crossing = false; });
+      }
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (destroyed) return;
-          v.style.transition = "opacity 520ms cubic-bezier(0.22, 1, 0.36, 1)";
-          v.style.opacity = "1";
+          bridge.style.transition = "opacity 520ms cubic-bezier(0.33, 1, 0.68, 1)";
+          bridge.style.opacity = "1";
         });
       });
-      window.setTimeout(() => {
-        manualLooping = false;
+
+      handoffTimer = window.setTimeout(() => {
+        if (destroyed) return;
+        const bridgeTime = Math.max(0.03, bridge.currentTime || 0.03);
+        try { primary.currentTime = bridgeTime; } catch {}
+        const primaryPlay = primary.play?.();
+        if (primaryPlay && typeof primaryPlay.catch === "function") {
+          primaryPlay.catch(() => {});
+        }
+
+        // Both elements now show almost the same frame, so removing the bridge
+        // is visually invisible and the next cycle continues on the primary.
+        bridge.style.transition = "opacity 140ms linear";
+        bridge.style.opacity = "0";
+
+        bridgeResetTimer = window.setTimeout(() => {
+          if (destroyed) return;
+          try { bridge.pause(); } catch {}
+          try { bridge.currentTime = 0.03; } catch {}
+          bridge.style.transition = "none";
+          crossing = false;
+        }, 180);
       }, 560);
-    };`;
-source = source.slice(0, restartStart) + smoothRestart + source.slice(restartEnd);
+    };
 
-const loopStart = source.indexOf("    const manualLoopIfNearEnd = () => {");
-const loopEnd = source.indexOf("\n\n    applyVideoFlags();", loopStart);
-if (loopStart === -1 || loopEnd === -1) {
-  throw new Error("Hero near-end loop block not found");
-}
-const smoothLoop = `    const manualLoopIfNearEnd = () => {
-      if (
-        destroyed ||
-        manualLooping ||
-        !Number.isFinite(v.duration) ||
-        v.duration <= 1
-      ) {
-        return;
-      }
+    const scheduleRecovery = () => {
+      if (destroyed || !isHeroVisible || document.visibilityState === "hidden") return;
+      if (recoveryTimer != null) window.clearTimeout(recoveryTimer);
+      recoveryTimer = window.setTimeout(() => {
+        recoveryTimer = null;
+        if (!destroyed && !crossing && primary.paused) playPrimary();
+      }, 220);
+    };
 
-      // Soften the transition before seeking back to frame 0. This avoids the
-      // hard visual cut while still decoding only one 4K60 stream on mobile.
-      if (v.duration - v.currentTime <= 0.48) {
-        manualLooping = true;
-        v.style.transition = "opacity 360ms cubic-bezier(0.4, 0, 1, 1)";
-        v.style.opacity = "0.16";
-        window.setTimeout(() => {
-          if (!destroyed) restart();
-        }, 300);
-      }
-    };`;
-source = source.slice(0, loopStart) + smoothLoop + source.slice(loopEnd);
+    primary.addEventListener("loadeddata", reveal);
+    primary.addEventListener("canplay", reveal);
+    primary.addEventListener("playing", reveal);
+    primary.addEventListener("timeupdate", startOverlap);
+    primary.addEventListener("pause", scheduleRecovery);
+    primary.addEventListener("stalled", scheduleRecovery);
+    primary.addEventListener("waiting", scheduleRecovery);
 
-// Reframe the landscape source slightly on narrow phones. This moves the
-// turquoise channel toward the visual centre without altering desktop framing.
+    playPrimary();
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") playPrimary();
+      else clearTimers();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        isHeroVisible = entry.intersectionRatio > 0.03;
+        if (isHeroVisible) playPrimary();
+        else {
+          try { primary.pause(); } catch {}
+          try { bridge.pause(); } catch {}
+        }
+      },
+      { threshold: [0, 0.03, 0.1, 0.25, 0.5, 1] }
+    );
+    io.observe(primary);
+
+    const revealTimeout = window.setTimeout(reveal, 1200);
+
+    return () => {
+      destroyed = true;
+      clearTimers();
+      window.clearTimeout(revealTimeout);
+      primary.removeEventListener("loadeddata", reveal);
+      primary.removeEventListener("canplay", reveal);
+      primary.removeEventListener("playing", reveal);
+      primary.removeEventListener("timeupdate", startOverlap);
+      primary.removeEventListener("pause", scheduleRecovery);
+      primary.removeEventListener("stalled", scheduleRecovery);
+      primary.removeEventListener("waiting", scheduleRecovery);
+      document.removeEventListener("visibilitychange", onVis);
+      io.disconnect();
+    };
+  }, [heroMp4Src]);
+`;
+
+source =
+  source.slice(0, effectStartIndex) +
+  overlapEffect +
+  source.slice(effectEndIndex + effectEnd.length);
+
+// Keep the channel centred on narrow phones while desktop uses the stock frame.
 source = source.replace(
   'className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"',
   'className="absolute inset-0 w-full h-full object-cover object-[46%_50%] md:object-center opacity-0 transition-opacity duration-[800ms] pointer-events-none"'
 );
 
+// Native looping must be off because the overlap controller performs the handoff.
+source = source.replace("              loop\n", "");
+
+const primaryVideoEndMarker = "              />";
+const primaryVideoStart = source.indexOf("            <video\n              ref={videoRef}");
+const primaryVideoEnd = source.indexOf(primaryVideoEndMarker, primaryVideoStart);
+if (primaryVideoStart === -1 || primaryVideoEnd === -1) {
+  throw new Error("Primary hero video markup not found");
+}
+
+const bridgeVideo = `
+
+            <video
+              ref={loopVideoRef}
+              className="absolute inset-0 w-full h-full object-cover object-[46%_50%] md:object-center opacity-0 pointer-events-none"
+              src={heroMp4Src}
+              muted
+              playsInline
+              preload="auto"
+              aria-hidden="true"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload noplaybackrate"
+              style={{
+                willChange: "opacity, transform",
+                backfaceVisibility: "hidden",
+                transform: "translateZ(0)",
+              }}
+            />`;
+
+source =
+  source.slice(0, primaryVideoEnd + primaryVideoEndMarker.length) +
+  bridgeVideo +
+  source.slice(primaryVideoEnd + primaryVideoEndMarker.length);
+
 if (!source.includes(HERO_FILE)) {
   throw new Error(`Hero source ${HERO_FILE} was not installed`);
+}
+if (!source.includes("loopVideoRef")) {
+  throw new Error("Bridge video ref was not installed");
+}
+if (!source.includes("opacity 520ms")) {
+  throw new Error("Overlap loop transition was not installed");
 }
 if (!source.includes("object-[46%_50%] md:object-center")) {
   throw new Error("Mobile v6_3 focal crop was not installed");
 }
-if (!source.includes('v.style.opacity = "0.16";')) {
-  throw new Error("Soft loop transition was not installed");
+if (source.includes('v.style.opacity = "0.16"')) {
+  throw new Error("Previous fade-to-background loop is still present");
 }
 if (source.includes("hero_web_v6_slow60_seamless.mp4")) {
   throw new Error("Previous processed slow-motion hero is still present");
 }
-if (source.includes("raw.githubusercontent.com/chrisrahi9/voskopulence-site")) {
-  throw new Error("Raw GitHub hero delivery is still present");
-}
 
 await writeFile(pagePath, source);
-console.log("BUNNY_V6_3_REFINED_PREVIEW", {
+console.log("BUNNY_V6_3_OVERLAP_LOOP_PREVIEW", {
   file: HERO_FILE,
   cdn: "https://vosko-cdn.b-cdn.net",
   sourceFps: 59.94,
   sourceResolution: "3840x2160",
   playbackRate: 1,
   mobileObjectPosition: "46% 50%",
-  softLoopLeadSeconds: 0.48,
-  nativeLoopDisabled: true,
-  iosSafariRecoveryController: true,
-  freshAdaptiveHlsPendingFinalization: true,
+  overlapLeadSeconds: 0.78,
+  crossfadeMilliseconds: 520,
+  blankFrameExposure: false,
+  adaptiveHlsPendingFinalization: true,
 });
