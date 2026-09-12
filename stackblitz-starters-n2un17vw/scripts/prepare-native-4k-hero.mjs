@@ -6,7 +6,7 @@ let source = await readFile(pagePath, "utf8");
 const DESKTOP_HERO = "/hero_web_v6_3_seamless.mp4";
 const MOBILE_HERO = "/hero_web_v6_3_mobile.mp4";
 const HERO_POSTER = "/hero_web_v6_3_poster.jpg";
-const HERO_VERSION = "20260912-v6-3-mobilefix1";
+const HERO_VERSION = "20260912-v6-3-mobile1080p60";
 
 source = source
   .replace(
@@ -22,15 +22,15 @@ source = source
     `const heroPosterSrc = "${HERO_POSTER}?v=${HERO_VERSION}";`
   );
 
-// The old HLS playlists contain previous footage, so use the matching v6_3 MP4
-// assets until a new adaptive set is generated.
+// Existing HLS playlists contain old footage. Use matching v6_3 MP4 assets
+// until the adaptive HLS ladder is regenerated from this seamless master.
 source = source.replace(
   "    const shouldUseNativeHls = isiOS || isSafariDesktop;",
   "    const shouldUseNativeHls = false;"
 );
 
-// Pick a much lighter 720p30 encode on phones. Do this before assigning a src,
-// otherwise mobile browsers may begin downloading the 1080p60 desktop file.
+// Mobile gets its own optimized 1080p60 rendition so quality stays premium
+// without forcing the heavier desktop file to download first.
 source = source.replace(
   "    let destroyed = false;",
   `    const isCompactHero =\n      window.matchMedia?.("(max-width: 767px)")?.matches ?? window.innerWidth < 768;\n\n    let destroyed = false;`
@@ -40,9 +40,7 @@ source = source.replace(
   `      const expectedSrc = isCompactHero ? heroMobileMp4Src : heroMp4Src;`
 );
 
-// Mobile Safari treats "suspend" as a normal loading decision. Recovering on
-// every suspend/waiting event was causing repeated start attempts and visible
-// flashing. Reveal only once frames are truly playing.
+// Avoid Safari recovery churn. Reveal only when playback has genuinely begun.
 source = source
   .replace('      v.preload = "auto";', '      v.preload = isCompactHero ? "metadata" : "auto";')
   .replace("      }, 200);", "      }, 800);")
@@ -60,20 +58,18 @@ source = source
   .replace('    v.addEventListener("timeupdate", manualLoopIfNearEnd);\n', "")
   .replace('      v.removeEventListener("timeupdate", manualLoopIfNearEnd);\n', "");
 
-// Prevent the static JSX src from making phones fetch the desktop asset before
-// the effect has selected the correct rendition. The poster remains visible
-// until the actual video emits "playing".
+// Don't let the browser fetch the desktop asset before JS selects the correct
+// rendition. Keep the poster visible until the video emits "playing".
 source = source
   .replace("              src={heroMp4Src}\n", "")
   .replace('              preload="auto"\n', '              preload="metadata"\n');
 
-// Use the matching poster underneath the transparent video while it buffers.
+// Lock BOTH the poster layer and video to the exact same focal point on phones.
+// This removes the apparent left/right repositioning during poster→video handoff.
 source = source.replace(
-  "style={{ backgroundImage: `url(${heroPosterSrc})`, filter: \"brightness(0.9)\" }}",
-  "style={{ backgroundImage: `url(${heroPosterSrc})`, filter: \"brightness(0.9)\" }}"
+  'className="absolute inset-0 bg-cover bg-center"',
+  'className="absolute inset-0 bg-cover bg-[position:46%_50%] md:bg-center"'
 );
-
-// Keep the approved iPhone focal framing; desktop remains centered.
 source = source.replace(
   'className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"',
   'className="absolute inset-0 w-full h-full object-cover object-[46%_50%] md:object-center opacity-0 transition-opacity duration-[800ms] pointer-events-none"'
@@ -93,30 +89,34 @@ if (source.includes("              src={heroMp4Src}")) {
   throw new Error("Static desktop hero src still present in JSX");
 }
 if (source.includes('v.addEventListener("suspend", scheduleRecovery)')) {
-  throw new Error("Suspend recovery must not remain on mobile");
+  throw new Error("Suspend recovery must not remain");
 }
 if (source.includes('v.addEventListener("loadeddata", reveal)')) {
   throw new Error("Video must not reveal before playback begins");
 }
+if (!source.includes("bg-[position:46%_50%] md:bg-center")) {
+  throw new Error("Poster focal lock missing");
+}
 if (!source.includes("object-[46%_50%] md:object-center")) {
-  throw new Error("Approved mobile focal crop missing");
+  throw new Error("Video focal lock missing");
 }
 if (source.includes("loopVideoRef")) throw new Error("Dual-video loop code leaked in");
 if (source.includes('v.style.opacity = "0.16"')) throw new Error("Old fade loop leaked in");
 
 await writeFile(pagePath, source);
-console.log("V6_3_RESPONSIVE_HERO_PREPARED", {
+console.log("V6_3_PREMIUM_MOBILE_HERO_PREPARED", {
   desktop: DESKTOP_HERO,
   desktopResolution: "1920x1080",
   desktopFps: 59.94,
   mobile: MOBILE_HERO,
-  mobileResolution: "1280x720",
-  mobileFps: 29.97,
-  mobileTargetBitrateMbps: 3.2,
+  mobileResolution: "1920x1080",
+  mobileFps: 59.94,
+  mobileTargetBitrateMbps: 7.2,
   poster: HERO_POSTER,
   mobilePreload: "metadata",
   revealEvent: "playing",
   suspendRecovery: false,
   nativeLoop: true,
-  mobileObjectPosition: "46% 50%",
+  posterAndVideoPosition: "46% 50%",
+  adaptiveHlsPending: true,
 });
