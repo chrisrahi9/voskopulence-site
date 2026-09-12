@@ -10,7 +10,7 @@ source = source
   )
   .replace(
     'const HERO_VIDEO_VERSION = "20260517-direct-mp4";',
-    'const HERO_VIDEO_VERSION = "20260912-smooth-slow-v4";'
+    'const HERO_VIDEO_VERSION = "20260912-seamless-slow-v5";'
   );
 
 const effectStart =
@@ -25,7 +25,7 @@ if (effectStartIndex === -1 || effectEndIndex === -1) {
 }
 source =
   source.slice(0, effectStartIndex) +
-  "  // Native hero playback only. The slow-motion timing is baked into the file.\n" +
+  "  // Native hero playback only. Slow timing and loop blending are baked into the file.\n" +
   source.slice(effectEndIndex + effectEnd.length);
 
 const videoStartMarker = "            <video\n              ref={videoRef}";
@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/video-curtain-stability-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v4_slow.mp4"
+              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/video-curtain-stability-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v5_seamless.mp4"
               autoPlay
               muted
               loop
@@ -62,16 +62,16 @@ source =
 if (source.includes("https://cdn.voskopulence.com")) {
   throw new Error("Expired custom CDN hostname still present");
 }
-if (!source.includes("hero_web_v4_slow.mp4")) {
-  throw new Error("Smooth slow-motion hero source missing");
+if (!source.includes("hero_web_v5_seamless.mp4")) {
+  throw new Error("Seamless slow-motion hero source missing");
 }
 
 await writeFile(pagePath, source);
-console.log("SMOOTH_SLOW_HERO_PREPARED", {
+console.log("SEAMLESS_SLOW_HERO_PREPARED", {
   source: "public raw GitHub preview asset",
-  sourceFps: 30,
   outputFps: 60,
   speed: "2/3 original",
+  loopBlendSeconds: 0.5,
   browserPlaybackRate: 1,
   controllerIndependent: true,
 });
