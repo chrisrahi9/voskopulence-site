@@ -10,7 +10,7 @@ source = source
   )
   .replace(
     'const HERO_VIDEO_VERSION = "20260517-direct-mp4";',
-    'const HERO_VIDEO_VERSION = "20260912-topaz60-slow-v9";'
+    'const HERO_VIDEO_VERSION = "20260912-topaz60-075x-v10";'
   );
 
 const effectStart =
@@ -25,7 +25,7 @@ if (effectStartIndex === -1 || effectEndIndex === -1) {
 }
 source =
   source.slice(0, effectStartIndex) +
-  "  // Native playback only. Topaz 60fps source, 0.60x timing and loop blend are baked into the web file.\n" +
+  "  // Native playback only. Topaz 60fps source, 0.75x timing and loop blend are baked into the web file.\n" +
   source.slice(effectEndIndex + effectEnd.length);
 
 const videoStartMarker = "            <video\n              ref={videoRef}";
@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/topaz-hero-web-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v9_topaz60_slow60_seamless.mp4"
+              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/topaz-hero-web-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v10_topaz60_075x_seamless.mp4"
               autoPlay
               muted
               loop
@@ -62,19 +62,19 @@ source =
 if (source.includes("https://cdn.voskopulence.com")) {
   throw new Error("Expired custom CDN hostname still present");
 }
-if (!source.includes("hero_web_v9_topaz60_slow60_seamless.mp4")) {
-  throw new Error("Topaz 60fps web hero source missing");
+if (!source.includes("hero_web_v10_topaz60_075x_seamless.mp4")) {
+  throw new Error("Topaz 0.75x web hero source missing");
 }
 
 await writeFile(pagePath, source);
-console.log("TOPAZ60_SLOW60_HERO_PREPARED", {
+console.log("TOPAZ60_075X_HERO_PREPARED", {
   master: "https://vosko-cdn.b-cdn.net/hero_web_v4_enhanced_fps.mp4",
   sourceResolution: "3840x2160",
   sourceFps: 60,
   webResolution: "1920x1080",
   outputFps: 60,
-  speed: "0.60x original",
-  loopBlendSeconds: 0.55,
+  speed: "0.75x original",
+  loopBlendSeconds: 0.45,
   browserPlaybackRate: 1,
   controllerIndependent: true,
 });
