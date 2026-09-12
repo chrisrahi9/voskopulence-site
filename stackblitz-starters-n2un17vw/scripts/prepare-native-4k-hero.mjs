@@ -3,8 +3,10 @@ import { readFile, writeFile } from "node:fs/promises";
 const pagePath = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pagePath, "utf8");
 
-const HERO_FILE = "/hero_web_v6_3_seamless.mp4";
-const HERO_VERSION = "20260912-v6-3-seamless1080";
+const DESKTOP_HERO = "/hero_web_v6_3_seamless.mp4";
+const MOBILE_HERO = "/hero_web_v6_3_mobile.mp4";
+const HERO_POSTER = "/hero_web_v6_3_poster.jpg";
+const HERO_VERSION = "20260912-v6-3-mobilefix1";
 
 source = source
   .replace(
@@ -13,70 +15,108 @@ source = source
   )
   .replace(
     /const heroMp4Src = [^;]+;/,
-    `const heroMp4Src = "${HERO_FILE}?v=${HERO_VERSION}";`
+    `const heroMp4Src = "${DESKTOP_HERO}?v=${HERO_VERSION}";\n  const heroMobileMp4Src = "${MOBILE_HERO}?v=${HERO_VERSION}";`
   )
   .replace(
     /const heroPosterSrc = [^;]+;/,
-    'const heroPosterSrc = "";'
+    `const heroPosterSrc = "${HERO_POSTER}?v=${HERO_VERSION}";`
   );
 
-// Existing HLS playlists still contain the previous hero. Until the adaptive
-// v6_3 HLS set is regenerated from this seamless master, every browser uses the
-// same baked 1080p60 MP4 while retaining the established Safari/iOS recovery
-// controller (muted autoplay, playsInline, visibility/stall recovery).
+// The old HLS playlists contain previous footage, so use the matching v6_3 MP4
+// assets until a new adaptive set is generated.
 source = source.replace(
   "    const shouldUseNativeHls = isiOS || isSafariDesktop;",
-  [
-    "    // Seamless v6_3 production asset; fresh adaptive HLS follows separately.",
-    "    const shouldUseNativeHls = false;",
-  ].join("\n")
+  "    const shouldUseNativeHls = false;"
 );
 
-// The transition is baked into the media itself. Native <video loop> is now the
-// only loop mechanism: no opacity fades, duplicate video layers or manual seeks.
+// Pick a much lighter 720p30 encode on phones. Do this before assigning a src,
+// otherwise mobile browsers may begin downloading the 1080p60 desktop file.
+source = source.replace(
+  "    let destroyed = false;",
+  `    const isCompactHero =\n      window.matchMedia?.("(max-width: 767px)")?.matches ?? window.innerWidth < 768;\n\n    let destroyed = false;`
+);
+source = source.replace(
+  `      const expectedSrc = shouldUseNativeHls\n        ? isiOS\n          ? heroHlsIos1080Src\n          : heroHlsSrc\n        : heroMp4Src;`,
+  `      const expectedSrc = isCompactHero ? heroMobileMp4Src : heroMp4Src;`
+);
+
+// Mobile Safari treats "suspend" as a normal loading decision. Recovering on
+// every suspend/waiting event was causing repeated start attempts and visible
+// flashing. Reveal only once frames are truly playing.
+source = source
+  .replace('      v.preload = "auto";', '      v.preload = isCompactHero ? "metadata" : "auto";')
+  .replace("      }, 200);", "      }, 800);")
+  .replace('    v.addEventListener("loadeddata", reveal);\n', "")
+  .replace('    v.addEventListener("canplay", reveal);\n', "")
+  .replace('    v.addEventListener("suspend", scheduleRecovery);\n', "")
+  .replace('      v.removeEventListener("loadeddata", reveal);\n', "")
+  .replace('      v.removeEventListener("canplay", reveal);\n', "")
+  .replace('      v.removeEventListener("suspend", scheduleRecovery);\n', "")
+  .replace("    const revealTimeout = window.setTimeout(() => revealHeroVideo(v), 1200);\n", "")
+  .replace("      window.clearTimeout(revealTimeout);\n", "");
+
+// Native loop only: the transition is already baked into the media.
 source = source
   .replace('    v.addEventListener("timeupdate", manualLoopIfNearEnd);\n', "")
   .replace('      v.removeEventListener("timeupdate", manualLoopIfNearEnd);\n', "");
 
-// Keep the user-approved iPhone focal framing; desktop remains centered.
+// Prevent the static JSX src from making phones fetch the desktop asset before
+// the effect has selected the correct rendition. The poster remains visible
+// until the actual video emits "playing".
+source = source
+  .replace("              src={heroMp4Src}\n", "")
+  .replace('              preload="auto"\n', '              preload="metadata"\n');
+
+// Use the matching poster underneath the transparent video while it buffers.
+source = source.replace(
+  "style={{ backgroundImage: `url(${heroPosterSrc})`, filter: \"brightness(0.9)\" }}",
+  "style={{ backgroundImage: `url(${heroPosterSrc})`, filter: \"brightness(0.9)\" }}"
+);
+
+// Keep the approved iPhone focal framing; desktop remains centered.
 source = source.replace(
   'className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[800ms] pointer-events-none"',
   'className="absolute inset-0 w-full h-full object-cover object-[46%_50%] md:object-center opacity-0 transition-opacity duration-[800ms] pointer-events-none"'
 );
 
-if (!source.includes(HERO_FILE)) {
-  throw new Error("Seamless v6_3 hero source was not installed");
+source = source.replace(
+  "  }, [heroMp4Src, heroPosterSrc, heroHlsSrc, heroHlsIos1080Src]);",
+  "  }, [heroMp4Src, heroMobileMp4Src, heroPosterSrc, heroHlsSrc, heroHlsIos1080Src]);"
+);
+
+if (!source.includes(MOBILE_HERO)) throw new Error("Mobile hero source missing");
+if (!source.includes(HERO_POSTER)) throw new Error("Matching hero poster missing");
+if (!source.includes("isCompactHero ? heroMobileMp4Src : heroMp4Src")) {
+  throw new Error("Responsive hero source selection missing");
+}
+if (source.includes("              src={heroMp4Src}")) {
+  throw new Error("Static desktop hero src still present in JSX");
+}
+if (source.includes('v.addEventListener("suspend", scheduleRecovery)')) {
+  throw new Error("Suspend recovery must not remain on mobile");
+}
+if (source.includes('v.addEventListener("loadeddata", reveal)')) {
+  throw new Error("Video must not reveal before playback begins");
 }
 if (!source.includes("object-[46%_50%] md:object-center")) {
-  throw new Error("Approved mobile focal crop was not installed");
+  throw new Error("Approved mobile focal crop missing");
 }
-if (!source.includes("const shouldUseNativeHls = false;")) {
-  throw new Error("Legacy HLS guard was not installed");
-}
-if (source.includes("loopVideoRef")) {
-  throw new Error("Dual-video overlap code must not be present");
-}
-if (source.includes('v.style.opacity = "0.16"')) {
-  throw new Error("Old fade-to-background loop must not be present");
-}
-if (source.includes("hero_web_v6_slow60_seamless.mp4")) {
-  throw new Error("Previous processed hero must not be present");
-}
-if (source.includes("raw.githubusercontent.com/chrisrahi9/voskopulence-site")) {
-  throw new Error("Raw GitHub hero delivery must not be present");
-}
+if (source.includes("loopVideoRef")) throw new Error("Dual-video loop code leaked in");
+if (source.includes('v.style.opacity = "0.16"')) throw new Error("Old fade loop leaked in");
 
 await writeFile(pagePath, source);
-console.log("V6_3_SEAMLESS_HERO_PREPARED", {
-  file: HERO_FILE,
-  sourceFps: 59.94,
-  sourceResolution: "1920x1080",
-  playbackRate: 1,
-  bakedCrossfadeSeconds: 1.2,
-  mobileObjectPosition: "46% 50%",
+console.log("V6_3_RESPONSIVE_HERO_PREPARED", {
+  desktop: DESKTOP_HERO,
+  desktopResolution: "1920x1080",
+  desktopFps: 59.94,
+  mobile: MOBILE_HERO,
+  mobileResolution: "1280x720",
+  mobileFps: 29.97,
+  mobileTargetBitrateMbps: 3.2,
+  poster: HERO_POSTER,
+  mobilePreload: "metadata",
+  revealEvent: "playing",
+  suspendRecovery: false,
   nativeLoop: true,
-  manualSeekLoop: false,
-  duplicateVideoLayer: false,
-  iosSafariRecoveryController: true,
-  adaptiveHlsPending: true,
+  mobileObjectPosition: "46% 50%",
 });
