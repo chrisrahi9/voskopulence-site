@@ -1,5 +1,6 @@
 name: Generate smooth slow-motion hero
 
+# One-off branch workflow for producing a smooth, slower hero derivative.
 on:
   push:
     branches:
