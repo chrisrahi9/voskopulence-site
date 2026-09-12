@@ -1,0 +1,28 @@
+name: Inspect Bunny hero metadata
+
+on:
+  push:
+    branches:
+      - fix/hero-ultrasmooth-20260912
+    paths:
+      - .github/workflows/inspect-bunny-heroes.yml
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Download and inspect v3 and v4
+        run: |
+          for v in v3 v4; do
+            url="https://vosko-cdn.b-cdn.net/hero_web_${v}.mp4"
+            out="/tmp/hero_web_${v}.mp4"
+            echo "=== $url ==="
+            curl -L --fail --retry 2 "$url" -o "$out"
+            ls -lh "$out"
+            ffprobe -v error \
+              -show_entries stream=codec_name,profile,width,height,r_frame_rate,avg_frame_rate,pix_fmt,bit_rate \
+              -show_entries format=duration,size,bit_rate \
+              -of default=nw=1 "$out"
+          done
