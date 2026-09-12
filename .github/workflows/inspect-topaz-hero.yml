@@ -1,0 +1,26 @@
+name: Inspect Topaz hero
+
+on:
+  push:
+    branches:
+      - fix/topaz-hero-web-20260912
+    paths:
+      - .github/workflows/inspect-topaz-hero.yml
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Download and inspect enhanced hero
+        run: |
+          url="https://vosko-cdn.b-cdn.net/hero_web_v4_enhanced.mp4"
+          out="/tmp/hero_web_v4_enhanced.mp4"
+          echo "=== $url ==="
+          curl -L --fail --retry 3 "$url" -o "$out"
+          ls -lh "$out"
+          ffprobe -v error \
+            -show_entries stream=codec_name,profile,width,height,r_frame_rate,avg_frame_rate,pix_fmt,bit_rate \
+            -show_entries format=duration,size,bit_rate \
+            -of default=nw=1 "$out"
