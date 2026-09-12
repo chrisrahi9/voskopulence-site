@@ -10,7 +10,7 @@ source = source
   )
   .replace(
     'const HERO_VIDEO_VERSION = "20260517-direct-mp4";',
-    'const HERO_VIDEO_VERSION = "20260912-seamless-slow-v6";'
+    'const HERO_VIDEO_VERSION = "20260912-topaz-slow60-v8";'
   );
 
 const effectStart =
@@ -25,7 +25,7 @@ if (effectStartIndex === -1 || effectEndIndex === -1) {
 }
 source =
   source.slice(0, effectStartIndex) +
-  "  // Native hero playback only. Slow timing and loop blending are baked into the file.\n" +
+  "  // Native playback only. Topaz-enhanced source, 0.60x timing and loop blend are baked into the web file.\n" +
   source.slice(effectEndIndex + effectEnd.length);
 
 const videoStartMarker = "            <video\n              ref={videoRef}";
@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/video-curtain-stability-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v6_slow60_seamless.mp4"
+              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/topaz-hero-web-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v8_topaz_slow60.mp4"
               autoPlay
               muted
               loop
@@ -62,13 +62,16 @@ source =
 if (source.includes("https://cdn.voskopulence.com")) {
   throw new Error("Expired custom CDN hostname still present");
 }
-if (!source.includes("hero_web_v6_slow60_seamless.mp4")) {
-  throw new Error("0.60x seamless slow-motion hero source missing");
+if (!source.includes("hero_web_v8_topaz_slow60.mp4")) {
+  throw new Error("Topaz web hero source missing");
 }
 
 await writeFile(pagePath, source);
-console.log("SEAMLESS_SLOW_HERO_PREPARED", {
-  source: "public raw GitHub preview asset",
+console.log("TOPAZ_SLOW60_HERO_PREPARED", {
+  master: "https://vosko-cdn.b-cdn.net/hero_web_v4_enhanced.mp4",
+  sourceResolution: "3840x2160",
+  sourceFps: 30,
+  webResolution: "1920x1080",
   outputFps: 60,
   speed: "0.60x original",
   loopBlendSeconds: 0.55,
