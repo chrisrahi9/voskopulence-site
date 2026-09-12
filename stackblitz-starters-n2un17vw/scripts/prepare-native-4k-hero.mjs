@@ -3,8 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 const pagePath = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pagePath, "utf8");
 
-const HERO_FILE = "hero_web_v6_3.mp4";
-const HERO_VERSION = "20260912-v6-3-native60";
+const HERO_FILE = "hero_web_v6_1.mp4";
+const HERO_VERSION = "20260912-v6-1-native60";
 
 // Use the Bunny pull-zone hostname directly for the preview so the new upload is
 // served from the same CDN origin that already backs the site's media routes.
@@ -31,12 +31,12 @@ source = source
 // Keep the established iPhone/Safari playback controller (muted autoplay,
 // playsInline, visibility recovery, stalled/waiting recovery and the fade-in),
 // but do NOT point Safari at the old HLS rendition because that playlist still
-// contains the previous hero. The uploaded v6_3 master is native H.264 4K60 and
-// is used directly on every browser for this visual-comparison preview.
+// contains the previous hero. The uploaded v6_1 master is native H.264 1080p60
+// and is used directly on every browser for this visual-comparison preview.
 source = source.replace(
   "    const shouldUseNativeHls = isiOS || isSafariDesktop;",
   [
-    "    // v6_3 preview: preserve Safari/iOS reliability handling, but use the",
+    "    // v6_1 preview: preserve Safari/iOS reliability handling, but use the",
     "    // matching Bunny MP4 instead of the legacy HLS playlist (old footage).",
     "    const shouldUseNativeHls = false;",
   ].join("\n")
@@ -66,7 +66,7 @@ console.log("BUNNY_NATIVE_HERO_PREPARED", {
   file: HERO_FILE,
   cdn: "https://vosko-cdn.b-cdn.net",
   sourceFps: 59.94,
-  sourceResolution: "3840x2160",
+  sourceResolution: "1920x1080",
   playbackRate: 1,
   manualNearEndSeek: false,
   iosSafariRecoveryController: true,
