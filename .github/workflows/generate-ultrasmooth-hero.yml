@@ -1,0 +1,54 @@
+name: Generate ultrasmooth hero
+
+on:
+  push:
+    branches:
+      - fix/hero-ultrasmooth-20260912
+    paths:
+      - .github/workflows/generate-ultrasmooth-hero.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download original Bunny hero
+        run: curl -L --fail --retry 3 https://vosko-cdn.b-cdn.net/hero_web_v3.mp4 -o /tmp/hero_web_v3.mp4
+
+      - name: Build 0.60x higher-quality 60fps master
+        run: |
+          mkdir -p stackblitz-starters-n2un17vw/public/media
+          tmp="/tmp/hero_web_v7_ultrasmooth_master.mp4"
+          out="stackblitz-starters-n2un17vw/public/media/hero_web_v7_ultrasmooth.mp4"
+
+          ffmpeg -y -i /tmp/hero_web_v3.mp4 -an \
+            -vf "setpts=1.6666667*PTS,minterpolate=fps=120:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:me=epzs:mb_size=8:search_param=64:vsbmc=1,tmix=frames=2:weights='1 1',fps=60" \
+            -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart "$tmp"
+
+          # Preserve the current approved 0.60x feel and 0.55s seamless loop blend.
+          ffmpeg -y -i "$tmp" -an -filter_complex \
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0.55:end=4.1667,setpts=PTS-STARTPTS[main];\
+             [b]trim=start=4.1667:end=4.7167,setpts=PTS-STARTPTS[tail];\
+             [c]trim=start=0:end=0.55,setpts=PTS-STARTPTS[head];\
+             [tail][head]blend=all_expr='A*(1-T/0.55)+B*(T/0.55)':shortest=1[bridge];\
+             [main][bridge]concat=n=2:v=1:a=0,fps=60[outv]" \
+            -map "[outv]" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart "$out"
+
+          ffprobe -v error -show_entries stream=width,height,avg_frame_rate,r_frame_rate -show_entries format=duration,size,bit_rate -of default=nw=1 "$out"
+
+      - name: Commit generated hero
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin fix/hero-ultrasmooth-20260912
+          git add stackblitz-starters-n2un17vw/public/media/hero_web_v7_ultrasmooth.mp4
+          git commit -m "Add higher-quality ultrasmooth 0.60x hero"
+          git push
