@@ -10,7 +10,7 @@ source = source
   )
   .replace(
     'const HERO_VIDEO_VERSION = "20260517-direct-mp4";',
-    'const HERO_VIDEO_VERSION = "20260828-native-v3";'
+    'const HERO_VIDEO_VERSION = "20260912-smooth-slow-v4";'
   );
 
 const effectStart =
@@ -25,7 +25,7 @@ if (effectStartIndex === -1 || effectEndIndex === -1) {
 }
 source =
   source.slice(0, effectStartIndex) +
-  "  // Native hero playback only. Safari is allowed to own the media element.\n" +
+  "  // Native hero playback only. The slow-motion timing is baked into the file.\n" +
   source.slice(effectEndIndex + effectEnd.length);
 
 const videoStartMarker = "            <video\n              ref={videoRef}";
@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="https://vosko-cdn.b-cdn.net/hero_web_v3.mp4"
+              src="/media/hero_web_v4_slow.mp4"
               autoPlay
               muted
               loop
@@ -62,13 +62,16 @@ source =
 if (source.includes("https://cdn.voskopulence.com")) {
   throw new Error("Expired custom CDN hostname still present");
 }
-if (!source.includes("hero_web_v3.mp4")) {
-  throw new Error("Native v3 hero source missing");
+if (!source.includes("hero_web_v4_slow.mp4")) {
+  throw new Error("Smooth slow-motion hero source missing");
 }
 
 await writeFile(pagePath, source);
-console.log("NATIVE_V3_HERO_PREPARED", {
-  source: "hero_web_v3.mp4",
-  legacyPlaybackEffectRemoved: true,
+console.log("SMOOTH_SLOW_HERO_PREPARED", {
+  source: "/media/hero_web_v4_slow.mp4",
+  sourceFps: 30,
+  outputFps: 60,
+  speed: "2/3 original",
+  browserPlaybackRate: 1,
   controllerIndependent: true,
 });
