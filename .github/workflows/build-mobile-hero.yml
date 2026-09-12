@@ -35,7 +35,8 @@ jobs:
             -b:v 7000k -maxrate 8000k -bufsize 16000k \
             -g 120 -keyint_min 120 -sc_threshold 0 \
             -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
-            -hls_segment_filename "$OUT/1080p/seg_%03d.ts" \
+            -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 \
+            -hls_segment_filename "$OUT/1080p/seg_%03d.m4s" \
             "$OUT/1080p/playlist.m3u8"
 
           ffmpeg -y -i "$SRC" -an \
@@ -44,7 +45,8 @@ jobs:
             -b:v 3800k -maxrate 4500k -bufsize 9000k \
             -g 120 -keyint_min 120 -sc_threshold 0 \
             -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
-            -hls_segment_filename "$OUT/720p/seg_%03d.ts" \
+            -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 \
+            -hls_segment_filename "$OUT/720p/seg_%03d.m4s" \
             "$OUT/720p/playlist.m3u8"
 
           ffmpeg -y -i "$SRC" -an \
@@ -53,12 +55,13 @@ jobs:
             -b:v 1900k -maxrate 2400k -bufsize 4800k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
             -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
-            -hls_segment_filename "$OUT/540p/seg_%03d.ts" \
+            -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 \
+            -hls_segment_filename "$OUT/540p/seg_%03d.m4s" \
             "$OUT/540p/playlist.m3u8"
 
           printf '%s\n' \
             '#EXTM3U' \
-            '#EXT-X-VERSION:3' \
+            '#EXT-X-VERSION:7' \
             '#EXT-X-INDEPENDENT-SEGMENTS' \
             '#EXT-X-STREAM-INF:BANDWIDTH=8500000,AVERAGE-BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
             '1080p/playlist.m3u8' \
@@ -73,7 +76,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add stackblitz-starters-n2un17vw/public/hero_hls_v6_3
-          git commit -m 'Add adaptive HLS ladder for v6_3 hero' || exit 0
+          git add -A stackblitz-starters-n2un17vw/public/hero_hls_v6_3
+          git commit -m 'Switch adaptive HLS ladder to fMP4' || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
