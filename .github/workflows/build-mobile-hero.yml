@@ -1,4 +1,4 @@
-name: Build lightweight mobile hero assets
+name: Build high-quality mobile hero assets
 
 on:
   push:
@@ -21,20 +21,20 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Render mobile hero and matching poster
+      - name: Render high-quality mobile hero and matching poster
         run: |
           ffmpeg -y \
             -i stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4 \
-            -an -vf "scale=-2:720:flags=lanczos,fps=30000/1001,format=yuv420p" \
-            -c:v libx264 -preset medium -profile:v high -level 3.1 \
-            -b:v 3200k -maxrate 4000k -bufsize 8000k \
-            -g 60 -keyint_min 60 -sc_threshold 0 \
+            -an -vf "scale=1920:1080:flags=lanczos,fps=60000/1001,format=yuv420p" \
+            -c:v libx264 -preset medium -profile:v high -level 4.2 \
+            -b:v 7200k -maxrate 8500k -bufsize 17000k \
+            -g 120 -keyint_min 120 -sc_threshold 0 \
             -movflags +faststart \
             stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4
 
           ffmpeg -y \
             -ss 0.05 -i stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4 \
-            -frames:v 1 -vf "scale=1280:-2:flags=lanczos" -q:v 3 \
+            -frames:v 1 -vf "scale=1920:1080:flags=lanczos" -q:v 2 \
             stackblitz-starters-n2un17vw/public/hero_web_v6_3_poster.jpg
 
           ls -lh stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4 \
@@ -46,5 +46,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4 \
                   stackblitz-starters-n2un17vw/public/hero_web_v6_3_poster.jpg
-          git commit -m 'Add lightweight mobile v6_3 hero assets' || exit 0
+          git commit -m 'Upgrade mobile v6_3 hero to 1080p60' || exit 0
           git push origin HEAD:main
