@@ -37,7 +37,7 @@ if (videoEnd === -1) throw new Error("Hero video end not found");
 const nativeVideo = `            <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover opacity-100 pointer-events-none"
-              src="/media/hero_web_v4_slow.mp4"
+              src="https://raw.githubusercontent.com/chrisrahi9/voskopulence-site/fix/video-curtain-stability-20260912/stackblitz-starters-n2un17vw/public/media/hero_web_v4_slow.mp4"
               autoPlay
               muted
               loop
@@ -68,7 +68,7 @@ if (!source.includes("hero_web_v4_slow.mp4")) {
 
 await writeFile(pagePath, source);
 console.log("SMOOTH_SLOW_HERO_PREPARED", {
-  source: "/media/hero_web_v4_slow.mp4",
+  source: "public raw GitHub preview asset",
   sourceFps: 30,
   outputFps: 60,
   speed: "2/3 original",
