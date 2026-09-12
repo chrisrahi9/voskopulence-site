@@ -1,4 +1,4 @@
-name: Build high-quality mobile hero assets
+name: Build adaptive v6_3 HLS hero
 
 on:
   push:
@@ -21,30 +21,59 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Render high-quality mobile hero and matching poster
+      - name: Build HLS ladder
         run: |
-          ffmpeg -y \
-            -i stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4 \
-            -an -vf "scale=1920:1080:flags=lanczos,fps=60000/1001,format=yuv420p" \
+          set -e
+          SRC=stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4
+          OUT=stackblitz-starters-n2un17vw/public/hero_hls_v6_3
+          rm -rf "$OUT"
+          mkdir -p "$OUT/1080p" "$OUT/720p" "$OUT/540p"
+
+          ffmpeg -y -i "$SRC" -an \
+            -vf "scale=1920:1080:flags=lanczos,fps=60000/1001,format=yuv420p" \
             -c:v libx264 -preset medium -profile:v high -level 4.2 \
-            -b:v 7200k -maxrate 8500k -bufsize 17000k \
+            -b:v 7000k -maxrate 8000k -bufsize 16000k \
             -g 120 -keyint_min 120 -sc_threshold 0 \
-            -movflags +faststart \
-            stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4
+            -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
+            -hls_segment_filename "$OUT/1080p/seg_%03d.ts" \
+            "$OUT/1080p/playlist.m3u8"
 
-          ffmpeg -y \
-            -ss 0.05 -i stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4 \
-            -frames:v 1 -vf "scale=1920:1080:flags=lanczos" -q:v 2 \
-            stackblitz-starters-n2un17vw/public/hero_web_v6_3_poster.jpg
+          ffmpeg -y -i "$SRC" -an \
+            -vf "scale=1280:720:flags=lanczos,fps=60000/1001,format=yuv420p" \
+            -c:v libx264 -preset medium -profile:v high -level 4.1 \
+            -b:v 3800k -maxrate 4500k -bufsize 9000k \
+            -g 120 -keyint_min 120 -sc_threshold 0 \
+            -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
+            -hls_segment_filename "$OUT/720p/seg_%03d.ts" \
+            "$OUT/720p/playlist.m3u8"
 
-          ls -lh stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4 \
-                 stackblitz-starters-n2un17vw/public/hero_web_v6_3_poster.jpg
+          ffmpeg -y -i "$SRC" -an \
+            -vf "scale=960:540:flags=lanczos,fps=30000/1001,format=yuv420p" \
+            -c:v libx264 -preset medium -profile:v high -level 3.1 \
+            -b:v 1900k -maxrate 2400k -bufsize 4800k \
+            -g 60 -keyint_min 60 -sc_threshold 0 \
+            -hls_time 2 -hls_playlist_type vod -hls_flags independent_segments \
+            -hls_segment_filename "$OUT/540p/seg_%03d.ts" \
+            "$OUT/540p/playlist.m3u8"
 
-      - name: Commit mobile assets
+          printf '%s\n' \
+            '#EXTM3U' \
+            '#EXT-X-VERSION:3' \
+            '#EXT-X-INDEPENDENT-SEGMENTS' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=8500000,AVERAGE-BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
+            '1080p/playlist.m3u8' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=4800000,AVERAGE-BANDWIDTH=3800000,RESOLUTION=1280x720,FRAME-RATE=59.940,CODECS="avc1.640029"' \
+            '720p/playlist.m3u8' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=2600000,AVERAGE-BANDWIDTH=1900000,RESOLUTION=960x540,FRAME-RATE=29.970,CODECS="avc1.64001F"' \
+            '540p/playlist.m3u8' > "$OUT/master.m3u8"
+
+          find "$OUT" -maxdepth 2 -type f -printf '%p %k KB\n' | sort
+
+      - name: Commit HLS assets
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add stackblitz-starters-n2un17vw/public/hero_web_v6_3_mobile.mp4 \
-                  stackblitz-starters-n2un17vw/public/hero_web_v6_3_poster.jpg
-          git commit -m 'Upgrade mobile v6_3 hero to 1080p60' || exit 0
+          git add stackblitz-starters-n2un17vw/public/hero_hls_v6_3
+          git commit -m 'Add adaptive HLS ladder for v6_3 hero' || exit 0
+          git pull --rebase origin main
           git push origin HEAD:main
