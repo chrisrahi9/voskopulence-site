@@ -6,6 +6,7 @@ import ScrollToTop from "./_components/ScrollToTop";
 import PremiumMotionController from "./_components/PremiumMotionController";
 import LanguageController from "./_components/LanguageController";
 import CurtainGestureController from "./_components/CurtainGestureController";
+import HeroPlaybackController from "./_components/HeroPlaybackController";
 
 const leagueSpartan = League_Spartan({
   subsets: ["latin"],
@@ -93,6 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PremiumMotionController />
         <LanguageController />
         <CurtainGestureController />
+        <HeroPlaybackController />
         {children}
       </body>
     </html>
