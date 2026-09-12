@@ -3,8 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 const pagePath = new URL("../app/page.tsx", import.meta.url);
 let source = await readFile(pagePath, "utf8");
 
-const HERO_FILE = "hero_web_v6_3.mp4";
-const HERO_VERSION = "20260912-v6-3-native60";
+const HERO_FILE = "hero_web_v6_2.mp4";
+const HERO_VERSION = "20260912-v6-2-4k25";
 
 // Use the Bunny pull-zone hostname directly for the preview so the new upload is
 // served from the same CDN origin that already backs the site's media routes.
@@ -28,22 +28,21 @@ source = source
     'const heroPosterSrc = "";'
   );
 
-// Keep the established iPhone/Safari playback controller (muted autoplay,
+// Preserve the established iPhone/Safari playback controller (muted autoplay,
 // playsInline, visibility recovery, stalled/waiting recovery and the fade-in),
 // but do NOT point Safari at the old HLS rendition because that playlist still
-// contains the previous hero. The uploaded v6_3 master is native H.264 4K60 and
-// is used directly on every browser for this visual-comparison preview.
+// contains the previous hero. This preview therefore uses the matching Bunny
+// MP4 on every browser so desktop and iPhone show exactly the same v6_2 clip.
 source = source.replace(
   "    const shouldUseNativeHls = isiOS || isSafariDesktop;",
   [
-    "    // v6_3 preview: preserve Safari/iOS reliability handling, but use the",
+    "    // v6_2 preview: preserve Safari/iOS reliability handling, but use the",
     "    // matching Bunny MP4 instead of the legacy HLS playlist (old footage).",
     "    const shouldUseNativeHls = false;",
   ].join("\n")
 );
 
-// Do not force a seek 120 ms before the end. The new stock master is already
-// genuine 59.94 fps, so native <video loop> gives the cleanest motion cadence.
+// Keep the stock master's native cadence and use the browser's native loop.
 source = source
   .replace('    v.addEventListener("timeupdate", manualLoopIfNearEnd);\n', "")
   .replace('      v.removeEventListener("timeupdate", manualLoopIfNearEnd);\n', "");
@@ -65,7 +64,7 @@ await writeFile(pagePath, source);
 console.log("BUNNY_NATIVE_HERO_PREPARED", {
   file: HERO_FILE,
   cdn: "https://vosko-cdn.b-cdn.net",
-  sourceFps: 59.94,
+  sourceFps: 25,
   sourceResolution: "3840x2160",
   playbackRate: 1,
   manualNearEndSeek: false,
