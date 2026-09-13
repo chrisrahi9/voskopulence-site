@@ -19,20 +19,35 @@ jobs:
           ref: main
 
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg curl
 
-      - name: Build HLS ladder
+      - name: Fetch original 4K master
+        run: |
+          curl -L --fail --retry 3 https://vosko-cdn.b-cdn.net/hero_web_v6_3.mp4 -o /tmp/hero_web_v6_3_original_4k.mp4
+          ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -of default=nw=1 /tmp/hero_web_v6_3_original_4k.mp4
+
+      - name: Build production HLS ladders
         run: |
           set -e
           SRC=stackblitz-starters-n2un17vw/public/hero_web_v6_3_seamless.mp4
           OUT=stackblitz-starters-n2un17vw/public/hero_hls_v6_3
           rm -rf "$OUT"
-          mkdir -p "$OUT/1080p" "$OUT/900p" "$OUT/720p" "$OUT/540p"
+          mkdir -p "$OUT/1440p" "$OUT/1080p" "$OUT/900p" "$OUT/720p" "$OUT/540p"
 
-          ffmpeg -y -i "$SRC" -an \
-            -vf "scale=1920:1080:flags=lanczos,fps=60000/1001,format=yuv420p" \
-            -c:v libx264 -preset medium -profile:v high -level 4.2 \
-            -b:v 5200k -maxrate 5800k -bufsize 10000k \
+          ffmpeg -y -i /tmp/hero_web_v6_3_original_4k.mp4 -an \
+            -filter_complex "[0:v]trim=start=1.2:end=10.662,setpts=PTS-STARTPTS[main];[0:v]trim=start=10.662:end=11.862,setpts=PTS-STARTPTS[tail];[0:v]trim=start=0:end=1.2,setpts=PTS-STARTPTS[head];[tail][head]xfade=transition=fade:duration=1.2:offset=0[blend];[main][blend]concat=n=2:v=1:a=0,scale=2560:1440:flags=lanczos,fps=60000/1001,format=yuv420p[outv]" \
+            -map "[outv]" -c:v libx264 -preset medium -profile:v high -level 5.1 \
+            -b:v 7000k -maxrate 8000k -bufsize 14000k \
+            -g 60 -keyint_min 60 -sc_threshold 0 \
+            -hls_time 1 -hls_playlist_type vod -hls_flags independent_segments \
+            -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 \
+            -hls_segment_filename "$OUT/1440p/seg_%03d.m4s" \
+            "$OUT/1440p/playlist.m3u8"
+
+          ffmpeg -y -i /tmp/hero_web_v6_3_original_4k.mp4 -an \
+            -filter_complex "[0:v]trim=start=1.2:end=10.662,setpts=PTS-STARTPTS[main];[0:v]trim=start=10.662:end=11.862,setpts=PTS-STARTPTS[tail];[0:v]trim=start=0:end=1.2,setpts=PTS-STARTPTS[head];[tail][head]xfade=transition=fade:duration=1.2:offset=0[blend];[main][blend]concat=n=2:v=1:a=0,scale=1920:1080:flags=lanczos,fps=60000/1001,format=yuv420p[outv]" \
+            -map "[outv]" -c:v libx264 -preset medium -profile:v high -level 4.2 \
+            -b:v 5200k -maxrate 5800k -bufsize 10400k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
             -hls_time 1 -hls_playlist_type vod -hls_flags independent_segments \
             -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 \
@@ -73,6 +88,8 @@ jobs:
             '#EXTM3U' \
             '#EXT-X-VERSION:7' \
             '#EXT-X-INDEPENDENT-SEGMENTS' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=8000000,AVERAGE-BANDWIDTH=7000000,RESOLUTION=2560x1440,FRAME-RATE=59.940,CODECS="avc1.640033"' \
+            '1440p/playlist.m3u8' \
             '#EXT-X-STREAM-INF:BANDWIDTH=5800000,AVERAGE-BANDWIDTH=5200000,RESOLUTION=1920x1080,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
             '1080p/playlist.m3u8' \
             '#EXT-X-STREAM-INF:BANDWIDTH=4500000,AVERAGE-BANDWIDTH=4000000,RESOLUTION=1600x900,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
@@ -82,6 +99,19 @@ jobs:
             '#EXT-X-STREAM-INF:BANDWIDTH=1800000,AVERAGE-BANDWIDTH=1500000,RESOLUTION=960x540,FRAME-RATE=29.970,CODECS="avc1.64001F"' \
             '540p/playlist.m3u8' > "$OUT/master.m3u8"
 
+          printf '%s\n' \
+            '#EXTM3U' \
+            '#EXT-X-VERSION:7' \
+            '#EXT-X-INDEPENDENT-SEGMENTS' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=8000000,AVERAGE-BANDWIDTH=7000000,RESOLUTION=2560x1440,FRAME-RATE=59.940,CODECS="avc1.640033"' \
+            '1440p/playlist.m3u8' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=5800000,AVERAGE-BANDWIDTH=5200000,RESOLUTION=1920x1080,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
+            '1080p/playlist.m3u8' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=4500000,AVERAGE-BANDWIDTH=4000000,RESOLUTION=1600x900,FRAME-RATE=59.940,CODECS="avc1.64002A"' \
+            '900p/playlist.m3u8' \
+            '#EXT-X-STREAM-INF:BANDWIDTH=3200000,AVERAGE-BANDWIDTH=2800000,RESOLUTION=1280x720,FRAME-RATE=59.940,CODECS="avc1.640029"' \
+            '720p/playlist.m3u8' > "$OUT/master-safari.m3u8"
+
           find "$OUT" -maxdepth 2 -type f -printf '%p %k KB\n' | sort
 
       - name: Commit HLS assets
@@ -89,6 +119,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A stackblitz-starters-n2un17vw/public/hero_hls_v6_3
-          git commit -m 'Retune mobile hero bitrates for sharper playback' || exit 0
+          git commit -m 'Build production 1440p hero ladders' || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
