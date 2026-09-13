@@ -69,6 +69,14 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  /* Chromium/Edge can elastically overscroll the root at the top with a
+     touchpad or precision wheel. Clamp the desktop scroll boundary so the
+     fixed header never exposes the white root canvas above the hero. */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
   .hero-orb::after {
     transition: transform 420ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease;
   }
