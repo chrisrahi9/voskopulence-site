@@ -7,13 +7,17 @@
   <style>
     html,body{margin:0;height:100%;background:#004642;overflow:hidden;font-family:Arial,sans-serif}
     .wrap{position:fixed;inset:0;background:#004642}
-    video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:46% 50%;background:#004642}
+    .poster{position:absolute;inset:0;background:url('/hero_web_v6_3_poster.jpg') 46% 50%/cover no-repeat;opacity:1;transition:opacity .22s ease}
+    video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:46% 50%;background:#004642;opacity:0;transition:opacity .22s ease}
+    .wrap.revealed video{opacity:1}
+    .wrap.revealed .poster{opacity:0}
     .shade{position:absolute;inset:0;background:rgba(0,0,0,.15);pointer-events:none}
     .diag{position:fixed;left:8px;bottom:8px;z-index:10;max-width:calc(100vw - 16px);padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.82);color:#fff;font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;pointer-events:none}
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div id="wrap" class="wrap">
+    <div class="poster"></div>
     <video id="hero" autoplay muted loop playsinline preload="auto"></video>
     <div class="shade"></div>
   </div>
@@ -21,10 +25,36 @@
   <script>
     const v=document.getElementById('hero');
     const d=document.getElementById('diag');
+    const wrap=document.getElementById('wrap');
+    let revealed=false;
+    let revealTimer=null;
+    let qualityPoll=null;
+    let firstPlayingAt=0;
+
     v.muted=true; v.defaultMuted=true; v.playsInline=true; v.loop=true;
     v.src='/hero_hls_v6_3_4k/master.m3u8';
+
     const play=()=>{const p=v.play(); if(p&&p.catch)p.catch(()=>{});};
-    v.addEventListener('loadedmetadata',play); play();
+    const reveal=()=>{
+      if(revealed)return;
+      revealed=true;
+      wrap.classList.add('revealed');
+      if(revealTimer)clearTimeout(revealTimer);
+      if(qualityPoll)clearInterval(qualityPoll);
+    };
+    const armReveal=()=>{
+      if(revealed||firstPlayingAt)return;
+      firstPlayingAt=performance.now();
+      qualityPoll=setInterval(()=>{
+        if(v.videoHeight>=1000 && !v.paused && v.readyState>=2) reveal();
+      },50);
+      revealTimer=setTimeout(reveal,900);
+    };
+
+    v.addEventListener('loadedmetadata',play);
+    v.addEventListener('playing',armReveal);
+    play();
+
     function quality(h){if(h>=1900)return '2160p / 4K';if(h>=1300)return '1440p';if(h>=1000)return '1080p';if(h>=840)return '900p';if(h>=650)return '720p';if(h>=500)return '540p';return h?h+'p':'waiting';}
     function update(){
       let ahead=0;
@@ -33,9 +63,10 @@
         'mode: ADAPTIVE (4K / 1440 / 1080 / 900 / 720 / 540)\n'+
         'decoded: '+(v.videoWidth&&v.videoHeight?v.videoWidth+'×'+v.videoHeight:'waiting')+'  ≈ '+quality(v.videoHeight)+'\n'+
         'state: '+(v.paused?'paused':'playing')+' / readyState '+v.readyState+'\n'+
-        'buffer: '+ahead.toFixed(1)+'s ahead';
+        'buffer: '+ahead.toFixed(1)+'s ahead\n'+
+        'reveal: '+(revealed?'video visible':'poster holding');
     }
-    setInterval(update,500); update();
+    setInterval(update,250); update();
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')play();});
   </script>
 </body>
