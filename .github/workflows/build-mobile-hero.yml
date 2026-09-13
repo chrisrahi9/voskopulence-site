@@ -119,6 +119,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A stackblitz-starters-n2un17vw/public/hero_hls_v6_3
-          git commit -m 'Build production 1440p hero ladders' || exit 0
+          git commit -m 'Build production 1440p hero ladders from latest main' || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
