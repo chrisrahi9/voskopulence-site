@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Voskopulence Stable 1440p Hero Test</title>
+  <title>Voskopulence Safari 1440p Hero Test</title>
   <style>
     html,body{margin:0;height:100%;background:#004642;overflow:hidden;font-family:Arial,sans-serif}
     .wrap{position:fixed;inset:0;background:#004642}
@@ -17,20 +17,20 @@
     <video id="hero" autoplay muted loop playsinline preload="auto"></video>
     <div class="shade"></div>
   </div>
-  <div id="diag" class="diag">HERO DIAGNOSTICS\nstable adaptive ladder loading…</div>
+  <div id="diag" class="diag">HERO DIAGNOSTICS\nSafari ladder loading…</div>
   <script>
     const v=document.getElementById('hero');
     const d=document.getElementById('diag');
     v.muted=true; v.defaultMuted=true; v.playsInline=true; v.loop=true;
-    v.src='/hero_hls_v6_3_4k/master.m3u8';
+    v.src='/hero_hls_v6_3_4k/master-safari.m3u8';
     const play=()=>{const p=v.play(); if(p&&p.catch)p.catch(()=>{});};
     v.addEventListener('loadedmetadata',play); play();
-    function quality(h){if(h>=1300)return '1440p';if(h>=1000)return '1080p';if(h>=840)return '900p';if(h>=650)return '720p';if(h>=500)return '540p';return h?h+'p':'waiting';}
+    function quality(h){if(h>=1300)return '1440p';if(h>=1000)return '1080p';if(h>=840)return '900p';if(h>=650)return '720p';return h?h+'p':'waiting';}
     function update(){
       let ahead=0;
       try{for(let i=0;i<v.buffered.length;i++){if(v.buffered.start(i)<=v.currentTime&&v.buffered.end(i)>=v.currentTime){ahead=Math.max(0,v.buffered.end(i)-v.currentTime);break;}}}catch(e){}
       d.textContent='HERO DIAGNOSTICS\n'+
-        'mode: ADAPTIVE (1440 / 1080 / 900 / 720 / 540)\n'+
+        'mode: SAFARI ADAPTIVE (1440 / 1080 / 900 / 720)\n'+
         'decoded: '+(v.videoWidth&&v.videoHeight?v.videoWidth+'×'+v.videoHeight:'waiting')+'  ≈ '+quality(v.videoHeight)+'\n'+
         'state: '+(v.paused?'paused':'playing')+' / readyState '+v.readyState+'\n'+
         'buffer: '+ahead.toFixed(1)+'s ahead';
