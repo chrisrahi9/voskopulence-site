@@ -46,6 +46,8 @@ for (const file of targets) {
   const url = new URL(file, root);
   let source = await readFile(url, "utf8");
 
+  source = source.replace(/>\s*About\s*</g, ">Our Story<");
+
   let desktop = getNavRange(source, DESKTOP_NAV, file, "desktop");
   let desktopBlock = source.slice(desktop.start, desktop.end);
 
@@ -58,8 +60,8 @@ for (const file of targets) {
 
   desktop = getNavRange(source, DESKTOP_NAV, file, "desktop");
   desktopBlock = source.slice(desktop.start, desktop.end);
-  if (!/>\s*About\s*</.test(desktopBlock)) {
-    const aboutLink = `            <a\n              href="/#about"\n              className="hover:text-gray-200"\n              onClick={(e) => {\n                e.preventDefault();\n                router.push("/#about");\n              }}\n            >\n              About\n            </a>\n`;
+  if (!/>\s*Our Story\s*</.test(desktopBlock)) {
+    const aboutLink = `            <a\n              href="/#about"\n              className="hover:text-gray-200"\n              onClick={(e) => {\n                e.preventDefault();\n                router.push("/#about");\n              }}\n            >\n              Our Story\n            </a>\n`;
     source = insertBeforeNavItem(
       source,
       desktop,
@@ -72,11 +74,11 @@ for (const file of targets) {
 
   let mobile = getNavRange(source, MOBILE_NAV, file, "mobile");
   let mobileBlock = source.slice(mobile.start, mobile.end);
-  if (!/>\s*About\s*</.test(mobileBlock)) {
+  if (!/>\s*Our Story\s*</.test(mobileBlock)) {
     const closeAction = source.includes("const closeMenu =")
       ? "closeMenu()"
       : "setMenuOpen(false)";
-    const aboutItem = `                  <li>\n                    <a\n                      href="/#about"\n                      className="hover:text-gray-200"\n                      onClick={(e) => {\n                        e.preventDefault();\n                        router.push("/#about");\n                        ${closeAction};\n                      }}\n                    >\n                      About\n                    </a>\n                  </li>\n`;
+    const aboutItem = `                  <li>\n                    <a\n                      href="/#about"\n                      className="hover:text-gray-200"\n                      onClick={(e) => {\n                        e.preventDefault();\n                        router.push("/#about");\n                        ${closeAction};\n                      }}\n                    >\n                      Our Story\n                    </a>\n                  </li>\n`;
     source = insertBeforeNavItem(
       source,
       mobile,
@@ -91,7 +93,7 @@ for (const file of targets) {
   mobile = getNavRange(source, MOBILE_NAV, file, "mobile");
   const desktopFinal = source.slice(desktop.start, desktop.end);
   const mobileFinal = source.slice(mobile.start, mobile.end);
-  for (const label of ["Home", "Shop", "About", "Sustainability", "Contact"]) {
+  for (const label of ["Home", "Shop", "Our Story", "Sustainability", "Contact"]) {
     if (!desktopFinal.includes(label)) {
       throw new Error(`NAV_UNIFORMITY: desktop ${label} missing in ${file}`);
     }
@@ -107,7 +109,7 @@ console.log("NAV_UNIFORMITY_PREPARED", {
   pages: targets,
   desktopBreakpoint: "xl",
   desktopOpticalOffsetPx: 2,
-  desktop: ["Home", "Shop", "About", "Sustainability", "Contact"],
-  mobile: ["Home", "Shop", "About", "Sustainability", "Contact"],
+  desktop: ["Home", "Shop", "Our Story", "Sustainability", "Contact"],
+  mobile: ["Home", "Shop", "Our Story", "Sustainability", "Contact"],
   guardedAgainstFutureDrift: true,
 });
