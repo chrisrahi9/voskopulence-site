@@ -27,7 +27,7 @@ home = replaceRegexRequired(
   "botanical heading"
 );
 
-home = replaceRegexRequired(home, />\s*About us\s*<\/h2>/, ">The house</h2>", "about heading");
+home = replaceRegexRequired(home, />\s*About us\s*<\/h2>/, ">Our Story</h2>", "about heading");
 
 home = replaceRegexRequired(
   home,
