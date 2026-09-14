@@ -26,10 +26,15 @@ for (const [url, from, to, label] of [
   await writeFile(url, source, "utf8");
 }
 
+let swedishHome = await readFile(swedishUrl, "utf8");
+swedishHome = swedishHome.replace("Berättelsen börjar med håret.", "Allt börjar med håret.");
+await writeFile(swedishUrl, swedishHome, "utf8");
+
 console.log("STORY_COPY_PREPARED", {
   voice: "we",
   founderInspiration: true,
   concise: true,
   englishUpdated: true,
   swedishUpdated: true,
+  swedishFirstChapterHeading: "Allt börjar med håret.",
 });
