@@ -27,17 +27,19 @@ export default function HeroDiagnostics() {
       const width = video.videoWidth || 0;
       const height = video.videoHeight || 0;
       const approx =
-        height >= 1000
-          ? "1080p"
-          : height >= 840
-            ? "900p"
-            : height >= 650
-              ? "720p"
-              : height >= 500
-                ? "540p"
-                : height
-                  ? `${height}p`
-                  : "waiting";
+        height >= 1300
+          ? "1440p"
+          : height >= 1000
+            ? "1080p"
+            : height >= 840
+              ? "900p"
+              : height >= 650
+                ? "720p"
+                : height >= 500
+                  ? "540p"
+                  : height
+                    ? `${height}p`
+                    : "waiting";
 
       let bufferedAhead = 0;
       try {
