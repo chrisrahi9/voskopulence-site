@@ -17,7 +17,7 @@ for (const file of pages) {
   loaded.set(file, await readFile(new URL(file, root), "utf8"));
 }
 
-const labels = ["Home", "Shop", "About", "Sustainability", "Contact"];
+const labels = ["Home", "Shop", "Our Story", "Sustainability", "Contact"];
 for (const [file, source] of loaded) {
   for (const label of labels) {
     assert(source.includes(label), `${file} is missing navigation label ${label}`);
@@ -55,6 +55,8 @@ const contact = loaded.get("app/contact/page.tsx");
 
 assert(home.includes("/products-live/true-cedar.png"), "Homepage Spotlight is not using true-cedar");
 assert(!home.includes('src={asset("/Spotlight_pic.png")}'), "Homepage still uses the legacy Spotlight image");
+assert(home.includes("Our Story"), "Homepage story section/navigation is not using Our Story");
+assert(!home.includes(">The house</h2>"), "Homepage still uses The house heading");
 assert(shop.includes("/products-live/true-cedar.png"), "Shop Fig & Cedar is not using true-cedar");
 assert(shop.includes('const ANALYTICS_ENDPOINT = "/api/interest";'), "Shop is not using same-origin interest API");
 assert(contact.includes('const FORMS_ENDPOINT = "/api/contact";'), "Contact is not using same-origin contact API");
@@ -71,6 +73,7 @@ for (const field of ["landingUrl", "referrer", "utmSource", "utmMedium", "utmCam
 console.log("PREMIUM_QA_PASSED", {
   pages,
   navigationUniform: true,
+  storyLabel: "Our Story",
   mobileOpticalAlignmentPx: 5,
   desktopOpticalAlignmentPx: 2,
   cleanProductFilenames: true,
