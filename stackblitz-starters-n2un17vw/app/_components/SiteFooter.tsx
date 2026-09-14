@@ -25,7 +25,7 @@ export default function SiteFooter() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#d8c8ad]">Discover</p>
             <nav className="mt-5 flex flex-col gap-3 text-sm text-white/78" aria-label="Footer navigation">
               <a className="footer-link" href="/shop">Shop</a>
-              <a className="footer-link" href="/#about">About</a>
+              <a className="footer-link" href="/#about">Our Story</a>
               <a className="footer-link" href="/sustainability">Sustainability</a>
               <a className="footer-link" href="/contact">Contact</a>
             </nav>
